@@ -51,7 +51,7 @@ function Diary() {
 
   const tagsFor = (m: string) => {
     const t: string[] = [];
-    s.snapshots.filter((x) => x.createdAt.slice(0, 7) === m.slice(0, 7)).forEach((x) => t.push(REASON_LABEL[x.reason]));
+    s.snapshots.filter((x) => x.createdAt.slice(0, 7) === m.slice(0, 7)).forEach((x) => t.push(REASON_LABEL[x.reason] ?? x.reason));
     s.achievements.filter((a) => a.at.slice(0, 7) === m.slice(0, 7)).forEach((a) => t.push(achievementInfo(a.code).title));
     const pauses = s.weeks.filter((w) => w.status === "pausa" && w.weekStart.slice(0, 7) === m.slice(0, 7)).length;
     if (pauses) t.push("Semana de pausa");

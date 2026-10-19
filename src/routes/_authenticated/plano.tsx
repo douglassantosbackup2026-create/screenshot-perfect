@@ -79,7 +79,10 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const annualAvailable = s.plan ? planAgeDays(s.plan.createdAt) >= 180 : false;
 
   function save(reason: SnapshotReason, life?: string) {
-    if (errors.length) return toast.error(errors[0]);
+    if (errors.length) {
+      toast.error(errors[0]);
+      return;
+    }
     const res = demo.savePlan(draft, reason, life);
     xpToast(isNew ? "Plano salvo." : reason === "quick_review" ? "Revisão feita." : "Plano salvo.", res.xpAwarded);
     handleResult(res);
