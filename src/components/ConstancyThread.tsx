@@ -59,7 +59,7 @@ export function ConstancyThread({ months }: { months: ThreadMonth[] }) {
               disabled={!m.onSelect}
               className="-mt-0.5 flex min-h-11 flex-1 flex-wrap items-center gap-2 rounded-[10px] px-2 text-left enabled:hover:bg-muted"
             >
-              <span className="font-semibold capitalize">{monthYear(m.month)}</span>
+              <span className="font-semibold">{monthYear(m.month)}</span>
               <span className="sr-only">, {stateLabel[m.state]}</span>
               {m.state === "sem_aporte" && <span className="text-sm text-muted-foreground">sem aporte</span>}
               {m.tags?.map((t) => (

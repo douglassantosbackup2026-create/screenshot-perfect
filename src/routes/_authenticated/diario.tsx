@@ -201,7 +201,7 @@ function DetailSheet({ month, items, onClose }: { month: string | null; items: C
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle className="font-display text-xl capitalize">{monthYear(month)}</SheetTitle>
+          <SheetTitle className="font-display text-xl">{monthYear(month)}</SheetTitle>
           <SheetDescription>Só você vê estes valores.</SheetDescription>
         </SheetHeader>
         <ul className="mt-4 space-y-4 pb-4">
