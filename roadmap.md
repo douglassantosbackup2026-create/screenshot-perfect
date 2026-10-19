@@ -1,0 +1,13 @@
+# Roadmap (spec §16)
+- [x] 1 App base and design system
+- [x] 2 Database
+- [x] 3 Calculation engine and tests
+- [ ] 4 Sign-in and onboarding
+- [ ] 5 21-day program and lessons
+- [ ] 6 Plano
+- [ ] 7 Diário and fio da constância
+- [ ] 8 Hoje, streaks, levels, achievements, missions
+- [ ] 9 Perfil and privacy
+- [ ] 10 Home and public calculator
+- [ ] 11 E-mail reminders (needs Resend key)
+- [ ] 12 Analytics and final review
