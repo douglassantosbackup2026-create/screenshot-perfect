@@ -10,33 +10,157 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as CalculadoraRouteImport } from './routes/calculadora'
+import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
+import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
+import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/plano'
+import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
+import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalculadoraRoute = CalculadoraRouteImport.update({
+  id: '/calculadora',
+  path: '/calculadora',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDiarioRoute = AuthenticatedDiarioRouteImport.update({
+  id: '/diario',
+  path: '/diario',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHojeRoute = AuthenticatedHojeRouteImport.update({
+  id: '/hoje',
+  path: '/hoje',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlanoRoute = AuthenticatedPlanoRouteImport.update({
+  id: '/plano',
+  path: '/plano',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminConteudoRoute =
+  AuthenticatedAdminConteudoRouteImport.update({
+    id: '/admin/conteudo',
+    path: '/admin/conteudo',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProgramaDiaRoute =
+  AuthenticatedProgramaDiaRouteImport.update({
+    id: '/programa/$dia',
+    path: '/programa/$dia',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calculadora': typeof CalculadoraRoute
+  '/entrar': typeof EntrarRoute
+  '/diario': typeof AuthenticatedDiarioRoute
+  '/hoje': typeof AuthenticatedHojeRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/plano': typeof AuthenticatedPlanoRoute
+  '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/calculadora': typeof CalculadoraRoute
+  '/entrar': typeof EntrarRoute
+  '/diario': typeof AuthenticatedDiarioRoute
+  '/hoje': typeof AuthenticatedHojeRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
+  '/plano': typeof AuthenticatedPlanoRoute
+  '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/calculadora': typeof CalculadoraRoute
+  '/entrar': typeof EntrarRoute
+  '/_authenticated/diario': typeof AuthenticatedDiarioRoute
+  '/_authenticated/hoje': typeof AuthenticatedHojeRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
+  '/_authenticated/plano': typeof AuthenticatedPlanoRoute
+  '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/calculadora'
+    | '/entrar'
+    | '/diario'
+    | '/hoje'
+    | '/onboarding'
+    | '/perfil'
+    | '/plano'
+    | '/admin/conteudo'
+    | '/programa/$dia'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/calculadora'
+    | '/entrar'
+    | '/diario'
+    | '/hoje'
+    | '/onboarding'
+    | '/perfil'
+    | '/plano'
+    | '/admin/conteudo'
+    | '/programa/$dia'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/calculadora'
+    | '/entrar'
+    | '/_authenticated/diario'
+    | '/_authenticated/hoje'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/perfil'
+    | '/_authenticated/plano'
+    | '/_authenticated/admin/conteudo'
+    | '/_authenticated/programa/$dia'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  CalculadoraRoute: typeof CalculadoraRoute
+  EntrarRoute: typeof EntrarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +172,107 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calculadora': {
+      id: '/calculadora'
+      path: '/calculadora'
+      fullPath: '/calculadora'
+      preLoaderRoute: typeof CalculadoraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/diario': {
+      id: '/_authenticated/diario'
+      path: '/diario'
+      fullPath: '/diario'
+      preLoaderRoute: typeof AuthenticatedDiarioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hoje': {
+      id: '/_authenticated/hoje'
+      path: '/hoje'
+      fullPath: '/hoje'
+      preLoaderRoute: typeof AuthenticatedHojeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plano': {
+      id: '/_authenticated/plano'
+      path: '/plano'
+      fullPath: '/plano'
+      preLoaderRoute: typeof AuthenticatedPlanoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/conteudo': {
+      id: '/_authenticated/admin/conteudo'
+      path: '/admin/conteudo'
+      fullPath: '/admin/conteudo'
+      preLoaderRoute: typeof AuthenticatedAdminConteudoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/programa/$dia': {
+      id: '/_authenticated/programa/$dia'
+      path: '/programa/$dia'
+      fullPath: '/programa/$dia'
+      preLoaderRoute: typeof AuthenticatedProgramaDiaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDiarioRoute: typeof AuthenticatedDiarioRoute
+  AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
+  AuthenticatedPlanoRoute: typeof AuthenticatedPlanoRoute
+  AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
+  AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDiarioRoute: AuthenticatedDiarioRoute,
+  AuthenticatedHojeRoute: AuthenticatedHojeRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
+  AuthenticatedPlanoRoute: AuthenticatedPlanoRoute,
+  AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
+  AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  CalculadoraRoute: CalculadoraRoute,
+  EntrarRoute: EntrarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
