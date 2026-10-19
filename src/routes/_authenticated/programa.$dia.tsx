@@ -137,7 +137,7 @@ function Questions({ lesson }: { lesson: Lesson }) {
   const [idx, setIdx] = useState(0);
   const found = lesson.questions[idx];
   if (!found) return null;
-  const q = found;
+  const q: NonNullable<typeof found> = found;
   const key = `${lesson.day}-${idx + 1}`;
   const answer = s.answers[key];
 
