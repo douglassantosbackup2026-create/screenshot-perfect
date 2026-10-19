@@ -1,0 +1,10 @@
+revoke execute on function public.has_role(uuid, public.app_role) from public, anon;
+revoke execute on function public.get_my_progress() from public, anon;
+revoke execute on function public.get_lesson_questions(uuid) from public, anon;
+revoke execute on function public.answer_question(uuid, text) from public, anon;
+revoke execute on function public.complete_lesson(uuid) from public, anon;
+revoke execute on function public.complete_weekly_mission(uuid) from public, anon;
+revoke execute on function public.record_plan_event(uuid, public.snapshot_reason, text, jsonb, jsonb) from public, anon;
+revoke execute on function public.log_contribution(date, boolean, numeric, public.contribution_destination, text) from public, anon;
+revoke execute on function public.export_my_data() from public, anon;
+grant execute on function public.has_role(uuid, public.app_role), public.get_my_progress(), public.get_lesson_questions(uuid), public.answer_question(uuid, text), public.complete_lesson(uuid), public.complete_weekly_mission(uuid), public.record_plan_event(uuid, public.snapshot_reason, text, jsonb, jsonb), public.log_contribution(date, boolean, numeric, public.contribution_destination, text), public.export_my_data() to authenticated;
