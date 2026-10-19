@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -38,6 +39,11 @@ const CalculadoraRoute = CalculadoraRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SobreRoute = SobreRouteImport.update({
+  id: '/sobre',
+  path: '/sobre',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDiarioRoute = AuthenticatedDiarioRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/sobre': typeof SobreRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/sobre': typeof SobreRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/sobre': typeof SobreRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calculadora'
     | '/entrar'
+    | '/sobre'
     | '/diario'
     | '/hoje'
     | '/onboarding'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calculadora'
     | '/entrar'
+    | '/sobre'
     | '/diario'
     | '/hoje'
     | '/onboarding'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/calculadora'
     | '/entrar'
+    | '/sobre'
     | '/_authenticated/diario'
     | '/_authenticated/hoje'
     | '/_authenticated/onboarding'
@@ -161,6 +173,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   CalculadoraRoute: typeof CalculadoraRoute
   EntrarRoute: typeof EntrarRoute
+  SobreRoute: typeof SobreRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/entrar'
       preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sobre': {
+      id: '/sobre'
+      path: '/sobre'
+      fullPath: '/sobre'
+      preLoaderRoute: typeof SobreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/diario': {
@@ -273,6 +293,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   CalculadoraRoute: CalculadoraRoute,
   EntrarRoute: EntrarRoute,
+  SobreRoute: SobreRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
