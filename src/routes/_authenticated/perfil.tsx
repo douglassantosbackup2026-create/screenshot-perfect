@@ -99,7 +99,7 @@ function Profile() {
         <h2 className="text-lg">Conquistas</h2>
         <ul className="mt-4 grid grid-cols-2 gap-3">
           {ACHIEVEMENTS.map((a) => {
-            const Icon = ACH_ICONS[a.icon];
+            const Icon = ACH_ICONS[a.icon] ?? Lock;
             const got = earned.has(a.code);
             return (
               <li key={a.code} className="rounded-2xl border border-border p-4">

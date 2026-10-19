@@ -42,7 +42,7 @@ export type Plan = { id: string; createdAt: string; updatedAt: string; inputs: P
 export type Snapshot = {
   id: string;
   reason: SnapshotReason;
-  lifeReason?: string;
+  lifeReason?: string | undefined;
   createdAt: string;
   engineVersion: string;
   inputs: PlanInputs;
@@ -126,7 +126,7 @@ export function makeSeed(now = new Date()): DemoState {
     createdAt: iso,
   }));
   const lessonCompletions: Record<number, string> = {};
-  for (let d = 1; d <= 14; d++) lessonCompletions[d] = iso;
+  for (let d = 1; d <= 14; d++) lessonCompletions[d] = new Date(now.getTime() - (15 - d) * 86400000).toISOString();
   const xpEvents: XpEvent[] = [];
   for (let d = 1; d <= 14; d++) xpEvents.push({ action: "lesson_completed", periodKey: `D:seed-${d}`, xp: 10, at: iso });
   xpEvents.push({ action: "first_plan_created", periodKey: "ONCE", xp: 100, at: iso });

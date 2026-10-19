@@ -16,7 +16,7 @@ import { DESTINATIONS, achievementInfo, monthName, monthYear, REASON_LABEL } fro
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 
 export const Route = createFileRoute("/_authenticated/diario")({
-  validateSearch: (s: Record<string, unknown>): { registrar?: boolean } => (s.registrar ? { registrar: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { registrar?: boolean } => (s['registrar'] ? { registrar: true } : {}),
   head: () => ({
     meta: [
       { title: "Diário — Previdência Intelligence" },
@@ -51,7 +51,7 @@ function Diary() {
 
   const tagsFor = (m: string) => {
     const t: string[] = [];
-    s.snapshots.filter((x) => x.createdAt.slice(0, 7) === m.slice(0, 7)).forEach((x) => t.push(REASON_LABEL[x.reason]));
+    s.snapshots.filter((x) => x.createdAt.slice(0, 7) === m.slice(0, 7)).forEach((x) => t.push(REASON_LABEL[x.reason] ?? x.reason));
     s.achievements.filter((a) => a.at.slice(0, 7) === m.slice(0, 7)).forEach((a) => t.push(achievementInfo(a.code).title));
     const pauses = s.weeks.filter((w) => w.status === "pausa" && w.weekStart.slice(0, 7) === m.slice(0, 7)).length;
     if (pauses) t.push("Semana de pausa");
@@ -201,7 +201,7 @@ function DetailSheet({ month, items, onClose }: { month: string | null; items: C
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle className="font-display text-xl capitalize">{monthYear(month)}</SheetTitle>
+          <SheetTitle className="font-display text-xl">{monthYear(month)}</SheetTitle>
           <SheetDescription>Só você vê estes valores.</SheetDescription>
         </SheetHeader>
         <ul className="mt-4 space-y-4 pb-4">

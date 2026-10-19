@@ -14,7 +14,7 @@ import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } fr
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
 
 export const Route = createFileRoute("/_authenticated/plano")({
-  validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s.criar ? { criar: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s['criar'] ? { criar: true } : {}),
   head: () => ({
     meta: [
       { title: "Plano — Previdência Intelligence" },
@@ -65,7 +65,9 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const [lifeOpen, setLifeOpen] = useState(false);
   const [lifeReason, setLifeReason] = useState<string | null>(null);
 
-  useEffect(() => setDraft(initial), [initial]);
+  useEffect(() => {
+    setDraft(initial);
+  }, [initial]);
 
   const errors = validateInputs(draft);
   const all = useMemo(() => (errors.length ? null : simulateAll(draft)), [draft, errors.length]);
@@ -77,7 +79,10 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const annualAvailable = s.plan ? planAgeDays(s.plan.createdAt) >= 180 : false;
 
   function save(reason: SnapshotReason, life?: string) {
-    if (errors.length) return toast.error(errors[0]);
+    if (errors.length) {
+      toast.error(errors[0]);
+      return;
+    }
     const res = demo.savePlan(draft, reason, life);
     xpToast(isNew ? "Plano salvo." : reason === "quick_review" ? "Revisão feita." : "Plano salvo.", res.xpAwarded);
     handleResult(res);

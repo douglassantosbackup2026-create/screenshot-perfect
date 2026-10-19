@@ -135,7 +135,9 @@ function LessonPage() {
 function Questions({ lesson }: { lesson: Lesson }) {
   const s = useDemo();
   const [idx, setIdx] = useState(0);
-  const q = lesson.questions[idx];
+  const found = lesson.questions[idx];
+  if (!found) return null;
+  const q: NonNullable<typeof found> = found;
   const key = `${lesson.day}-${idx + 1}`;
   const answer = s.answers[key];
 

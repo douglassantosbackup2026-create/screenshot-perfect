@@ -6,7 +6,10 @@ const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "o
 /** "2026-10-01" → "outubro" */
 export const monthName = (month: string) => MONTHS[Number(month.slice(5, 7)) - 1];
 export const monthShort = (month: string) => SHORT[Number(month.slice(5, 7)) - 1];
-export const monthYear = (month: string) => `${monthName(month)} de ${month.slice(0, 4)}`;
+export const monthYear = (month: string) => {
+  const n = monthName(month) ?? "";
+  return `${n.charAt(0).toUpperCase()}${n.slice(1)} de ${month.slice(0, 4)}`;
+};
 
 export const formatDate = (iso: string) =>
   new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" }).format(new Date(iso));

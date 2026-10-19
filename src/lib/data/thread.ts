@@ -7,7 +7,7 @@ export type MonthState = "aporte" | "sem_aporte" | "vazio";
 export function threadMonths(contribs: Contribution[], now = new Date()): { month: string; state: MonthState; items: Contribution[] }[] {
   const current = monthOf(spDate(now));
   if (!contribs.length) return [];
-  const first = contribs.map((c) => c.month).sort()[0];
+  const first = contribs.map((c) => c.month).sort()[0] ?? current;
   const out: { month: string; state: MonthState; items: Contribution[] }[] = [];
   for (let m = current; m >= first; m = addMonths(m, -1)) {
     const items = contribs.filter((c) => c.month === m);

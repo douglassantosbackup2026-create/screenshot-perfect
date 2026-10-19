@@ -7,7 +7,7 @@ import type { AchievementCode } from "@/lib/gamification/rules";
 import { achievementInfo } from "@/lib/labels";
 import type { ActionResult } from "@/lib/data/demo-store";
 
-export const ACH_ICONS: Record<string, LucideIcon> = {
+export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
   map: Map,
   sprout: Sprout,
   "calendar-check": CalendarCheck,
@@ -37,7 +37,7 @@ export function AchievementSheet() {
   }, []);
   const code = queue[0];
   const info = code ? achievementInfo(code) : null;
-  const Icon = info ? ACH_ICONS[info.icon] : Award;
+  const Icon = (info && ACH_ICONS[info.icon]) || Award;
 
   async function share() {
     if (!info) return;

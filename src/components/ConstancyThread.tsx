@@ -4,13 +4,13 @@ import { monthShort, monthYear } from "@/lib/labels";
 export type ThreadMonth = {
   month: string; // YYYY-MM-01
   state: "aporte" | "sem_aporte" | "vazio";
-  tags?: string[];
-  highlight?: boolean; // anima o preenchimento (registro recém-feito)
-  onSelect?: () => void;
+  tags?: string[] | undefined;
+  highlight?: boolean | undefined; // anima o preenchimento (registro recém-feito)
+  onSelect?: (() => void) | undefined;
 };
 
 /** Ponto do fio: preenchido em ipê (aporte), vazado (sem aporte) ou nada (mês sem registro). */
-export function ThreadDot({ state, highlight, size = 18 }: { state: ThreadMonth["state"]; highlight?: boolean; size?: number }) {
+export function ThreadDot({ state, highlight, size = 18 }: { state: ThreadMonth["state"]; highlight?: boolean | undefined; size?: number }) {
   if (state === "vazio") return <span aria-hidden style={{ width: size, height: size }} className="inline-block" />;
   return (
     <span
@@ -46,7 +46,7 @@ export function ConstancyThread({ months }: { months: ThreadMonth[] }) {
                   aria-hidden
                   className={cn(
                     "absolute top-7 bottom-0 w-0.5",
-                    months[i + 1].state === "vazio" || m.state === "vazio"
+                    months[i + 1]?.state === "vazio" || m.state === "vazio"
                       ? "border-l-2 border-dotted border-border"
                       : "bg-border",
                   )}
@@ -59,7 +59,7 @@ export function ConstancyThread({ months }: { months: ThreadMonth[] }) {
               disabled={!m.onSelect}
               className="-mt-0.5 flex min-h-11 flex-1 flex-wrap items-center gap-2 rounded-[10px] px-2 text-left enabled:hover:bg-muted"
             >
-              <span className="font-semibold capitalize">{monthYear(m.month)}</span>
+              <span className="font-semibold">{monthYear(m.month)}</span>
               <span className="sr-only">, {stateLabel[m.state]}</span>
               {m.state === "sem_aporte" && <span className="text-sm text-muted-foreground">sem aporte</span>}
               {m.tags?.map((t) => (
