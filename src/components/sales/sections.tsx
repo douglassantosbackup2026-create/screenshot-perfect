@@ -203,7 +203,7 @@ export function Pricing({ onStart }: { onStart: () => void }) {
 }
 
 export function Faq() {
-  const qs = [
+  const qs: [string, string][] = [
     ["Isso é um investimento?", "Não. É um programa de educação e planejamento. Você escolhe onde e como investir."],
     ["Preciso dar dados do meu banco?", "Não. Você só informa valores aproximados, se quiser."],
     ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
