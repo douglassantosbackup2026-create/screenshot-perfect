@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly } from "@/lib/calc/format";
-import { DEFAULT_ASSUMPTIONS, CALC_PREFILL_KEY } from "@/lib/data/demo-store";
+import { demo, DEFAULT_ASSUMPTIONS, CALC_PREFILL_KEY } from "@/lib/data/demo-store";
 import { SIMULATION_FOOTER } from "@/lib/labels";
-import { demo } from "@/lib/data/demo-store";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 
 export const Route = createFileRoute("/")({
