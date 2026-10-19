@@ -60,7 +60,7 @@ export function ProductPreview() {
       <div className="mt-5 space-y-3">
         <div className="rounded-2xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Hoje · Dia 3 de 21</p>
-          <p className="mt-1 font-semibold">Inflação: o inimigo silencioso</p>
+          <p className="mt-1 font-semibold">{LESSONS[2]?.title}</p>
           <div className="mt-3 h-2 rounded-full bg-muted">
             <div className="h-2 w-[14%] rounded-full bg-accent" />
           </div>
