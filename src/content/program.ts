@@ -3,8 +3,14 @@ export type LessonOption = { id: string; text: string };
 export type LessonQuestion = { prompt: string; options: LessonOption[]; correct: string; explanation: string };
 export type ActionKey = "set_goal" | "create_plan" | "first_contribution";
 export type Lesson = {
-  day: number; title: string; objective: string; keyPoints: string[]; questions: LessonQuestion[];
-  sources: { label: string; url: string }[]; actionKey: ActionKey | null; actionText: string | null;
+  day: number;
+  title: string;
+  objective: string;
+  keyPoints: string[];
+  questions: LessonQuestion[];
+  sources: { label: string; url: string }[];
+  actionKey: ActionKey | null;
+  actionText: string | null;
 };
 export const PROGRAM = { slug: "plano-sem-inss-21", title: "Meu plano sem depender do INSS", totalDays: 21 } as const;
 export const LESSONS: Lesson[] = [
@@ -166,6 +172,25 @@ export const LESSONS: Lesson[] = [
   ],
   "questions": [
    {
+    "prompt": "Juros compostos são:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Juros calculados só sobre o valor inicial"
+     },
+     {
+      "id": "b",
+      "text": "Juros que também rendem sobre os juros anteriores"
+     },
+     {
+      "id": "c",
+      "text": "Juros cobrados por bancos"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
     "prompt": "A 6% ao ano, o dinheiro dobra em cerca de:",
     "options": [
      {
@@ -183,6 +208,25 @@ export const LESSONS: Lesson[] = [
     ],
     "correct": "b",
     "explanation": "72 ÷ 6 = 12."
+   },
+   {
+    "prompt": "O que mais ajuda os juros compostos?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Tempo e constância"
+     },
+     {
+      "id": "b",
+      "text": "Mudar de aplicação todo mês"
+     },
+     {
+      "id": "c",
+      "text": "Resgatar os rendimentos"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
    }
   ],
   "sources": [],
@@ -199,7 +243,65 @@ export const LESSONS: Lesson[] = [
    "Um ponto de partida comum é a sua renda atual. Dá para ajustar depois.",
    "Um número aproximado agora vale mais que um número perfeito nunca."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Em que valor você deve pensar a renda desejada?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Em reais de hoje"
+     },
+     {
+      "id": "b",
+      "text": "Em reais do ano em que vai se aposentar"
+     },
+     {
+      "id": "c",
+      "text": "Em dólares"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Qual despesa costuma subir na aposentadoria?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Saúde"
+     },
+     {
+      "id": "b",
+      "text": "Transporte para o trabalho"
+     },
+     {
+      "id": "c",
+      "text": "Material escolar"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "A renda desejada pode mudar depois?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Não, é definitiva"
+     },
+     {
+      "id": "b",
+      "text": "Sim, o plano é revisado"
+     },
+     {
+      "id": "c",
+      "text": "Só a cada dez anos"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": "anotar a renda mensal desejada."
@@ -215,6 +317,25 @@ export const LESSONS: Lesson[] = [
    "Este app planeja sem o INSS por padrão. Se você tiver uma estimativa do Meu INSS, pode informá-la e ver os dois cenários."
   ],
   "questions": [
+   {
+    "prompt": "Qual é o maior benefício pago pelo INSS em 2026?",
+    "options": [
+     {
+      "id": "a",
+      "text": "R$ 1.621,00"
+     },
+     {
+      "id": "b",
+      "text": "R$ 8.475,55"
+     },
+     {
+      "id": "c",
+      "text": "Não existe limite"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
    {
     "prompt": "Por que o app planeja sem o INSS por padrão?",
     "options": [
@@ -233,6 +354,25 @@ export const LESSONS: Lesson[] = [
     ],
     "correct": "b",
     "explanation": "O INSS entra como cenário extra, nunca como base."
+   },
+   {
+    "prompt": "Onde consultar sua estimativa oficial?",
+    "options": [
+     {
+      "id": "a",
+      "text": "No Meu INSS"
+     },
+     {
+      "id": "b",
+      "text": "Em redes sociais"
+     },
+     {
+      "id": "c",
+      "text": "No app do seu banco"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
    }
   ],
   "sources": [
@@ -257,7 +397,65 @@ export const LESSONS: Lesson[] = [
    "Quanto mais longo o horizonte, maior o patrimônio necessário.",
    "Você pode mudar o horizonte nas premissas a qualquer momento."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Por que o horizonte padrão vai até os 95 anos?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Para não ficar sem dinheiro se você viver mais"
+     },
+     {
+      "id": "b",
+      "text": "Porque é a expectativa média de vida"
+     },
+     {
+      "id": "c",
+      "text": "Por exigência legal"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Aumentar o horizonte de 85 para 95 anos faz o patrimônio necessário:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Cair"
+     },
+     {
+      "id": "b",
+      "text": "Subir"
+     },
+     {
+      "id": "c",
+      "text": "Ficar igual"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "O horizonte pode ser alterado?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Sim, nas premissas"
+     },
+     {
+      "id": "b",
+      "text": "Não"
+     },
+     {
+      "id": "c",
+      "text": "Só pagando"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -271,7 +469,65 @@ export const LESSONS: Lesson[] = [
    "Aposentadoria não precisa ser tudo ou nada: muita gente reduz o trabalho aos poucos.",
    "O objetivo orienta decisões; não é uma promessa nem uma regra fixa."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Antecipar a aposentadoria em 5 anos geralmente:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Reduz o aporte necessário"
+     },
+     {
+      "id": "b",
+      "text": "Aumenta o aporte necessário"
+     },
+     {
+      "id": "c",
+      "text": "Não muda nada"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Por quê?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Menos anos para acumular e mais anos para consumir"
+     },
+     {
+      "id": "b",
+      "text": "Os juros mudam"
+     },
+     {
+      "id": "c",
+      "text": "A inflação deixa de existir"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Seu objetivo é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Uma meta para orientar decisões"
+     },
+     {
+      "id": "b",
+      "text": "Uma promessa de resultado"
+     },
+     {
+      "id": "c",
+      "text": "Uma regra que não pode mudar"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": "set_goal",
   "actionText": "confirmar idade e renda desejadas."
@@ -286,7 +542,65 @@ export const LESSONS: Lesson[] = [
    "A reserva pede aplicação com resgate rápido e baixo risco.",
    "Dá para construir a reserva e começar a aposentadoria em paralelo, com valores menores."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Por que a reserva vem antes?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Evita resgatar a aposentadoria ou se endividar num imprevisto"
+     },
+     {
+      "id": "b",
+      "text": "Rende mais"
+     },
+     {
+      "id": "c",
+      "text": "É obrigatória por lei"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Para renda variável, uma referência comum é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "1 mês de despesas"
+     },
+     {
+      "id": "b",
+      "text": "6 a 12 meses de despesas"
+     },
+     {
+      "id": "c",
+      "text": "5 anos de despesas"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "A característica mais importante da reserva é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Poder sacar rápido, com baixo risco"
+     },
+     {
+      "id": "b",
+      "text": "Ter o maior retorno possível"
+     },
+     {
+      "id": "c",
+      "text": "Ter prazo longo de carência"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -301,7 +615,65 @@ export const LESSONS: Lesson[] = [
    "Se você contar com um INSS estimado de R$ 4.500, o valor necessário cai para cerca de R$ 798 mil.",
    "O app faz essa conta por você e mostra as premissas."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "O patrimônio-alvo depende de:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Renda desejada, horizonte e retorno"
+     },
+     {
+      "id": "b",
+      "text": "Só da sua idade"
+     },
+     {
+      "id": "c",
+      "text": "Do seu banco"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "No exemplo, considerar um INSS de R$ 4.500 reduz o alvo para cerca de:",
+    "options": [
+     {
+      "id": "a",
+      "text": "R$ 1,82 milhão"
+     },
+     {
+      "id": "b",
+      "text": "R$ 798 mil"
+     },
+     {
+      "id": "c",
+      "text": "Zero"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "O patrimônio-alvo é calculado em:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Reais de hoje"
+     },
+     {
+      "id": "b",
+      "text": "Reais do futuro"
+     },
+     {
+      "id": "c",
+      "text": "Dólares"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -315,7 +687,65 @@ export const LESSONS: Lesson[] = [
    "Premissas otimistas demais fazem o plano parecer fácil e escondem o esforço necessário.",
    "Rentabilidade passada não garante rentabilidade futura."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Retorno real é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "O retorno acima da inflação"
+     },
+     {
+      "id": "b",
+      "text": "O retorno sem impostos"
+     },
+     {
+      "id": "c",
+      "text": "O retorno garantido"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Usar uma premissa de retorno alta demais tende a:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Subestimar o aporte necessário"
+     },
+     {
+      "id": "b",
+      "text": "Superestimar o aporte necessário"
+     },
+     {
+      "id": "c",
+      "text": "Não mudar nada"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Rentabilidade passada:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Garante a futura"
+     },
+     {
+      "id": "b",
+      "text": "Não garante a futura"
+     },
+     {
+      "id": "c",
+      "text": "É sempre igual à futura"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -329,7 +759,65 @@ export const LESSONS: Lesson[] = [
    "Uma prática prudente: escolher o aporte olhando o cenário central e conferir se o conservador não fica longe demais.",
    "Os cenários mudam quando você muda as premissas, e o plano é revisado todo ano."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Por que olhar três cenários?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Porque o futuro é incerto"
+     },
+     {
+      "id": "b",
+      "text": "Para escolher o mais bonito"
+     },
+     {
+      "id": "c",
+      "text": "Por exigência legal"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Uma prática prudente é escolher o aporte com base:",
+    "options": [
+     {
+      "id": "a",
+      "text": "No cenário otimista"
+     },
+     {
+      "id": "b",
+      "text": "No central, conferindo o conservador"
+     },
+     {
+      "id": "c",
+      "text": "Em nenhum deles"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Os cenários mudam quando:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Você muda as premissas"
+     },
+     {
+      "id": "b",
+      "text": "Nunca"
+     },
+     {
+      "id": "c",
+      "text": "Só no fim do ano"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -344,7 +832,65 @@ export const LESSONS: Lesson[] = [
    "Em planos de previdência, vale olhar a taxa de administração e a taxa de carregamento antes de contratar.",
    "No app, você pode informar um custo anual nas premissas."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "No exemplo, 1 ponto percentual a menos por ano, em 30 anos, reduziu o resultado em cerca de:",
+    "options": [
+     {
+      "id": "a",
+      "text": "1%"
+     },
+     {
+      "id": "b",
+      "text": "16%"
+     },
+     {
+      "id": "c",
+      "text": "50%"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Em planos de previdência, um custo a verificar é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "A taxa de carregamento"
+     },
+     {
+      "id": "b",
+      "text": "O IPVA"
+     },
+     {
+      "id": "c",
+      "text": "A tarifa do Pix"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Quando comparar custos?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Antes de contratar"
+     },
+     {
+      "id": "b",
+      "text": "Nunca"
+     },
+     {
+      "id": "c",
+      "text": "Só no resgate"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -360,7 +906,65 @@ export const LESSONS: Lesson[] = [
    "Desde 2024, quem tem previdência pode escolher o regime de tributação (progressivo ou regressivo) até o primeiro resgate ou o início do benefício.",
    "Este app não recomenda produtos. Para escolher, compare custos e regras e, se precisar, consulte um profissional habilitado."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "O PGBL tende a fazer mais sentido para quem:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Faz a declaração completa do imposto de renda"
+     },
+     {
+      "id": "b",
+      "text": "É isento de imposto"
+     },
+     {
+      "id": "c",
+      "text": "Quer resgatar em seis meses"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "No VGBL, o imposto no resgate incide sobre:",
+    "options": [
+     {
+      "id": "a",
+      "text": "O valor total"
+     },
+     {
+      "id": "b",
+      "text": "Apenas os rendimentos"
+     },
+     {
+      "id": "c",
+      "text": "Nada"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Desde 2024, o regime de tributação da previdência pode ser escolhido:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Até o primeiro resgate ou o início do benefício"
+     },
+     {
+      "id": "b",
+      "text": "Só na contratação"
+     },
+     {
+      "id": "c",
+      "text": "Depois do último resgate"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [
    {
     "label": "Lei 14.803/2024 (KPMG)",
@@ -383,7 +987,65 @@ export const LESSONS: Lesson[] = [
    "O app mostra o aporte necessário e a distância até ele. Começar e revisar vale mais do que esperar o valor ideal.",
    "O aporte é uma decisão sua, não uma recomendação do app."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Se o aporte necessário não cabe hoje, o melhor é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Não começar"
+     },
+     {
+      "id": "b",
+      "text": "Começar com o que cabe e revisar"
+     },
+     {
+      "id": "c",
+      "text": "Apostar para acelerar"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "O plano deve ser revisado:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Quando a vida muda e uma vez por ano"
+     },
+     {
+      "id": "b",
+      "text": "Nunca"
+     },
+     {
+      "id": "c",
+      "text": "Todos os dias"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "O valor do aporte é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Uma decisão sua"
+     },
+     {
+      "id": "b",
+      "text": "Uma recomendação do app"
+     },
+     {
+      "id": "c",
+      "text": "Uma obrigação legal"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": "create_plan",
   "actionText": "salvar o plano."
@@ -397,7 +1059,65 @@ export const LESSONS: Lesson[] = [
    "Programe uma transferência automática no seu banco para o dia em que você recebe.",
    "O app não movimenta dinheiro: quem programa é você."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "\"Pagar-se primeiro\" significa:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Separar o aporte assim que o dinheiro entra"
+     },
+     {
+      "id": "b",
+      "text": "Guardar o que sobrar no fim do mês"
+     },
+     {
+      "id": "c",
+      "text": "Gastar primeiro com você mesmo"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "O melhor dia para a transferência é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Logo depois de receber"
+     },
+     {
+      "id": "b",
+      "text": "O último dia do mês"
+     },
+     {
+      "id": "c",
+      "text": "Qualquer dia aleatório"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Quem programa a transferência?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Você, no seu banco"
+     },
+     {
+      "id": "b",
+      "text": "O app"
+     },
+     {
+      "id": "c",
+      "text": "O INSS"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -411,7 +1131,65 @@ export const LESSONS: Lesson[] = [
    "Para PJ, definir um \"salário\" fixo para si ajuda a separar as finanças pessoais das da empresa.",
    "Nos meses bons, o extra pode ir primeiro para completar a reserva de emergência."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Uma estratégia para renda variável é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Aporte mínimo fixo e extra nos meses bons"
+     },
+     {
+      "id": "b",
+      "text": "Só aportar quando sobrar"
+     },
+     {
+      "id": "c",
+      "text": "Aportar tudo de uma vez num mês"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Para PJ, definir um salário fixo para si ajuda a:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Separar finanças pessoais e da empresa"
+     },
+     {
+      "id": "b",
+      "text": "Pagar sempre menos imposto"
+     },
+     {
+      "id": "c",
+      "text": "Nada"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Nos meses bons, o extra pode ir primeiro para:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Completar a reserva de emergência"
+     },
+     {
+      "id": "b",
+      "text": "Apostas"
+     },
+     {
+      "id": "c",
+      "text": "Compras por impulso"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -425,7 +1203,65 @@ export const LESSONS: Lesson[] = [
    "Pegar empréstimo para manter o aporte quase nunca faz sentido: os juros do crédito costumam ser maiores que o retorno.",
    "No app, um mês sem aporte fica registrado e o plano segue."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Num mês apertado, o mais saudável é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Desistir do plano"
+     },
+     {
+      "id": "b",
+      "text": "Reduzir ou pausar e retomar depois"
+     },
+     {
+      "id": "c",
+      "text": "Usar o cartão de crédito para aportar"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Pegar empréstimo para manter o aporte:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Geralmente não faz sentido"
+     },
+     {
+      "id": "b",
+      "text": "É o recomendado"
+     },
+     {
+      "id": "c",
+      "text": "É obrigatório"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "No app, um mês sem aporte:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Apaga seu progresso"
+     },
+     {
+      "id": "b",
+      "text": "Fica registrado e você segue"
+     },
+     {
+      "id": "c",
+      "text": "Bloqueia sua conta"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -439,7 +1275,65 @@ export const LESSONS: Lesson[] = [
    "Seu progresso é comparado com a sua própria trajetória, nunca com a de outras pessoas.",
    "O fio da constância mostra mês a mês o hábito que você está construindo."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "No app, quem ganha mais XP ao registrar um aporte?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Quem aporta mais"
+     },
+     {
+      "id": "b",
+      "text": "Todos ganham o mesmo"
+     },
+     {
+      "id": "c",
+      "text": "Quem tem mais patrimônio"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "O que mais influencia o resultado no longo prazo?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Regularidade e tempo"
+     },
+     {
+      "id": "b",
+      "text": "Acertar o melhor mês"
+     },
+     {
+      "id": "c",
+      "text": "Sorte"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Com quem comparar seu progresso?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Com a sua própria trajetória"
+     },
+     {
+      "id": "b",
+      "text": "Com o patrimônio dos amigos"
+     },
+     {
+      "id": "c",
+      "text": "Com influenciadores"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -454,7 +1348,65 @@ export const LESSONS: Lesson[] = [
    "Revisão completa uma vez por ano.",
    "Revisar para baixo faz parte do processo."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "Qual destes é um motivo para ajustar o plano?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Mudança de renda"
+     },
+     {
+      "id": "b",
+      "text": "Troca de celular"
+     },
+     {
+      "id": "c",
+      "text": "Um app novo"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Com que frequência fazer a revisão completa?",
+    "options": [
+     {
+      "id": "a",
+      "text": "Uma vez por ano"
+     },
+     {
+      "id": "b",
+      "text": "Todos os dias"
+     },
+     {
+      "id": "c",
+      "text": "A cada dez anos"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "Revisar o plano para baixo é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Um fracasso"
+     },
+     {
+      "id": "b",
+      "text": "Parte normal do processo"
+     },
+     {
+      "id": "c",
+      "text": "Proibido"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -468,7 +1420,65 @@ export const LESSONS: Lesson[] = [
    "Apostas são entretenimento com perda esperada, não investimento.",
    "Nunca compartilhe senhas nem códigos de acesso. Desconfie de urgência."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "\"Retorno garantido de 5% ao mês\" é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Uma oportunidade"
+     },
+     {
+      "id": "b",
+      "text": "Um sinal de alerta"
+     },
+     {
+      "id": "c",
+      "text": "Normal no mercado"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Apostas esportivas são:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Uma forma de investimento"
+     },
+     {
+      "id": "b",
+      "text": "Entretenimento com perda esperada"
+     },
+     {
+      "id": "c",
+      "text": "Previdência"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "Alguém pede sua senha para \"investir por você\". Você:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Aceita"
+     },
+     {
+      "id": "b",
+      "text": "Recusa"
+     },
+     {
+      "id": "c",
+      "text": "Negocia"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": null,
   "actionText": null
@@ -482,7 +1492,65 @@ export const LESSONS: Lesson[] = [
    "Ative o lembrete mensal no dia em que seu dinheiro entra.",
    "A partir de agora: uma missão por semana, o registro mensal e a revisão anual."
   ],
-  "questions": [],
+  "questions": [
+   {
+    "prompt": "O que acontece depois do dia 21?",
+    "options": [
+     {
+      "id": "a",
+      "text": "O app acaba"
+     },
+     {
+      "id": "b",
+      "text": "Começam as missões semanais e o registro mensal"
+     },
+     {
+      "id": "c",
+      "text": "Você precisa recomeçar"
+     }
+    ],
+    "correct": "b",
+    "explanation": ""
+   },
+   {
+    "prompt": "O lembrete mensal serve para:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Registrar o aporte e revisar rápido o plano"
+     },
+     {
+      "id": "b",
+      "text": "Vender produtos"
+     },
+     {
+      "id": "c",
+      "text": "Cobrar uma taxa"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   },
+   {
+    "prompt": "O mais importante agora é:",
+    "options": [
+     {
+      "id": "a",
+      "text": "Manter a constância"
+     },
+     {
+      "id": "b",
+      "text": "Buscar o maior retorno"
+     },
+     {
+      "id": "c",
+      "text": "Trocar de aplicação todo mês"
+     }
+    ],
+    "correct": "a",
+    "explanation": ""
+   }
+  ],
   "sources": [],
   "actionKey": "first_contribution",
   "actionText": "registrar o aporte e ativar o lembrete."
