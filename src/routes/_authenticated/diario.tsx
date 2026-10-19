@@ -16,7 +16,7 @@ import { DESTINATIONS, achievementInfo, monthName, monthYear, REASON_LABEL } fro
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 
 export const Route = createFileRoute("/_authenticated/diario")({
-  validateSearch: (s: Record<string, unknown>): { registrar?: boolean } => (s.registrar ? { registrar: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { registrar?: boolean } => (s['registrar'] ? { registrar: true } : {}),
   head: () => ({
     meta: [
       { title: "Diário — Previdência Intelligence" },

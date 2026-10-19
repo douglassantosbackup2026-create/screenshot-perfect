@@ -42,7 +42,7 @@ export type Plan = { id: string; createdAt: string; updatedAt: string; inputs: P
 export type Snapshot = {
   id: string;
   reason: SnapshotReason;
-  lifeReason?: string;
+  lifeReason?: string | undefined;
   createdAt: string;
   engineVersion: string;
   inputs: PlanInputs;

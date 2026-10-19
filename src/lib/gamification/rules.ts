@@ -38,7 +38,7 @@ export function spDate(now: Date): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 function parseDay(s: string): Date {
-  const [y, m, d] = s.split("-").map(Number);
+  const [y = 1970, m = 1, d = 1] = s.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d));
 }
 function fmtDay(d: Date): string {
@@ -157,7 +157,7 @@ export function hasThreeConsecutiveMonths(monthKeys: string[]): boolean {
     .sort((a, b) => a - b);
   let run = 1;
   for (let i = 1; i < idx.length; i++) {
-    run = idx[i] === idx[i - 1] + 1 ? run + 1 : 1;
+    run = idx[i] === (idx[i - 1] ?? NaN) + 1 ? run + 1 : 1;
     if (run >= 3) return true;
   }
   return false;

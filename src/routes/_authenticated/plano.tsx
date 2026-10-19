@@ -14,7 +14,7 @@ import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } fr
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
 
 export const Route = createFileRoute("/_authenticated/plano")({
-  validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s.criar ? { criar: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s['criar'] ? { criar: true } : {}),
   head: () => ({
     meta: [
       { title: "Plano — Previdência Intelligence" },
@@ -65,7 +65,9 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const [lifeOpen, setLifeOpen] = useState(false);
   const [lifeReason, setLifeReason] = useState<string | null>(null);
 
-  useEffect(() => setDraft(initial), [initial]);
+  useEffect(() => {
+    setDraft(initial);
+  }, [initial]);
 
   const errors = validateInputs(draft);
   const all = useMemo(() => (errors.length ? null : simulateAll(draft)), [draft, errors.length]);

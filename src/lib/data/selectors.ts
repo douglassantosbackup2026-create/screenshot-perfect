@@ -8,7 +8,7 @@ export function missionOfWeek(s: DemoState, now = new Date()) {
   const week = isoWeekKey(weekStartOf(spDate(now)));
   const doneThisWeek = s.missionCompletions.find((m) => m.isoWeek === week);
   const idx = (s.missionCompletions.length - (doneThisWeek ? 1 : 0)) % MISSIONS.length;
-  return { mission: MISSIONS[idx], done: !!doneThisWeek };
+  return { mission: MISSIONS[idx] ?? MISSIONS[0]!, done: !!doneThisWeek };
 }
 
 export function hasMonthRecord(s: DemoState, now = new Date()) {

@@ -136,6 +136,7 @@ function Questions({ lesson }: { lesson: Lesson }) {
   const s = useDemo();
   const [idx, setIdx] = useState(0);
   const q = lesson.questions[idx];
+  if (!q) return null;
   const key = `${lesson.day}-${idx + 1}`;
   const answer = s.answers[key];
 
