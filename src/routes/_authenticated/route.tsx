@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { BottomNav } from "@/components/BottomNav";
-import { TopNav } from "@/components/TopNav";
+import { MobileHeader, TopNav } from "@/components/TopNav";
 
 // MODO DEMONSTRAÇÃO: o bloqueio de login está desligado de propósito até a etapa de login.
 // Para religar, restaurar o beforeLoad abaixo:
@@ -22,6 +22,7 @@ function AuthenticatedLayout() {
         Modo demonstração: seus dados ainda não são salvos
       </div>
       {!hideNav && <TopNav />}
+      {!hideNav && <MobileHeader />}
       <Outlet />
       {!hideNav && <BottomNav />}
     </>

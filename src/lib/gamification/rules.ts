@@ -18,7 +18,8 @@ export type XpAction =
   | "daily_mission"
   | "statement_imported"
   | "budget_planned"
-  | "investment_logged";
+  | "investment_logged"
+  | "month_closed";
 
 export const XP: Record<XpAction, number> = {
   lesson_completed: 10,
@@ -43,6 +44,8 @@ export const XP: Record<XpAction, number> = {
   statement_imported: 20,
   budget_planned: 20,
   investment_logged: 20,
+  // Fechar o mês: os cinco passos do ritual mensal feitos, uma vez por mês.
+  month_closed: 50,
 };
 
 /** Metas criadas só dão XP até 3 vezes por mês (periodKey "G:YYYY-MM:<id>"). */
@@ -215,7 +218,8 @@ export type AchievementCode =
   | "primeiro_extrato"
   | "primeiro_orcamento"
   | "primeiro_investimento"
-  | "carteira_com_metas";
+  | "carteira_com_metas"
+  | "primeiro_fechamento";
 
 export const ACHIEVEMENTS: { code: AchievementCode; title: string; description: string; icon: string }[] = [
   { code: "primeiro_plano", title: "Primeiro plano", description: "Você criou seu plano de aposentadoria.", icon: "map" },
@@ -235,6 +239,7 @@ export const ACHIEVEMENTS: { code: AchievementCode; title: string; description: 
   { code: "primeiro_orcamento", title: "Mês planejado", description: "Você deu um destino ao dinheiro do mês no orçamento.", icon: "wallet" },
   { code: "primeiro_investimento", title: "Primeiro investimento", description: "Você registrou uma operação de investimento.", icon: "line-chart" },
   { code: "carteira_com_metas", title: "Carteira com metas", description: "Você definiu quanto quer em cada classe de investimento.", icon: "pie-chart" },
+  { code: "primeiro_fechamento", title: "Primeiro mês fechado", description: "Você fez os cinco passos do fechamento do mês.", icon: "calendar-check" },
 ];
 
 export function hasThreeConsecutiveMonths(monthKeys: string[]): boolean {
@@ -278,6 +283,7 @@ export function eligibleAchievements(s: {
   hasPlannedBudget?: boolean;
   hasInvestmentTrade?: boolean;
   hasAllocationTargets?: boolean;
+  hasClosedMonth?: boolean;
 }): AchievementCode[] {
   const out: AchievementCode[] = [];
   if (s.hasPlan) out.push("primeiro_plano");
@@ -297,6 +303,7 @@ export function eligibleAchievements(s: {
   if (s.hasPlannedBudget) out.push("primeiro_orcamento");
   if (s.hasInvestmentTrade) out.push("primeiro_investimento");
   if (s.hasAllocationTargets) out.push("carteira_com_metas");
+  if (s.hasClosedMonth) out.push("primeiro_fechamento");
   return out;
 }
 

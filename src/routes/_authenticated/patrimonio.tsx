@@ -16,6 +16,7 @@ import { formatMoney, formatMonthly, formatWealth } from "@/lib/calc/format";
 import type { HistoryPoint } from "@/lib/calc/networth";
 import { demo, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
 import { PortfolioSection } from "@/components/portfolio/PortfolioSection";
+import { AreaTabs } from "@/components/nav/areas";
 import { assetHistories, hasWealthRecord } from "@/lib/data/selectors";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -94,6 +95,7 @@ function Wealth() {
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-4xl lg:px-8 lg:pb-12">
+      <AreaTabs />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1>Patrimônio</h1>

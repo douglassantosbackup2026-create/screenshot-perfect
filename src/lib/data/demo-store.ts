@@ -558,6 +558,7 @@ function refresh(s: DemoState, now: Date): { fresh: AchievementCode[]; xp: numbe
     hasPlannedBudget: Object.values(s.budget.assigned).some((m) => Object.values(m).some((v) => v > 0)),
     hasInvestmentTrade: s.trades.length > 0,
     hasAllocationTargets: Object.keys(s.allocationTargets).length > 0,
+    hasClosedMonth: s.xpEvents.some((e) => e.action === "month_closed"),
   });
   const have = new Set(s.achievements.map((a) => a.code));
   const fresh = eligible.filter((c) => !have.has(c));
@@ -1278,10 +1279,51 @@ export const demo = {
     s.categoryRules = s.categoryRules.filter((r) => r.id !== id);
     commit(s);
   },
+  /** Fecha o mês atual (espelho de complete_month_close): só com os cinco passos feitos; XP uma vez por mês. */
+  closeMonth(): ActionResult {
+    return mutate((s, now) => {
+      const c = monthCloseSteps(s, now);
+      if (!c.complete) throw new Error("Ainda faltam passos para fechar o mês.");
+      const a = awardXp(s.xpEvents, "month_closed", "M:" + c.month.slice(0, 7), now.toISOString());
+      s.xpEvents = a.events;
+      markActive(s, now);
+      return a.awarded;
+    });
+  },
   exportData() {
     return { exported_at: new Date().toISOString(), modo: "demonstracao", ...load() };
   },
 };
+
+export type MonthStepKey = "lancamentos" | "categorias" | "orcamento" | "aporte" | "patrimonio";
+
+/**
+ * Os cinco passos do fechamento do mês atual, cada um conferido pelos próprios dados.
+ * Quem não usa o livro-caixa (sem contas) tem os dois primeiros dados como feitos, para não ficar travado.
+ * O orçamento conta como feito quando o mês foi planejado; o que ainda está sem destino aparece como dica.
+ */
+export function monthCloseSteps(s: DemoState, now = new Date()) {
+  const month = monthOf(spDate(now));
+  const usesLedger = s.accounts.length > 0;
+  const inMonth = s.transactions.filter((t) => t.date.slice(0, 7) === month.slice(0, 7));
+  const uncategorized = inMonth.filter((t) => !t.transferId && !t.categoryId);
+  const steps: { key: MonthStepKey; done: boolean }[] = [
+    { key: "lancamentos", done: !usesLedger || inMonth.some((t) => t.source !== "recorrente") },
+    { key: "categorias", done: !usesLedger || (inMonth.length > 0 && uncategorized.length === 0) },
+    { key: "orcamento", done: Object.values(s.budget.assigned[month] ?? {}).some((v) => v > 0) },
+    { key: "aporte", done: s.contributions.some((c) => c.month === month) },
+    { key: "patrimonio", done: s.wealthEntries.some((w) => w.month === month) },
+  ];
+  return {
+    month,
+    usesLedger,
+    steps,
+    doneCount: steps.filter((x) => x.done).length,
+    complete: steps.every((x) => x.done),
+    closed: s.xpEvents.some((e) => e.action === "month_closed" && e.periodKey === "M:" + month.slice(0, 7)),
+    uncategorized,
+  };
+}
 
 /** Guarda o valor do item no histórico do mês; no mesmo mês, o novo valor substitui o anterior. */
 function recordValuation(s: DemoState, assetId: string, value: number, now: Date) {
@@ -1534,4 +1576,22 @@ export function inputsFromProfile(p: Pick<Profile, "birthYear" | "goalRetirement
 }
 
 export const CALC_PREFILL_KEY = "calc_prefill";
-export type CalcPrefill = { currentAge: number; retirementAge: number; desiredIncome: number };
+/** O que a pessoa já digitou na calculadora ou na landing, para o onboarding não perguntar de novo. */
+export type CalcPrefill = {
+  currentAge: number;
+  retirementAge: number;
+  desiredIncome: number;
+  initialWealth?: number | null;
+  monthlyContribution?: number | null;
+  inssEstimate?: number | null;
+};
+
+/** Guarda (ou apaga, com null) o que veio da calculadora; vale só nesta aba do navegador. */
+export function setCalcPrefill(p: CalcPrefill | null) {
+  try {
+    if (p) sessionStorage.setItem(CALC_PREFILL_KEY, JSON.stringify(p));
+    else sessionStorage.removeItem(CALC_PREFILL_KEY);
+  } catch {
+    /* armazenamento indisponível */
+  }
+}

@@ -6,7 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { JourneyMap } from "@/components/JourneyMap";
 import { SuggestionCard } from "@/components/portfolio/PortfolioSection";
 import { handleResult, xpToast } from "@/components/feedback";
-import { completedDays, demo, useDemo } from "@/lib/data/demo-store";
+import { completedDays, demo, monthCloseSteps, useDemo, type DemoState } from "@/lib/data/demo-store";
+import { monthYear } from "@/lib/labels";
 import { dataWarnings, journeyHome, missionOfWeek } from "@/lib/data/selectors";
 import { XP } from "@/lib/gamification/rules";
 import type { DailyKind } from "@/lib/journey/journey";
@@ -87,6 +88,8 @@ function JourneyPage() {
 
           <DailyMissionCard mission={j.mission} done={j.missionDone} />
 
+          <MonthCloseCard s={s} />
+
           {s.plan && <SuggestionCard s={s} showValues={!s.profile.hideValues} compact />}
 
           {warnings.length > 0 && (
@@ -156,6 +159,30 @@ function JourneyPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+/** O ritual do mês: quantos dos cinco passos já foram feitos e o atalho para o fechamento. */
+function MonthCloseCard({ s }: { s: DemoState }) {
+  const c = monthCloseSteps(s);
+  return (
+    <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Fechamento do mês">
+      <p className="eyebrow">Fechamento do mês · +{XP.month_closed} XP</p>
+      <h2 className="mt-1 text-lg">{c.closed ? `${monthYear(c.month)} fechado` : `Seu mês: ${c.doneCount} de ${c.steps.length}`}</h2>
+      <Progress value={(c.doneCount / c.steps.length) * 100} className="mt-3 h-2" aria-label={`${c.doneCount} de ${c.steps.length} passos`} />
+      <p className="mt-2 text-sm text-muted-foreground">
+        {c.closed
+          ? "Tudo em dia. O próximo fechamento abre no mês que vem."
+          : c.complete
+            ? "Os cinco passos estão feitos. Falta só fechar."
+            : "Lançar, categorizar, orçar, aportar e atualizar o patrimônio: uns 10 minutos."}
+      </p>
+      {!c.closed && (
+        <Button asChild variant={c.complete ? "default" : "outline"} className="mt-4 w-full">
+          <Link to="/fechamento">{c.complete ? "Fechar o mês" : c.doneCount ? "Continuar o fechamento" : "Começar o fechamento"}</Link>
+        </Button>
+      )}
+    </section>
   );
 }
 

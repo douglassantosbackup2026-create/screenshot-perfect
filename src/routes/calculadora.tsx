@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs, type ScenarioResult } from "@/lib/calc/retirement";
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
-import { DEFAULT_ASSUMPTIONS, CALC_PREFILL_KEY } from "@/lib/data/demo-store";
+import { DEFAULT_ASSUMPTIONS, demo, setCalcPrefill } from "@/lib/data/demo-store";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -56,10 +56,15 @@ function Calculator() {
     return { errors: [] as string[], i, sem: simulate(i, "central", false), com: i.inssEstimate ? simulate(i, "central", true) : null };
   }, [age, retire, income, wealth, monthly, inss]);
 
+  // Leva tudo o que foi digitado para o onboarding, que já abre preenchido (antes ia para um login desativado).
   function start() {
-    if (age && retire && income)
-      sessionStorage.setItem(CALC_PREFILL_KEY, JSON.stringify({ currentAge: age, retirementAge: retire, desiredIncome: income }));
-    navigate({ to: "/entrar" });
+    setCalcPrefill(
+      age && retire && income
+        ? { currentAge: age, retirementAge: retire, desiredIncome: income, initialWealth: wealth, monthlyContribution: monthly, inssEstimate: inss && inss > 0 ? inss : null }
+        : null,
+    );
+    demo.startFresh();
+    navigate({ to: "/onboarding" });
   }
 
   async function sendLead(e: React.FormEvent) {

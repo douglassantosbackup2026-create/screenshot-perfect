@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ConstancyThread } from "@/components/ConstancyThread";
 import { LedgerSection } from "@/components/ledger/LedgerSection";
+import { AreaTabs } from "@/components/nav/areas";
 import type { TxEditing } from "@/components/ledger/TransactionSheet";
 import { NumberField } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
@@ -74,6 +75,7 @@ function Diary() {
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
+      <AreaTabs />
       <h1>Diário</h1>
       <Button className="mt-5 w-full" onClick={() => setLogMonth(current)} variant={currentLogged ? "outline" : "default"}>
         Registrar aporte de {monthName(current)}

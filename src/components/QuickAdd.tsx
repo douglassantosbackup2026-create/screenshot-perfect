@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Landmark, PiggyBank, Plus, Receipt, Target, Wallet, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Landmark, PiggyBank, Plus, Receipt, Target, Wallet, type LucideIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,12 @@ export function QuickAdd({ className }: { className?: string }) {
   const navigate = useNavigate();
 
   const actions: { label: string; hint: string; icon: LucideIcon; go: () => void }[] = [
+    {
+      label: "Fechar o mês",
+      hint: "Os cinco passos do mês, num lugar só",
+      icon: CalendarCheck,
+      go: () => navigate({ to: "/fechamento" }),
+    },
     {
       label: "Registrar aporte",
       hint: "O aporte deste mês, no Diário",

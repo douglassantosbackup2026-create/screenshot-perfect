@@ -70,16 +70,22 @@ function Onboarding() {
   const [debt, setDebt] = useState<Debt | null>(null);
   const [day, setDay] = useState<number | null>(5);
   const [weekly, setWeekly] = useState(true);
+  const [inss, setInss] = useState<number | null>(null);
   const year = Number(spDate(new Date()).slice(0, 4));
 
+  // O que veio da calculadora já preenche as etapas; a pessoa só confirma.
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(CALC_PREFILL_KEY);
       if (!raw) return;
       const p = JSON.parse(raw) as CalcPrefill;
       if (p.currentAge) setBirthYear(year - p.currentAge);
-      if (p.retirementAge >= 45 && p.retirementAge <= 75) setRetire(p.retirementAge);
+      // Fora da faixa da etapa (45 a 75), fica no limite mais próximo em vez de ser ignorada.
+      if (p.retirementAge) setRetire(Math.min(Math.max(p.retirementAge, 45), 75));
       if (p.desiredIncome) setIncome(p.desiredIncome);
+      if (p.initialWealth != null) setWealth(p.initialWealth);
+      if (p.monthlyContribution != null) setContribution(p.monthlyContribution);
+      if (p.inssEstimate) setInss(p.inssEstimate);
     } catch {
       /* ignora */
     }
@@ -108,6 +114,7 @@ function Onboarding() {
     retirementAge: Math.max(base.retirementAge, base.currentAge + 1),
     initialWealth: missing.includes("patrimonio") ? 0 : (wealth ?? 0),
     monthlyContribution: missing.includes("aporte") ? 0 : (contribution ?? 0),
+    inssEstimate: inss,
   };
 
   function skip() {
@@ -146,7 +153,7 @@ function Onboarding() {
       setPassed({});
       return setPlacement(null);
     }
-    if (step === 1) return navigate({ to: "/entrar" });
+    if (step === 1) return navigate({ to: "/" });
     setStep((s) => s - 1);
   }
   function finish() {

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly } from "@/lib/calc/format";
-import { demo, DEFAULT_ASSUMPTIONS, CALC_PREFILL_KEY } from "@/lib/data/demo-store";
+import { demo, DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
 import { SIMULATION_FOOTER } from "@/lib/labels";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 
@@ -32,6 +32,12 @@ function Index() {
   const [age, setAge] = useState<number | null>(30);
   const [retire, setRetire] = useState<number | null>(60);
   const [income, setIncome] = useState<number | null>(8000);
+  // Só leva os números para o onboarding se a pessoa mexeu neles; os valores de exemplo não são dela.
+  const [touched, setTouched] = useState(false);
+  const edit = (set: (v: number | null) => void) => (v: number | null) => {
+    setTouched(true);
+    set(v);
+  };
 
   const result = useMemo(() => {
     if (age == null || retire == null || income == null) return null;
@@ -50,15 +56,9 @@ function Index() {
     return { errors: [], r: simulate(i, "central", false) };
   }, [age, retire, income]);
 
+  /** A única ação de começar da página: todos os botões levam ao onboarding pelo mesmo caminho. */
   function start() {
-    if (age && retire && income)
-      sessionStorage.setItem(CALC_PREFILL_KEY, JSON.stringify({ currentAge: age, retirementAge: retire, desiredIncome: income }));
-    demo.startFresh();
-    navigate({ to: "/onboarding" });
-  }
-
-  function startFree() {
-    sessionStorage.removeItem(CALC_PREFILL_KEY);
+    setCalcPrefill(touched && age && retire && income ? { currentAge: age, retirementAge: retire, desiredIncome: income } : null);
     demo.startFresh();
     navigate({ to: "/onboarding" });
   }
@@ -84,9 +84,10 @@ function Index() {
               Abrir o app
             </Link>
           ) : (
-            <Link to="/entrar" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
-              Entrar
-            </Link>
+            // Enquanto o login não existe, "Entrar" levaria a uma tela sem saída: o topo leva ao mesmo começo da página.
+            <button type="button" onClick={start} className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
+              Começar
+            </button>
           )}
         </div>
       </header>
@@ -98,7 +99,7 @@ function Index() {
       </h1>
       <p className="mt-4 text-lg text-muted-foreground">Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você.</p>
       <div className="mt-6 flex flex-col gap-2">
-        <Button onClick={startFree}>Começar grátis</Button>
+        <Button onClick={start}>Começar grátis</Button>
         <Button variant="ghost" onClick={seeExample}>
           Ver um exemplo
         </Button>
@@ -106,11 +107,11 @@ function Index() {
 
       <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">
         <div className="grid grid-cols-2 gap-4">
-          <NumberField label="Sua idade" value={age} onChange={setAge} suffix="anos" min={16} max={90} />
-          <NumberField label="Aposentar aos" value={retire} onChange={setRetire} suffix="anos" min={30} max={90} />
+          <NumberField label="Sua idade" value={age} onChange={edit(setAge)} suffix="anos" min={16} max={90} />
+          <NumberField label="Aposentar aos" value={retire} onChange={edit(setRetire)} suffix="anos" min={30} max={90} />
         </div>
         <div className="mt-4">
-          <NumberField label="Renda por mês, em valores de hoje" value={income} onChange={setIncome} prefix="R$" min={0} step={100} />
+          <NumberField label="Renda por mês, em valores de hoje" value={income} onChange={edit(setIncome)} prefix="R$" min={0} step={100} />
         </div>
         <div className="mt-6" aria-live="polite">
           {result?.errors.length ? (
@@ -137,12 +138,12 @@ function Index() {
       <ProductPreview />
       <Curriculum />
       <WhatWeDont />
-      <Pricing onStart={startFree} />
+      <Pricing onStart={start} />
       <Faq />
 
       <section className="mt-16 rounded-2xl bg-card shadow-card p-6 text-center">
         <h2>Comece hoje. Leva 5 minutos.</h2>
-        <Button className="mt-5 w-full" onClick={startFree}>
+        <Button className="mt-5 w-full" onClick={start}>
           Começar grátis
         </Button>
       </section>

@@ -41,6 +41,7 @@ function Profile() {
   const navigate = useNavigate();
   const [delOpen, setDelOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
+  const [confirmRestore, setConfirmRestore] = useState(false);
   const earned = new Set(s.achievements.map((a) => a.code));
 
   function exportData() {
@@ -49,6 +50,7 @@ function Profile() {
     a.href = URL.createObjectURL(blob);
     a.download = "meus-dados-previdencia-intelligence.json";
     a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 0);
   }
 
   return (
@@ -134,10 +136,15 @@ function Profile() {
             <NumberField
               label="Dia do mês"
               value={s.profile.reminderDay}
-              onChange={(v) => v && v >= 1 && v <= 28 && demo.updateProfile({ reminderDay: v })}
+              onChange={(v) => {
+                if (v == null) return;
+                if (Number.isInteger(v) && v >= 1 && v <= 28) demo.updateProfile({ reminderDay: v });
+                else toast.error("Escolha um dia entre 1 e 28: assim o lembrete existe em todos os meses.");
+              }}
               min={1}
               max={28}
               step={1}
+              hint="Entre 1 e 28."
             />
           </div>
         )}
@@ -169,8 +176,19 @@ function Profile() {
         <Link to="/sobre" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>
-        <button type="button" className="min-h-11 py-3 text-left" onClick={() => { demo.reset(); toast("Dados de exemplo restaurados."); }}>
-          Restaurar dados de exemplo
+        {/* Restaurar apaga o que a pessoa registrou: pede um segundo toque antes. */}
+        <button
+          type="button"
+          className={cn("min-h-11 py-3 text-left", confirmRestore && "font-semibold text-destructive")}
+          onClick={() => {
+            if (!confirmRestore) return setConfirmRestore(true);
+            demo.reset();
+            setConfirmRestore(false);
+            toast("Dados de exemplo restaurados.");
+          }}
+          onBlur={() => setConfirmRestore(false)}
+        >
+          {confirmRestore ? "Toque de novo: isso substitui tudo o que você registrou" : "Restaurar dados de exemplo"}
         </button>
         <Link to="/" className="min-h-11 py-3 font-semibold text-primary">Sair</Link>
       </nav>

@@ -534,3 +534,40 @@ describe("XP e conquistas das novas funções", () => {
     expect(g.newAchievements).toContain("carteira_com_metas");
   });
 });
+
+describe("fechamento do mês", () => {
+  const month = () => monthOf(spDate(new Date()));
+
+  it("no exemplo da Ana, só falta o aporte; com ele, fecha o mês com XP uma vez e a conquista", async () => {
+    const { demo, monthCloseSteps, makeSeed } = await freshStore();
+    const seed = makeSeed();
+    const before = monthCloseSteps(seed);
+    expect(before.steps.filter((x) => !x.done).map((x) => x.key)).toEqual(["aporte"]);
+    expect(() => demo.closeMonth()).toThrow();
+    demo.logContribution({ month: month(), made: true, amount: 1000, destination: "previdencia" });
+    const r = demo.closeMonth();
+    expect(r.xpAwarded).toBe(50);
+    expect(r.newAchievements).toContain("primeiro_fechamento");
+    expect(demo.closeMonth().xpAwarded).toBe(0);
+  });
+
+  it("quem não usa contas tem os passos do livro-caixa dados como feitos; lançamento sem categoria trava o passo 2", async () => {
+    const { demo, monthCloseSteps } = await freshStore();
+    demo.startFresh();
+    const s0 = JSON.parse(window.localStorage.getItem(KEY)!);
+    expect(monthCloseSteps(s0).steps.map((x) => [x.key, x.done])).toEqual([
+      ["lancamentos", true],
+      ["categorias", true],
+      ["orcamento", false],
+      ["aporte", false],
+      ["patrimonio", false],
+    ]);
+    demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 0 });
+    const cc = JSON.parse(window.localStorage.getItem(KEY)!).accounts[0].id;
+    demo.addTransaction({ accountId: cc, date: spDate(new Date()), amount: -100, payee: "Sem regra" });
+    const s1 = JSON.parse(window.localStorage.getItem(KEY)!);
+    const c = monthCloseSteps(s1);
+    expect(c.steps.slice(0, 2).map((x) => x.done)).toEqual([true, false]);
+    expect(c.uncategorized).toHaveLength(1);
+  });
+});

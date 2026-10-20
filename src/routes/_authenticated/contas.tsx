@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { AreaTabs } from "@/components/nav/areas";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,10 +39,8 @@ function Accounts() {
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-4xl lg:px-8 lg:pb-12">
-      <Link to="/diario" className="inline-flex min-h-10 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={16} aria-hidden /> Diário
-      </Link>
-      <header className="mt-2 flex flex-wrap items-end justify-between gap-4">
+      <AreaTabs />
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1>Contas</h1>
           <p className="mt-1 text-sm text-muted-foreground">Saldos calculados a partir do que você lançou ou importou.</p>
