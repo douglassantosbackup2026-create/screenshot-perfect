@@ -7,6 +7,7 @@ import { formatMonthly } from "@/lib/calc/format";
 import { demo, DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
 import { isDemoMode, setDemoMode, useSession } from "@/lib/data/session";
 import { track } from "@/lib/analytics";
+import { captureUtm } from "@/lib/utm";
 import { SIMULATION_FOOTER } from "@/lib/labels";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 
@@ -76,7 +77,10 @@ function Index() {
   }
 
   const { session } = useSession();
-  useEffect(() => track("landing_view"), []);
+  useEffect(() => {
+    captureUtm();
+    track("landing_view");
+  }, []);
   const [hasProgress, setHasProgress] = useState(false);
   useEffect(() => setHasProgress(isDemoMode()), []);
 

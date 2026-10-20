@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,24 @@ import { DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
 import { useSession } from "@/lib/data/session";
 import { track } from "@/lib/analytics";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
-import { supabase } from "@/integrations/supabase/client";
+import { submitLead } from "@/functions/leads";
+import { captureUtm, getUtm } from "@/lib/utm";
+
+type CalcSearch = { idade?: number; aposentar?: number; renda?: number; patrimonio?: number; aporte?: number; inss?: number };
+const numParam = (v: unknown) => {
+  const x = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(x) && x >= 0 ? x : undefined;
+};
 
 export const Route = createFileRoute("/calculadora")({
+  // O link do e-mail de resultado reabre a calculadora com os mesmos números.
+  validateSearch: (s: Record<string, unknown>): CalcSearch =>
+    Object.fromEntries(
+      (["idade", "aposentar", "renda", "patrimonio", "aporte", "inss"] as const).flatMap((k) => {
+        const v = numParam(s[k]);
+        return v === undefined ? [] : [[k, v]];
+      }),
+    ) as CalcSearch,
   head: () => ({
     meta: [
       { title: "Calculadora — quanto falta para me aposentar sem o INSS" },
@@ -31,12 +46,15 @@ export const Route = createFileRoute("/calculadora")({
 function Calculator() {
   const navigate = useNavigate();
   const { session } = useSession();
-  const [age, setAge] = useState<number | null>(30);
-  const [retire, setRetire] = useState<number | null>(60);
-  const [income, setIncome] = useState<number | null>(8000);
-  const [wealth, setWealth] = useState<number | null>(null);
-  const [monthly, setMonthly] = useState<number | null>(null);
-  const [inss, setInss] = useState<number | null>(null);
+  const q = Route.useSearch();
+  const [age, setAge] = useState<number | null>(q.idade ?? 30);
+  const [retire, setRetire] = useState<number | null>(q.aposentar ?? 60);
+  const [income, setIncome] = useState<number | null>(q.renda ?? 8000);
+  const [wealth, setWealth] = useState<number | null>(q.patrimonio ?? null);
+  const [monthly, setMonthly] = useState<number | null>(q.aporte ?? null);
+  const [inss, setInss] = useState<number | null>(q.inss ?? null);
+  const [emailSent, setEmailSent] = useState(false);
+  useEffect(() => captureUtm(), []);
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -74,13 +92,20 @@ function Calculator() {
     e.preventDefault();
     if (!consent) return;
     setSending(true);
-    const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source: "calculadora" });
-    setSending(false);
-    if (error) {
+    try {
+      const simulation =
+        age && retire && income
+          ? { currentAge: age, retirementAge: retire, desiredIncome: income, initialWealth: wealth, monthlyContribution: monthly, inssEstimate: inss && inss > 0 ? inss : null }
+          : null;
+      const r = await submitLead({ data: { email, source: "calculadora", simulation, utm: getUtm() } });
+      setEmailSent(r.sent);
+      setSent(true);
+      track("calc_done", { lead: true, emailSent: r.sent });
+    } catch {
       toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
-      return;
+    } finally {
+      setSending(false);
     }
-    setSent(true);
   }
 
   return (
@@ -89,7 +114,7 @@ function Calculator() {
         Previdência Intelligence
       </Link>
       <h1 className="mt-6">Quanto falta para me aposentar sem o INSS</h1>
-      <p className="mt-3 text-muted-foreground">Sem login. Nada do que você digita é gravado.</p>
+      <p className="mt-3 text-muted-foreground">Sem login. Nada do que você digita é gravado, a não ser que você peça o resultado por e-mail.</p>
 
       <section className="mt-6 space-y-4 rounded-2xl bg-card shadow-card p-5" aria-label="Seus dados">
         <div className="grid grid-cols-2 gap-4">
@@ -135,7 +160,9 @@ function Calculator() {
       <section className="mt-10">
         <h2 className="text-lg">Quero receber meu resultado por e-mail</h2>
         {sent ? (
-          <p className="mt-3 text-muted-foreground">E-mail salvo. Você pode cancelar quando quiser.</p>
+          <p className="mt-3 text-muted-foreground" role="status">
+            {emailSent ? "Enviamos o resultado para o seu e-mail. Veja também o spam." : "E-mail salvo. Você pode cancelar quando quiser."}
+          </p>
         ) : (
           <form onSubmit={sendLead} className="mt-3 space-y-3">
             <label htmlFor="lead-email" className="sr-only">
@@ -152,7 +179,7 @@ function Calculator() {
             />
             <label className="flex items-start gap-3 text-sm">
               <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
-              Aceito receber e-mails do Previdência Intelligence. Só o e-mail é guardado, sem os valores da simulação.
+              Aceito receber e-mails do Previdência Intelligence. Guardamos o e-mail e esta simulação para enviar o resultado; você cancela quando quiser.
             </label>
             <Button type="submit" variant="outline" className="w-full" disabled={!consent || sending}>
               {sending ? "Salvando…" : "Receber por e-mail"}

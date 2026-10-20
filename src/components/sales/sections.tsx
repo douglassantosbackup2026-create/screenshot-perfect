@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { supabase } from "@/integrations/supabase/client";
+import { submitLead } from "@/functions/leads";
+import { getUtm } from "@/lib/utm";
 import { LESSONS } from "@/content/program";
 import { UNITS } from "@/content/journey";
 import { PLANS, PRICING_NOTE, type PlanTier } from "@/content/pricing";
@@ -196,13 +197,14 @@ function Waitlist({ source, planName }: { source: string; planName: string }) {
     e.preventDefault();
     if (!consent) return;
     setSending(true);
-    const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source });
-    setSending(false);
-    if (error) {
+    try {
+      await submitLead({ data: { email, source: "lista_espera", simulation: null, utm: getUtm() } });
+      setSent(true);
+    } catch {
       toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
-      return;
+    } finally {
+      setSending(false);
     }
-    setSent(true);
   }
 
   if (sent) {
