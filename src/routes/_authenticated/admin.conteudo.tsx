@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
+import { getSession } from "@/lib/data/session";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,13 @@ import { publishBlockers, type ContentStatus } from "@/lib/content-rules";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/conteudo")({
+  // Com login, só quem tem o papel de admin (user_roles); no modo demonstração, edita só neste aparelho.
+  beforeLoad: async () => {
+    const session = await getSession();
+    if (!session) return;
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id);
+    if (!(data ?? []).some((r) => r.role === "admin")) throw redirect({ to: "/hoje" });
+  },
   head: () => ({
     meta: [
       { title: "Admin de conteúdo — Previdência Intelligence" },

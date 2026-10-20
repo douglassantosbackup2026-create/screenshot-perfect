@@ -258,7 +258,12 @@ export const DEFAULT_ASSUMPTIONS = {
 };
 
 let idSeq = 0;
-const newId = () => `${Date.now().toString(36)}-${(idSeq++).toString(36)}`;
+/** Ids no formato do banco (uuid), para o que é criado aqui poder ser gravado com o mesmo id. */
+const newId = (): string => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  const hex = (Date.now().toString(16) + (idSeq++).toString(16).padStart(8, "0") + Math.random().toString(16).slice(2)).padEnd(32, "0").slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+};
 
 /** Pessoa de exemplo "Ana", com os dados do caso A da seção 7.4. */
 export function makeSeed(now = new Date()): DemoState {
@@ -619,12 +624,66 @@ function migrate(raw: DemoState): DemoState {
   };
 }
 
+/** Estado de quem está começando agora: sem plano, sem registros, com as categorias padrão. */
+export function emptyState(now = new Date()): DemoState {
+  const s = makeSeed(now);
+  return {
+    ...s,
+    profile: {
+      ...s.profile,
+      displayName: "",
+      onboardingCompletedAt: null,
+      birthYear: null,
+      workType: null,
+      hasOverdueDebt: null,
+      goalRetirementAge: null,
+      goalIncome: null,
+      objective: null,
+      missingFields: [],
+    },
+    assets: [],
+    assetValuations: [],
+    accounts: [],
+    categories: [...DEFAULT_CATEGORIES],
+    transactions: [],
+    recurring: [],
+    categoryRules: [],
+    budget: { assigned: {}, templates: [] },
+    holdings: [],
+    trades: [],
+    allocationTargets: {},
+    journey: { testedOutUnits: [], dailyMissions: [] },
+    plan: null,
+    snapshots: [],
+    contributions: [],
+    program: { currentDay: 1, startedAt: now.toISOString(), completedAt: null },
+    lessonCompletions: {},
+    answers: {},
+    missionCompletions: [],
+    xpEvents: [],
+    weeks: [],
+    achievements: [],
+    wealthEntries: [],
+    goals: [],
+    challenges: [],
+    days: [],
+    stats: { ...EMPTY_STATS },
+  };
+}
+
 // ---------- Store ----------
+// Dois modos: "demo" guarda o estado neste aparelho (localStorage); "cloud" (com login) mantém o estado só em
+// memória e entrega cada operação ao sincronizador (src/lib/data/cloud.ts), que grava no banco e recarrega de lá.
 let state: DemoState | null = null;
 const listeners = new Set<() => void>();
+let backend: "demo" | "cloud" = "demo";
+
+export type SyncHandler = (op: string, args: unknown[], prev: DemoState, next: DemoState) => void;
+let syncHandler: SyncHandler | null = null;
 
 function load(): DemoState {
   if (state) return state;
+  if (backend === "cloud") return (state = emptyState());
   try {
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;
     state = raw ? migrate(JSON.parse(raw) as DemoState) : makeSeed();
@@ -635,13 +694,32 @@ function load(): DemoState {
 }
 function commit(next: DemoState) {
   state = next;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* armazenamento indisponível */
+  if (backend === "demo") {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      /* armazenamento indisponível */
+    }
   }
   listeners.forEach((l) => l());
 }
+
+/** Liga o modo nuvem (estado vazio até o sincronizador carregar do banco) ou volta ao modo demonstração. */
+export function useBackend(mode: "demo" | "cloud", handler: SyncHandler | null = null) {
+  if (mode === backend && handler === syncHandler) return;
+  backend = mode;
+  syncHandler = handler;
+  state = null;
+  listeners.forEach((l) => l());
+}
+export const currentBackend = () => backend;
+
+/** Troca o estado inteiro pelo que veio do banco (modo nuvem). */
+export function replaceState(next: DemoState) {
+  state = next;
+  listeners.forEach((l) => l());
+}
+export const getState = (): DemoState => load();
 function mutate(fn: (s: DemoState, now: Date) => number): ActionResult {
   const now = new Date();
   const s: DemoState = structuredClone(load());
@@ -671,54 +749,12 @@ export function useDemo(): DemoState {
 }
 
 // ---------- Operações (mesma forma das RPCs) ----------
-export const demo = {
+const rawDemo = {
   reset() {
     commit(makeSeed());
   },
   startFresh() {
-    const s = makeSeed();
-    commit({
-      ...s,
-      profile: {
-        ...s.profile,
-        displayName: "",
-        onboardingCompletedAt: null,
-        birthYear: null,
-        workType: null,
-        hasOverdueDebt: null,
-        goalRetirementAge: null,
-        goalIncome: null,
-        objective: null,
-        missingFields: [],
-      },
-      assets: [],
-      assetValuations: [],
-      accounts: [],
-      categories: [...DEFAULT_CATEGORIES],
-      transactions: [],
-      recurring: [],
-      categoryRules: [],
-      budget: { assigned: {}, templates: [] },
-      holdings: [],
-      trades: [],
-      allocationTargets: {},
-      journey: { testedOutUnits: [], dailyMissions: [] },
-      plan: null,
-      snapshots: [],
-      contributions: [],
-      program: { currentDay: 1, startedAt: new Date().toISOString(), completedAt: null },
-      lessonCompletions: {},
-      answers: {},
-      missionCompletions: [],
-      xpEvents: [],
-      weeks: [],
-      achievements: [],
-      wealthEntries: [],
-      goals: [],
-      challenges: [],
-      days: [],
-      stats: { ...EMPTY_STATS },
-    });
+    commit(emptyState());
   },
   updateProfile(patch: Partial<Profile>) {
     const s = structuredClone(load());
@@ -1291,9 +1327,29 @@ export const demo = {
     });
   },
   exportData() {
-    return { exported_at: new Date().toISOString(), modo: "demonstracao", ...load() };
+    return { exported_at: new Date().toISOString(), modo: backend === "cloud" ? "conta" : "demonstracao", ...load() };
   },
 };
+
+type DemoOps = typeof rawDemo;
+/**
+ * As operações que as telas usam. No modo nuvem, cada uma roda aqui na hora (a tela responde sem esperar a rede)
+ * e o sincronizador recebe o estado de antes e de depois para gravar no banco e recarregar de lá.
+ */
+export const demo: DemoOps = Object.fromEntries(
+  Object.entries(rawDemo).map(([name, fn]) => [
+    name,
+    (...args: unknown[]) => {
+      const run = fn as (...a: unknown[]) => unknown;
+      if (backend !== "cloud" || !syncHandler || name === "exportData") return run(...args);
+      const prev = load();
+      const out = run(...args);
+      const next = load();
+      if (next !== prev || name === "runRecurring") syncHandler(name, args, prev, next);
+      return out;
+    },
+  ]),
+) as DemoOps;
 
 export type MonthStepKey = "lancamentos" | "categorias" | "orcamento" | "aporte" | "patrimonio";
 
@@ -1586,11 +1642,11 @@ export type CalcPrefill = {
   inssEstimate?: number | null;
 };
 
-/** Guarda (ou apaga, com null) o que veio da calculadora; vale só nesta aba do navegador. */
+/** Guarda (ou apaga, com null) o que veio da calculadora. Fica no aparelho: o link de confirmação do e-mail abre outra aba. */
 export function setCalcPrefill(p: CalcPrefill | null) {
   try {
-    if (p) sessionStorage.setItem(CALC_PREFILL_KEY, JSON.stringify(p));
-    else sessionStorage.removeItem(CALC_PREFILL_KEY);
+    if (p) localStorage.setItem(CALC_PREFILL_KEY, JSON.stringify(p));
+    else localStorage.removeItem(CALC_PREFILL_KEY);
   } catch {
     /* armazenamento indisponível */
   }

@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { NumberField } from "@/components/forms";
-import { demo, inputsFromProfile, CALC_PREFILL_KEY, type CalcPrefill, type MissingField, type Objective, type ReviewCadence, type WorkType } from "@/lib/data/demo-store";
+import { currentBackend, demo, getState, inputsFromProfile, CALC_PREFILL_KEY, type CalcPrefill, type MissingField, type Objective, type ReviewCadence, type WorkType } from "@/lib/data/demo-store";
 import { ENGINE_VERSION, simulate, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { Quiz, type QuizResult } from "@/components/Quiz";
@@ -57,7 +57,8 @@ function Onboarding() {
   const [placement, setPlacement] = useState<"intro" | number | null>(null);
   const [passed, setPassed] = useState<Record<number, Record<string, string>>>({});
   const [showTips, setShowTips] = useState(false);
-  const [name, setName] = useState("");
+  // Quem criou a conta já informou o nome no cadastro.
+  const [name, setName] = useState(() => getState().profile.displayName);
   const [objective, setObjective] = useState<Objective | null>(null);
   const [wealth, setWealth] = useState<number | null>(null);
   const [contribution, setContribution] = useState<number | null>(null);
@@ -76,7 +77,7 @@ function Onboarding() {
   // O que veio da calculadora já preenche as etapas; a pessoa só confirma.
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(CALC_PREFILL_KEY);
+      const raw = localStorage.getItem(CALC_PREFILL_KEY);
       if (!raw) return;
       const p = JSON.parse(raw) as CalcPrefill;
       if (p.currentAge) setBirthYear(year - p.currentAge);
@@ -157,7 +158,8 @@ function Onboarding() {
     setStep((s) => s - 1);
   }
   function finish() {
-    demo.startFresh();
+    // No modo demonstração recomeça do zero; com conta, os dados já estão no banco e não podem ser zerados aqui.
+    if (currentBackend() === "demo") demo.startFresh();
     demo.updateProfile({
       displayName: name.trim(),
       birthYear: birthYearKnown,
@@ -176,7 +178,7 @@ function Onboarding() {
     demo.savePlan(inputs, "created");
     // Reenvia, em ordem, as unidades em que a pessoa passou no teste (mesma regra do banco).
     for (const u of Object.keys(passed).map(Number).sort((a, b) => a - b)) demo.submitPlacement(u, passed[u]!);
-    sessionStorage.removeItem(CALC_PREFILL_KEY);
+    localStorage.removeItem(CALC_PREFILL_KEY);
     navigate({ to: "/hoje" });
   }
 

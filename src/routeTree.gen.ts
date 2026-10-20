@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
@@ -37,6 +39,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalculadoraRoute = CalculadoraRouteImport.update({
   id: '/calculadora',
   path: '/calculadora',
@@ -45,6 +52,11 @@ const CalculadoraRoute = CalculadoraRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SobreRoute = SobreRouteImport.update({
@@ -122,8 +134,10 @@ const AuthenticatedProgramaDiaRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
@@ -141,8 +155,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
@@ -162,8 +178,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
@@ -183,8 +201,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cadastro'
     | '/calculadora'
     | '/entrar'
+    | '/redefinir-senha'
     | '/sobre'
     | '/contas'
     | '/diario'
@@ -202,8 +222,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cadastro'
     | '/calculadora'
     | '/entrar'
+    | '/redefinir-senha'
     | '/sobre'
     | '/contas'
     | '/diario'
@@ -222,8 +244,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/cadastro'
     | '/calculadora'
     | '/entrar'
+    | '/redefinir-senha'
     | '/sobre'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
@@ -243,8 +267,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  CadastroRoute: typeof CadastroRoute
   CalculadoraRoute: typeof CalculadoraRoute
   EntrarRoute: typeof EntrarRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SobreRoute: typeof SobreRoute
 }
 
@@ -264,6 +290,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calculadora': {
       id: '/calculadora'
       path: '/calculadora'
@@ -276,6 +309,13 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/entrar'
       preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sobre': {
@@ -417,8 +457,10 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  CadastroRoute: CadastroRoute,
   CalculadoraRoute: CalculadoraRoute,
   EntrarRoute: EntrarRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   SobreRoute: SobreRoute,
 }
 export const routeTree = rootRouteImport

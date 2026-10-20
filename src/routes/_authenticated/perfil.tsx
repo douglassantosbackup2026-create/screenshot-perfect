@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { NumberField } from "@/components/forms";
 import { ACH_ICONS, handleResult } from "@/components/feedback";
 import { demo, useDemo } from "@/lib/data/demo-store";
+import { useCloudStatus } from "@/lib/data/cloud";
+import { account, setDemoMode, useSession } from "@/lib/data/session";
 import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +44,18 @@ function Profile() {
   const [delOpen, setDelOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [confirmRestore, setConfirmRestore] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { session } = useSession();
+  const cloud = useCloudStatus();
+
+  async function signOut() {
+    await account.signOut();
+    navigate({ to: "/" });
+  }
+  function leaveDemo() {
+    setDemoMode(false);
+    navigate({ to: "/" });
+  }
   const earned = new Set(s.achievements.map((a) => a.code));
 
   function exportData() {
@@ -175,22 +189,40 @@ function Profile() {
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
         <Link to="/sobre" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
-        <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>
-        {/* Restaurar apaga o que a pessoa registrou: pede um segundo toque antes. */}
-        <button
-          type="button"
-          className={cn("min-h-11 py-3 text-left", confirmRestore && "font-semibold text-destructive")}
-          onClick={() => {
-            if (!confirmRestore) return setConfirmRestore(true);
-            demo.reset();
-            setConfirmRestore(false);
-            toast("Dados de exemplo restaurados.");
-          }}
-          onBlur={() => setConfirmRestore(false)}
-        >
-          {confirmRestore ? "Toque de novo: isso substitui tudo o que você registrou" : "Restaurar dados de exemplo"}
-        </button>
-        <Link to="/" className="min-h-11 py-3 font-semibold text-primary">Sair</Link>
+        {(!session || cloud.isAdmin) && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
+        {/* Só no modo demonstração: restaurar apaga o que a pessoa registrou, então pede um segundo toque. */}
+        {!session && (
+          <button
+            type="button"
+            className={cn("min-h-11 py-3 text-left", confirmRestore && "font-semibold text-destructive")}
+            onClick={() => {
+              if (!confirmRestore) return setConfirmRestore(true);
+              demo.reset();
+              setConfirmRestore(false);
+              toast("Dados de exemplo restaurados.");
+            }}
+            onBlur={() => setConfirmRestore(false)}
+          >
+            {confirmRestore ? "Toque de novo: isso substitui tudo o que você registrou" : "Restaurar dados de exemplo"}
+          </button>
+        )}
+        {session ? (
+          <>
+            <p className="pt-3 text-xs text-muted-foreground">Conectado como {session.user.email}</p>
+            <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
+              Sair
+            </button>
+          </>
+        ) : (
+          <>
+            <Link to="/cadastro" className="min-h-11 py-3 font-semibold text-primary">
+              Criar conta e salvar de verdade
+            </Link>
+            <button type="button" className="min-h-11 py-3 text-left" onClick={leaveDemo}>
+              Sair do modo demonstração
+            </button>
+          </>
+        )}
       </nav>
 
       <Dialog open={delOpen} onOpenChange={setDelOpen}>
@@ -198,7 +230,9 @@ function Profile() {
           <DialogHeader>
             <DialogTitle>Excluir minha conta</DialogTitle>
             <DialogDescription>
-              Isso apaga seu plano, seus registros e seu progresso. Não dá para desfazer. Digite EXCLUIR para confirmar.
+              {session
+                ? "Isso apaga sua conta, seu plano, seus registros e seu progresso do nosso banco. Não dá para desfazer. Baixe seus dados antes, se quiser. Digite EXCLUIR para confirmar."
+                : "Isso apaga o que você registrou neste aparelho. Não dá para desfazer. Digite EXCLUIR para confirmar."}
             </DialogDescription>
           </DialogHeader>
           <label htmlFor="confirm" className="sr-only">Digite EXCLUIR</label>
@@ -206,14 +240,29 @@ function Profile() {
           <DialogFooter>
             <Button
               variant="destructive"
-              disabled={confirm !== "EXCLUIR"}
-              onClick={() => {
-                demo.startFresh();
-                setDelOpen(false);
-                navigate({ to: "/" });
+              disabled={confirm !== "EXCLUIR" || deleting}
+              onClick={async () => {
+                if (!session) {
+                  demo.startFresh();
+                  setDemoMode(false);
+                  setDelOpen(false);
+                  navigate({ to: "/" });
+                  return;
+                }
+                setDeleting(true);
+                try {
+                  await account.deleteAccount();
+                  setDelOpen(false);
+                  toast("Sua conta e seus dados foram excluídos.");
+                  navigate({ to: "/" });
+                } catch (e) {
+                  toast.error((e as Error).message);
+                } finally {
+                  setDeleting(false);
+                }
               }}
             >
-              Excluir definitivamente
+              {deleting ? "Excluindo…" : "Excluir definitivamente"}
             </Button>
           </DialogFooter>
         </DialogContent>

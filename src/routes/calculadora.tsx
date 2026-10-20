@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs, type ScenarioResult } from "@/lib/calc/retirement";
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
-import { DEFAULT_ASSUMPTIONS, demo, setCalcPrefill } from "@/lib/data/demo-store";
+import { DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
+import { useSession } from "@/lib/data/session";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/calculadora")({
 
 function Calculator() {
   const navigate = useNavigate();
+  const { session } = useSession();
   const [age, setAge] = useState<number | null>(30);
   const [retire, setRetire] = useState<number | null>(60);
   const [income, setIncome] = useState<number | null>(8000);
@@ -56,15 +58,14 @@ function Calculator() {
     return { errors: [] as string[], i, sem: simulate(i, "central", false), com: i.inssEstimate ? simulate(i, "central", true) : null };
   }, [age, retire, income, wealth, monthly, inss]);
 
-  // Leva tudo o que foi digitado para o onboarding, que já abre preenchido (antes ia para um login desativado).
+  // Leva tudo o que foi digitado para o onboarding, que abre preenchido depois de criar a conta.
   function start() {
     setCalcPrefill(
       age && retire && income
         ? { currentAge: age, retirementAge: retire, desiredIncome: income, initialWealth: wealth, monthlyContribution: monthly, inssEstimate: inss && inss > 0 ? inss : null }
         : null,
     );
-    demo.startFresh();
-    navigate({ to: "/onboarding" });
+    navigate({ to: session ? "/hoje" : "/cadastro" });
   }
 
   async function sendLead(e: React.FormEvent) {

@@ -5,6 +5,7 @@ import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly } from "@/lib/calc/format";
 import { demo, DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
+import { isDemoMode, setDemoMode, useSession } from "@/lib/data/session";
 import { SIMULATION_FOOTER } from "@/lib/labels";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 
@@ -56,20 +57,26 @@ function Index() {
     return { errors: [], r: simulate(i, "central", false) };
   }, [age, retire, income]);
 
-  /** A única ação de começar da página: todos os botões levam ao onboarding pelo mesmo caminho. */
+  /**
+   * A única ação de começar da página: cria a conta (os números digitados vão junto para o onboarding).
+   * Quem já está logado vai direto para o app.
+   */
   function start() {
+    if (session) return void navigate({ to: "/hoje" });
     setCalcPrefill(touched && age && retire && income ? { currentAge: age, retirementAge: retire, desiredIncome: income } : null);
-    demo.startFresh();
-    navigate({ to: "/onboarding" });
+    navigate({ to: "/cadastro" });
   }
 
+  /** Exemplo sem conta: modo demonstração, com os dados da Ana, só neste aparelho. */
   function seeExample() {
+    setDemoMode(true);
     demo.reset();
     navigate({ to: "/hoje" });
   }
 
+  const { session } = useSession();
   const [hasProgress, setHasProgress] = useState(false);
-  useEffect(() => setHasProgress(!!localStorage.getItem("pi_demo_state_v1")), []);
+  useEffect(() => setHasProgress(isDemoMode()), []);
 
   return (
     <>
@@ -79,15 +86,14 @@ function Index() {
             <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
             Previdência Intelligence
           </span>
-          {hasProgress ? (
+          {session || hasProgress ? (
             <Link to="/hoje" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
               Abrir o app
             </Link>
           ) : (
-            // Enquanto o login não existe, "Entrar" levaria a uma tela sem saída: o topo leva ao mesmo começo da página.
-            <button type="button" onClick={start} className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
-              Começar
-            </button>
+            <Link to="/entrar" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
+              Entrar
+            </Link>
           )}
         </div>
       </header>
