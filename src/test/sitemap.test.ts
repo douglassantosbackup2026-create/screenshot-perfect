@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-router", () => ({ createFileRoute: () => () => ({}) }));
-const { sitemapXml, PUBLIC_PAGES } = await import("./sitemap[.]xml");
+const { sitemapXml, PUBLIC_PAGES } = await import("@/routes/sitemap[.]xml");
 
 describe("sitemap", () => {
   it("lista só as páginas públicas, com o domínio de quem pediu", () => {
