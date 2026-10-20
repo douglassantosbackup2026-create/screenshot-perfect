@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
+import { sendEmail } from "./email";
 
 export type LeadSimulation = {
   currentAge: number;
@@ -104,18 +105,6 @@ function origin(): string {
   } catch {
     return "";
   }
-}
-
-async function sendEmail(to: string, msg: { subject: string; html: string; text: string }) {
-  const key = process.env["RESEND_API_KEY"];
-  const from = process.env["RESEND_FROM"] ?? "Previdência Intelligence <resultado@resend.dev>";
-  if (!key) return false;
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject: msg.subject, html: msg.html, text: msg.text }),
-  });
-  return res.ok;
 }
 
 /**

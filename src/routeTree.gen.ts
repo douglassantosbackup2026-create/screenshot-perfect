@@ -32,6 +32,8 @@ import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
+import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
+import { Route as ApiLembretesSairRouteImport } from './routes/api/lembretes/sair'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -149,6 +151,16 @@ const AuthenticatedProgramaDiaRoute =
     path: '/programa/$dia',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiCronLembretesRoute = ApiCronLembretesRouteImport.update({
+  id: '/api/cron/lembretes',
+  path: '/api/cron/lembretes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLembretesSairRoute = ApiLembretesSairRouteImport.update({
+  id: '/api/lembretes/sair',
+  path: '/api/lembretes/sair',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -173,6 +185,8 @@ export interface FileRoutesByFullPath {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/cron/lembretes': typeof ApiCronLembretesRoute
+  '/api/lembretes/sair': typeof ApiLembretesSairRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,6 +211,8 @@ export interface FileRoutesByTo {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/cron/lembretes': typeof ApiCronLembretesRoute
+  '/api/lembretes/sair': typeof ApiLembretesSairRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -223,6 +239,8 @@ export interface FileRoutesById {
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/cron/lembretes': typeof ApiCronLembretesRoute
+  '/api/lembretes/sair': typeof ApiLembretesSairRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -249,6 +267,8 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
+    | '/api/cron/lembretes'
+    | '/api/lembretes/sair'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -273,6 +293,8 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
+    | '/api/cron/lembretes'
+    | '/api/lembretes/sair'
   id:
     | '__root__'
     | '/'
@@ -298,6 +320,8 @@ export interface FileRouteTypes {
     | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/programa/$dia'
+    | '/api/cron/lembretes'
+    | '/api/lembretes/sair'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -311,6 +335,8 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SobreRoute: typeof SobreRoute
   TermosRoute: typeof TermosRoute
+  ApiCronLembretesRoute: typeof ApiCronLembretesRoute
+  ApiLembretesSairRoute: typeof ApiLembretesSairRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -476,6 +502,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProgramaDiaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/cron/lembretes': {
+      id: '/api/cron/lembretes'
+      path: '/api/cron/lembretes'
+      fullPath: '/api/cron/lembretes'
+      preLoaderRoute: typeof ApiCronLembretesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lembretes/sair': {
+      id: '/api/lembretes/sair'
+      path: '/api/lembretes/sair'
+      fullPath: '/api/lembretes/sair'
+      preLoaderRoute: typeof ApiLembretesSairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -525,6 +565,8 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SobreRoute: SobreRoute,
   TermosRoute: TermosRoute,
+  ApiCronLembretesRoute: ApiCronLembretesRoute,
+  ApiLembretesSairRoute: ApiLembretesSairRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

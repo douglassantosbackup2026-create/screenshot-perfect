@@ -1,0 +1,22 @@
+# Dispara os lembretes por e-mail uma vez por dia, às 9h de Brasília (12h UTC).
+# Precisa de dois segredos no repositório (Settings → Secrets and variables → Actions):
+#   REMINDERS_URL  endereço publicado do app, por exemplo https://seuapp.lovable.app
+#   CRON_SECRET    o mesmo valor configurado no ambiente do app
+name: Lembretes por e-mail
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/lembretes
+        env:
+          REMINDERS_URL: ${{ secrets.REMINDERS_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$REMINDERS_URL" ] || [ -z "$CRON_SECRET" ]; then echo "Configure REMINDERS_URL e CRON_SECRET"; exit 0; fi
+          curl --fail --silent --show-error -X POST "$REMINDERS_URL/api/cron/lembretes" -H "Authorization: Bearer $CRON_SECRET"
