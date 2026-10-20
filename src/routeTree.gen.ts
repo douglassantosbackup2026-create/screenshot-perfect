@@ -16,6 +16,7 @@ import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
@@ -64,6 +65,11 @@ const PrivacidadeRoute = PrivacidadeRouteImport.update({
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   id: '/redefinir-senha',
   path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SobreRoute = SobreRouteImport.update({
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
   '/contas': typeof AuthenticatedContasRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
   '/contas': typeof AuthenticatedContasRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/sitemap.xml'
     | '/sobre'
     | '/termos'
     | '/contas'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/sitemap.xml'
     | '/sobre'
     | '/termos'
     | '/contas'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/privacidade'
     | '/redefinir-senha'
+    | '/sitemap.xml'
     | '/sobre'
     | '/termos'
     | '/_authenticated/contas'
@@ -296,6 +308,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SobreRoute: typeof SobreRoute
   TermosRoute: typeof TermosRoute
 }
@@ -349,6 +362,13 @@ declare module '@tanstack/react-router' {
       path: '/redefinir-senha'
       fullPath: '/redefinir-senha'
       preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sobre': {
@@ -502,6 +522,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SobreRoute: SobreRoute,
   TermosRoute: TermosRoute,
 }

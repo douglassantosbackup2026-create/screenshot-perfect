@@ -231,20 +231,22 @@ function Waitlist({ source, planName }: { source: string; planName: string }) {
   );
 }
 
+/** Perguntas frequentes (também vão para os dados estruturados da landing). */
+export const FAQ: [string, string][] = [
+  ["Isso é um investimento?", "Não. É um programa de educação e planejamento. Você escolhe onde e como investir."],
+  ["Preciso dar dados do meu banco?", "Não. Você só informa valores aproximados, se quiser."],
+  ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
+  ["E se eu perder um dia?", "Tudo bem. Até dois dias por semana ficam protegidos e sua sequência continua."],
+  ["Tem ranking de patrimônio?", "Não. Você só se compara com você mesmo. O app reconhece hábitos e progresso, nunca quanto dinheiro alguém tem."],
+  ["Os valores são garantidos?", "Não. São simulações com premissas que você vê e pode mudar."],
+];
+
 export function Faq() {
-  const qs: [string, string][] = [
-    ["Isso é um investimento?", "Não. É um programa de educação e planejamento. Você escolhe onde e como investir."],
-    ["Preciso dar dados do meu banco?", "Não. Você só informa valores aproximados, se quiser."],
-    ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
-    ["E se eu perder um dia?", "Tudo bem. Até dois dias por semana ficam protegidos e sua sequência continua."],
-    ["Tem ranking de patrimônio?", "Não. Você só se compara com você mesmo. O app reconhece hábitos e progresso, nunca quanto dinheiro alguém tem."],
-    ["Os valores são garantidos?", "Não. São simulações com premissas que você vê e pode mudar."],
-  ];
   return (
     <section className="mt-16">
       <h2>Perguntas frequentes</h2>
       <Accordion type="single" collapsible className="mt-4">
-        {qs.map(([q, a]) => (
+        {FAQ.map(([q, a]) => (
           <AccordionItem key={q} value={q}>
             <AccordionTrigger className="text-left">{q}</AccordionTrigger>
             <AccordionContent className="text-muted-foreground">{a}</AccordionContent>

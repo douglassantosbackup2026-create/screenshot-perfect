@@ -9,7 +9,7 @@ import { isDemoMode, setDemoMode, useSession } from "@/lib/data/session";
 import { track } from "@/lib/analytics";
 import { captureUtm } from "@/lib/utm";
 import { SIMULATION_FOOTER } from "@/lib/labels";
-import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
+import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq, FAQ } from "@/components/sales/sections";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,6 +24,31 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content: "Um plano de aposentadoria que não depende do governo — e que você consegue seguir.",
+      },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    // Dados estruturados: o app e as perguntas frequentes, para os buscadores entenderem a página.
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebApplication",
+              name: "Previdência Intelligence",
+              applicationCategory: "FinanceApplication",
+              operatingSystem: "Web",
+              inLanguage: "pt-BR",
+              description: "Plano de aposentadoria sem depender do INSS, orçamento por envelopes e evolução do patrimônio.",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
+            },
+            {
+              "@type": "FAQPage",
+              mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+            },
+          ],
+        }),
       },
     ],
   }),

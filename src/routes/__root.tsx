@@ -16,6 +16,10 @@ import { ConsentBanner } from "@/components/ConsentBanner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
+const FONTS = "https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Poppins:wght@400;500;600;700;800&display=swap";
+/** Endereço público (para a imagem de compartilhamento, que precisa ser absoluta). Sem a variável, fica relativa. */
+const SITE = ((import.meta.env["VITE_PUBLIC_SITE_URL"] as string | undefined) ?? "").replace(/\/+$/, "");
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -85,7 +89,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Previdência Intelligence" },
       { name: "description", content: "Um plano de aposentadoria que não depende do governo — e que você consegue seguir." },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Previdência Intelligence" },
+      { property: "og:locale", content: "pt_BR" },
+      { property: "og:image", content: `${SITE}/og-image.png` },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: `${SITE}/og-image.png` },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
     ],
     links: [
       {
@@ -93,12 +105,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Poppins:wght@400;500;600;700;800&display=swap",
-      },
+      // Fontes: pré-carregadas e com display=swap, para o texto aparecer na hora com a fonte do sistema.
+      { rel: "preload", as: "style", href: FONTS },
+      { rel: "stylesheet", href: FONTS },
     ],
   }),
   shellComponent: RootShell,
@@ -123,6 +136,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // App instalável (PWA): só no site publicado, fora do preview do editor (lá, um cache atrapalharia as edições).
+  useEffect(() => {
+    if (!import.meta.env.PROD || !("serviceWorker" in navigator) || window.self !== window.top) return;
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
