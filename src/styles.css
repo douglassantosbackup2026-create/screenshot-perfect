@@ -10,11 +10,11 @@
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
- * The :root and .dark blocks define the actual color values using oklch.
+ * The :root block defines the actual color values using oklch (single dark theme).
  * All colors MUST use oklch format.
  *
  * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 1. Add the variable to :root
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
@@ -59,80 +59,48 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
-  --radius-button: 10px;
+  --font-display: "Oswald", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --radius-button: 9999px;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -16px rgb(0 0 0 / 0.7);
 }
 
 :root {
+  /* Black Card: fundo quase preto, cartões grafite e o amarelo Soldiers #F6C800 como cor principal. */
+  color-scheme: dark;
   --radius: 1rem;
-  --background: oklch(0.974 0.003 174.5);
-  --foreground: oklch(0.288 0.032 182.5);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.288 0.032 182.5);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.288 0.032 182.5);
-  --primary: oklch(0.445 0.063 202.6);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.938 0.007 174.4);
-  --secondary-foreground: oklch(0.288 0.032 182.5);
-  --muted: oklch(0.938 0.007 174.4);
-  --muted-foreground: oklch(0.524 0.025 181.8);
-  --accent: oklch(0.758 0.147 80.8);
-  --accent-foreground: oklch(0.288 0.032 182.5);
-  --destructive: oklch(0.544 0.144 29.9);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.877 0.012 176.3);
-  --input: oklch(0.877 0.012 176.3);
-  --ring: oklch(0.445 0.063 202.6);
-  --chart-1: oklch(0.445 0.063 202.6);
-  --chart-2: oklch(0.711 0.084 184.5);
-  --chart-3: oklch(0.524 0.025 181.8);
-  --chart-4: oklch(0.758 0.147 80.8);
-  --chart-5: oklch(0.366 0.031 183);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.288 0.032 182.5);
-  --sidebar-primary: oklch(0.445 0.063 202.6);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.938 0.007 174.4);
-  --sidebar-accent-foreground: oklch(0.288 0.032 182.5);
-  --sidebar-border: oklch(0.877 0.012 176.3);
-  --sidebar-ring: oklch(0.445 0.063 202.6);
-}
-
-.dark {
-  --background: oklch(0.233 0.021 185.3);
-  --foreground: oklch(0.945 0.009 171.8);
-  --card: oklch(0.272 0.026 183.3);
-  --card-foreground: oklch(0.945 0.009 171.8);
-  --popover: oklch(0.272 0.026 183.3);
-  --popover-foreground: oklch(0.945 0.009 171.8);
-  --primary: oklch(0.711 0.084 184.5);
-  --primary-foreground: oklch(0.224 0.023 186.1);
-  --secondary: oklch(0.306 0.027 184.6);
-  --secondary-foreground: oklch(0.945 0.009 171.8);
-  --muted: oklch(0.306 0.027 184.6);
-  --muted-foreground: oklch(0.746 0.024 179.7);
-  --accent: oklch(0.822 0.141 83.7);
-  --accent-foreground: oklch(0.224 0.023 186.1);
-  --destructive: oklch(0.69 0.129 29);
-  --destructive-foreground: oklch(0.224 0.023 186.1);
-  --border: oklch(0.366 0.031 183);
-  --input: oklch(0.366 0.031 183);
-  --ring: oklch(0.711 0.084 184.5);
-  --chart-1: oklch(0.711 0.084 184.5);
-  --chart-2: oklch(0.445 0.063 202.6);
-  --chart-3: oklch(0.746 0.024 179.7);
-  --chart-4: oklch(0.822 0.141 83.7);
-  --chart-5: oklch(0.945 0.009 171.8);
-  --sidebar: oklch(0.272 0.026 183.3);
-  --sidebar-foreground: oklch(0.945 0.009 171.8);
-  --sidebar-primary: oklch(0.711 0.084 184.5);
-  --sidebar-primary-foreground: oklch(0.224 0.023 186.1);
-  --sidebar-accent: oklch(0.306 0.027 184.6);
-  --sidebar-accent-foreground: oklch(0.945 0.009 171.8);
-  --sidebar-border: oklch(0.366 0.031 183);
-  --sidebar-ring: oklch(0.711 0.084 184.5);
+  --background: oklch(0.154 0.002 106.6);
+  --foreground: oklch(0.969 0.004 106.5);
+  --card: oklch(0.204 0.004 106.7);
+  --card-foreground: oklch(0.969 0.004 106.5);
+  --popover: oklch(0.204 0.004 106.7);
+  --popover-foreground: oklch(0.969 0.004 106.5);
+  --primary: oklch(0.848 0.174 92);
+  --primary-foreground: oklch(0.154 0.002 106.6);
+  --secondary: oklch(0.251 0.006 106.8);
+  --secondary-foreground: oklch(0.969 0.004 106.5);
+  --muted: oklch(0.251 0.006 106.8);
+  --muted-foreground: oklch(0.718 0.012 95.2);
+  --accent: oklch(0.848 0.174 92);
+  --accent-foreground: oklch(0.154 0.002 106.6);
+  --destructive: oklch(0.711 0.166 22.2);
+  --destructive-foreground: oklch(0.154 0.002 106.6);
+  --border: oklch(0.292 0.005 106.7);
+  --input: oklch(0.292 0.005 106.7);
+  --ring: oklch(0.848 0.174 92);
+  --chart-1: oklch(0.848 0.174 92);
+  --chart-2: oklch(0.801 0.023 83.3);
+  --chart-3: oklch(0.918 0.011 95.2);
+  --chart-4: oklch(0.718 0.012 95.2);
+  --chart-5: oklch(0.573 0.009 91.5);
+  --sidebar: oklch(0.204 0.004 106.7);
+  --sidebar-foreground: oklch(0.969 0.004 106.5);
+  --sidebar-primary: oklch(0.848 0.174 92);
+  --sidebar-primary-foreground: oklch(0.154 0.002 106.6);
+  --sidebar-accent: oklch(0.251 0.006 106.8);
+  --sidebar-accent-foreground: oklch(0.969 0.004 106.5);
+  --sidebar-border: oklch(0.292 0.005 106.7);
+  --sidebar-ring: oklch(0.848 0.174 92);
 }
 
 @layer base {
@@ -148,22 +116,37 @@
   body {
     font-family: var(--font-sans);
     font-size: 16px;
+    font-weight: 500;
     line-height: 24px;
     -webkit-font-smoothing: antialiased;
   }
+  strong, b {
+    font-weight: 700;
+  }
+  /* Títulos leves em Poppins; Oswald (font-display) fica para os números de destaque. */
   h1, h2, h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-weight: 600;
     text-transform: none;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
-  h1 { font-size: 28px; line-height: 34px; }
+  h1 { font-size: 30px; line-height: 36px; }
   h2 { font-size: 22px; line-height: 28px; }
   h3 { font-size: 18px; line-height: 24px; }
   :focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
+}
+
+/* Rótulo pequeno em amarelo acima dos blocos. */
+@utility eyebrow {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-primary);
 }
 
 @utility money {

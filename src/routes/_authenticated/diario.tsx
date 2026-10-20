@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ConstancyThread } from "@/components/ConstancyThread";
+import { LedgerSection } from "@/components/ledger/LedgerSection";
+import type { TxEditing } from "@/components/ledger/TransactionSheet";
 import { NumberField } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
 import { demo, useDemo, type Contribution, type Destination } from "@/lib/data/demo-store";
@@ -16,13 +18,16 @@ import { DESTINATIONS, achievementInfo, monthName, monthYear, REASON_LABEL } fro
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 
 export const Route = createFileRoute("/_authenticated/diario")({
-  validateSearch: (s: Record<string, unknown>): { registrar?: boolean } => (s['registrar'] ? { registrar: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { registrar?: boolean; lancar?: boolean } => ({
+    ...(s["registrar"] ? { registrar: true } : {}),
+    ...(s["lancar"] ? { lancar: true } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Diário — Previdência Intelligence" },
-      { name: "description", content: "O fio da constância: um ponto por mês, a cada aporte registrado." },
+      { name: "description", content: "O fio da constância e o dia a dia do dinheiro: aportes, gastos, receitas e extratos." },
       { property: "og:title", content: "Diário — Previdência Intelligence" },
-      { property: "og:description", content: "O fio da constância: um ponto por mês, a cada aporte registrado." },
+      { property: "og:description", content: "O fio da constância e o dia a dia do dinheiro: aportes, gastos, receitas e extratos." },
     ],
   }),
   component: Diary,
@@ -30,20 +35,27 @@ export const Route = createFileRoute("/_authenticated/diario")({
 
 function Diary() {
   const s = useDemo();
-  const { registrar } = Route.useSearch();
+  const { registrar, lancar } = Route.useSearch();
   const navigate = useNavigate();
   const current = monthOf(spDate(new Date()));
   const [logMonth, setLogMonth] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
-  const [showValues, setShowValues] = useState(false);
+  const [showValues, setShowValues] = useState(!s.profile.hideValues);
+  const [txEditing, setTxEditing] = useState<TxEditing>(null);
 
   useEffect(() => {
-    if (registrar) {
-      setLogMonth(current);
+    if (registrar || lancar) {
+      if (registrar) setLogMonth(current);
+      if (lancar) setTxEditing({ tx: null });
       navigate({ to: "/diario", search: {}, replace: true });
     }
-  }, [registrar, current, navigate]);
+  }, [registrar, lancar, current, navigate]);
+
+  // Recorrências vencidas entram ao abrir o Diário; rodar de novo não duplica.
+  useEffect(() => {
+    demo.runRecurring();
+  }, []);
 
   const months = threadMonths(s.contributions);
   const withContribution = months.filter((m) => m.state === "aporte").length;
@@ -61,7 +73,7 @@ function Diary() {
   const currentLogged = s.contributions.some((c) => c.month === current);
 
   return (
-    <main className="mx-auto w-full max-w-[480px] px-5 pb-28 pt-8">
+    <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <h1>Diário</h1>
       <Button className="mt-5 w-full" onClick={() => setLogMonth(current)} variant={currentLogged ? "outline" : "default"}>
         Registrar aporte de {monthName(current)}
@@ -74,7 +86,7 @@ function Diary() {
         <button
           type="button"
           onClick={() => setShowValues((v) => !v)}
-          className="flex min-h-11 items-center gap-2 rounded-[10px] px-2 text-muted-foreground hover:bg-muted"
+          className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-muted-foreground hover:bg-muted"
           aria-pressed={showValues}
         >
           {showValues ? <EyeOff size={18} strokeWidth={1.75} aria-hidden /> : <Eye size={18} strokeWidth={1.75} aria-hidden />}
@@ -93,6 +105,8 @@ function Diary() {
           }))}
         />
       </section>
+
+      <LedgerSection s={s} showValues={showValues} editing={txEditing} setEditing={setTxEditing} />
 
       <LogSheet
         month={logMonth}
@@ -129,7 +143,7 @@ function LogSheet({ month, onClose, onSaved }: { month: string | null; onClose: 
       if (didContribute) {
         xpToast(`Aporte de ${monthName(month!)} registrado.`, r.xpAwarded);
         onSaved(month!);
-      } else toast("Tudo bem. Este mês fica marcado e o plano segue.");
+      } else xpToast("Tudo bem. Este mês fica registrado e o plano segue.", r.xpAwarded);
       handleResult(r);
       onClose();
     } catch (e) {
@@ -141,10 +155,10 @@ function LogSheet({ month, onClose, onSaved }: { month: string | null; onClose: 
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle className="font-display text-xl">Registrar aporte</SheetTitle>
+          <SheetTitle className="text-xl font-semibold">Registrar aporte</SheetTitle>
           <SheetDescription>
             {isCurrent ? "Você fez um aporte este mês?" : `Você fez um aporte em ${monthYear(month)}?`}
-            {!isRecent && " Meses antigos ficam no fio, sem XP."}
+            {isRecent ? " O XP vem de registrar o mês, com ou sem aporte, nunca do valor." : " Meses antigos ficam no fio, sem XP."}
           </SheetDescription>
         </SheetHeader>
         {made === null ? (
@@ -201,12 +215,12 @@ function DetailSheet({ month, items, onClose }: { month: string | null; items: C
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle className="font-display text-xl">{monthYear(month)}</SheetTitle>
+          <SheetTitle className="text-xl font-semibold">{monthYear(month)}</SheetTitle>
           <SheetDescription>Só você vê estes valores.</SheetDescription>
         </SheetHeader>
         <ul className="mt-4 space-y-4 pb-4">
           {items.map((c) => (
-            <li key={c.id} className="rounded-2xl border border-border p-4">
+            <li key={c.id} className="rounded-2xl bg-card shadow-card p-4">
               {editing === c.id ? (
                 <div className="space-y-3">
                   <NumberField label="Valor" value={amount} onChange={setAmount} prefix="R$" optional />

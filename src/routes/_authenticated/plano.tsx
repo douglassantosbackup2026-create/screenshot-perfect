@@ -8,7 +8,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumberField, Segmented, LegalNote } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
-import { ENGINE_VERSION, projectSeries, simulateAll, validateInputs, type PlanInputs, type ScenarioKey } from "@/lib/calc/retirement";
+import { ENGINE_VERSION, projectSeries, sensitivity, simulateAll, validateInputs, type PlanInputs, type ScenarioKey } from "@/lib/calc/retirement";
+import { summarizeAssets } from "@/lib/calc/assets";
+import { sinceLastReview } from "@/lib/data/selectors";
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } from "@/lib/data/demo-store";
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
@@ -43,9 +45,9 @@ function PlanPage() {
 
   if (!s.plan && !creating) {
     return (
-      <main className="mx-auto w-full max-w-[480px] px-5 pb-28 pt-8">
+      <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
         <h1>Seu plano</h1>
-        <p className="mt-4">Seu plano fica pronto no dia 14 do programa. Quer montar agora?</p>
+        <p className="mt-4">Seu plano fica pronto na Unidade 2 da jornada. Quer montar agora?</p>
         <Button className="mt-6 w-full" onClick={() => setCreating(true)}>
           Montar meu plano
         </Button>
@@ -97,13 +99,19 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const setRet = (k: ScenarioKey) => (v: number | null) => setDraft((d) => ({ ...d, returns: { ...d.returns, [k]: (v ?? 0) / 100 } }));
 
   const central = all?.semInss.central;
+  const sens = useMemo(() => (all ? sensitivity(draft, scenario, includeInss) : []), [all, draft, scenario, includeInss]);
+  const assetsForRetirement = s.assets.length ? summarizeAssets(s.assets).retirementTotal : null;
+  const review = sinceLastReview(s);
 
   return (
-    <main className="mx-auto w-full max-w-[480px] px-5 pb-28 pt-8">
+    <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
       <h1>Seu plano</h1>
 
+      {/* No celular, uma coluna na ordem do código; no desktop, resumo à esquerda e gráfico à direita. */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-[5fr_7fr] lg:items-start lg:gap-x-6 lg:[grid-template-areas:'res_chart'_'seg_chart'_'pre_chart'_'calc_hist'_'rev_hist'_'sens_hist']">
+      <div className="lg:[grid-area:res]">
       {r && central && (
-        <section className="mt-6" aria-live="polite">
+        <section className="rounded-3xl bg-card p-6 shadow-card" aria-live="polite">
           <p className="text-lg leading-7">
             Para chegar lá, guarde cerca de{" "}
             <strong className="money block font-display text-4xl font-semibold text-primary">{formatMonthly(r.requiredMonthlyContribution)}</strong>{" "}
@@ -117,9 +125,34 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
           </p>
         </section>
       )}
+      {r && (
+        <section className="mt-4 rounded-2xl bg-card p-5 shadow-card" aria-label="De onde vem o patrimônio projetado">
+          <h2 className="text-base">De onde vem o patrimônio aos {draft.retirementAge} anos</h2>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Patrimônio de hoje, rendendo</dt>
+              <dd className="money">{formatWealth(r.fvFromInitial)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Aportes mensais, rendendo</dt>
+              <dd className="money">{formatWealth(r.fvFromContributions)}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-border pt-2 font-semibold">
+              <dt>Estimativa total</dt>
+              <dd className="money">{formatWealth(r.projectedWealthAtRetirement)}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Renda que esse patrimônio sustentaria: cerca de <span className="money">{formatMonthly(r.sustainableMonthlyIncome)}</span> por mês. Diferença
+            estimada até o patrimônio necessário:{" "}
+            <span className="money">{r.gap > 0 ? formatWealth(r.gap) : "nenhuma neste cenário"}</span>.
+          </p>
+        </section>
+      )}
       {errors.length > 0 && <p className="mt-6 text-sm text-destructive">{errors[0]}</p>}
+      </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="space-y-3 lg:[grid-area:seg]">
         <Segmented
           label="Considerar INSS"
           value={withInss}
@@ -140,7 +173,7 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
       </div>
 
       {r && (
-        <section className="mt-6" aria-label="Gráfico do patrimônio">
+        <section className="rounded-2xl bg-card p-5 shadow-card lg:[grid-area:chart]" aria-label="Gráfico do patrimônio">
           <figure>
             <div className="h-56 w-full" aria-hidden>
               <ResponsiveContainer>
@@ -171,14 +204,18 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
               com inflação de {formatPercent(draft.inflationAA)}, seriam cerca de {formatWealth(r.projectedWealthNominal)}.
             </figcaption>
           </figure>
-          <p className="mt-3 rounded-[10px] bg-muted p-3 text-sm">
+          <p className="mt-3 rounded-xl bg-muted p-3 text-sm">
             Retorno real {formatPercent(draft.returns[scenario])} ao ano · horizonte {draft.horizonAge} anos · custos {formatPercent(draft.costsAA)} ao ano ·{" "}
             {includeInss ? `com INSS de ${formatMonthly(draft.inssEstimate!)}` : "sem INSS"}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {s.plan ? `Premissas salvas em ${formatDate(s.plan.updatedAt)}` : "Premissas ainda não salvas"} · motor {ENGINE_VERSION}
+            {dirty && s.plan ? " · você está vendo alterações não salvas" : ""}
           </p>
         </section>
       )}
 
-      <Collapsible open={editOpen} onOpenChange={setEditOpen} className="mt-8 rounded-2xl border border-border bg-card">
+      <Collapsible open={editOpen} onOpenChange={setEditOpen} className="rounded-2xl bg-card shadow-card lg:[grid-area:pre]">
         <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between px-5 font-semibold">
           Premissas
           <ChevronDown size={18} strokeWidth={1.75} className={editOpen ? "rotate-180" : ""} aria-hidden />
@@ -189,7 +226,14 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
             <NumberField label="Aposentar aos" value={draft.retirementAge} onChange={(v) => set("retirementAge")(v ?? 0)} suffix="anos" help="A idade em que você quer parar de depender do trabalho." />
           </div>
           <NumberField label="Horizonte" value={draft.horizonAge} onChange={(v) => set("horizonAge")(v ?? 0)} suffix="anos" help="Até que idade o dinheiro precisa durar. O padrão é 95 anos." />
-          <NumberField label="Patrimônio atual" value={draft.initialWealth} onChange={(v) => set("initialWealth")(v ?? 0)} prefix="R$" help="Quanto você já guardou para a aposentadoria." />
+          <div>
+            <NumberField label="Patrimônio atual" value={draft.initialWealth} onChange={(v) => set("initialWealth")(v ?? 0)} prefix="R$" help="Quanto você já guardou para a aposentadoria." />
+            {assetsForRetirement != null && Math.abs(assetsForRetirement - draft.initialWealth) >= 1 && (
+              <button type="button" className="mt-1 text-sm text-primary underline-offset-4 hover:underline" onClick={() => set("initialWealth")(assetsForRetirement)}>
+                Usar <span className="money">{formatWealth(assetsForRetirement)}</span> do seu patrimônio cadastrado
+              </button>
+            )}
+          </div>
           <NumberField label="Aporte mensal" value={draft.monthlyContribution} onChange={(v) => set("monthlyContribution")(v ?? 0)} prefix="R$" help="Quanto você guarda por mês hoje." />
           <NumberField label="Renda desejada" value={draft.desiredMonthlyIncome} onChange={(v) => set("desiredMonthlyIncome")(v ?? 0)} prefix="R$" help="Quanto você quer ter por mês, em valores de hoje." />
           <NumberField label="Estimativa do INSS" value={draft.inssEstimate} onChange={set("inssEstimate")} prefix="R$" optional help={INSS_HELP} />
@@ -223,7 +267,7 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         </CollapsibleContent>
       </Collapsible>
 
-      <Collapsible className="mt-4 rounded-2xl border border-border">
+      <Collapsible className="rounded-2xl bg-card shadow-card lg:[grid-area:calc]">
         <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between px-5 font-semibold">
           Como calculamos
           <ChevronDown size={18} strokeWidth={1.75} aria-hidden />
@@ -234,13 +278,14 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
           <p>Os aportes e as retiradas acontecem no fim de cada mês, com a taxa mensal equivalente.</p>
           <p>O patrimônio-alvo é o valor que paga sua renda até o horizonte, consumindo o dinheiro aos poucos.</p>
           <p>O cenário padrão não conta com o INSS. Impostos não são considerados.</p>
-          <p>Valores mensais são arredondados para R$ 10 e patrimônios para R$ 1.000.</p>
+          <p>Valores mensais são arredondados para R$ 10 e patrimônios para R$ 1.000, porque a estimativa não tem precisão maior que isso.</p>
+          <p>A inflação não muda o resultado em reais de hoje: ela só converte o patrimônio para valores nominais. O que move o resultado é o retorno acima da inflação.</p>
           <p>Versão do motor de cálculo: {ENGINE_VERSION}.</p>
         </CollapsibleContent>
       </Collapsible>
 
       {!isNew && (
-        <section className="mt-8 space-y-2">
+        <section className="space-y-2 lg:[grid-area:rev]">
           <Button variant="outline" className="w-full" onClick={() => setQuickOpen(true)}>
             Fazer revisão rápida
           </Button>
@@ -255,9 +300,37 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         </section>
       )}
 
+      {sens.length > 0 && (
+        <section className="rounded-2xl bg-card p-5 shadow-card lg:[grid-area:sens]" aria-label="O que mais muda o resultado">
+          <h2 className="text-lg">O que mais muda o resultado</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Mudando uma coisa por vez, no cenário {scenario}. Variação na renda mensal sustentável.</p>
+          <ul className="mt-3 divide-y divide-border">
+            {sens.map((it) => (
+              <li key={it.key} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                <span>{it.label}</span>
+                <span className={"money " + (it.deltaSustainableIncome >= 0 ? "text-primary" : "text-muted-foreground")}>
+                  {it.deltaSustainableIncome >= 0 ? "+" : "−"}
+                  {formatMonthly(Math.abs(it.deltaSustainableIncome))}/mês
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {s.snapshots.length > 0 && (
-        <section className="mt-10">
+        <section className="rounded-2xl bg-card p-5 shadow-card lg:[grid-area:hist]">
           <h2 className="text-lg">Histórico</h2>
+          {review && (
+            <div className="mt-3 rounded-xl bg-muted p-3 text-sm">
+              <p className="font-semibold">Desde a revisão de {formatDate(review.since)}</p>
+              <p className="mt-1 text-muted-foreground">
+                Rumo à independência: {formatPercent(review.coverageBefore)} → {formatPercent(review.coverageNow)}. Renda sustentável estimada{" "}
+                {review.deltaSustainableIncome >= 0 ? "subiu" : "caiu"} <span className="money">{formatMonthly(Math.abs(review.deltaSustainableIncome))}</span> por
+                mês. A mudança vem das premissas que você alterou, não de rendimento.
+              </p>
+            </div>
+          )}
           <ul className="mt-3 divide-y divide-border">
             {s.snapshots.map((sn) => (
               <li key={sn.id} className="flex items-center justify-between py-3 text-sm">
@@ -271,6 +344,8 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
           </ul>
         </section>
       )}
+
+      </div>
 
       <footer className="mt-10 border-t border-border pt-6">
         <LegalNote>{SIMULATION_FOOTER}</LegalNote>

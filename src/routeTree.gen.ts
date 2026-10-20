@@ -14,11 +14,15 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as SobreRouteImport } from './routes/sobre'
+import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
+import { Route as AuthenticatedEvolucaoRouteImport } from './routes/_authenticated/evolucao'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedPatrimonioRouteImport } from './routes/_authenticated/patrimonio'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/plano'
+import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 
@@ -46,9 +50,19 @@ const SobreRoute = SobreRouteImport.update({
   path: '/sobre',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
+  id: '/contas',
+  path: '/contas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDiarioRoute = AuthenticatedDiarioRouteImport.update({
   id: '/diario',
   path: '/diario',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEvolucaoRoute = AuthenticatedEvolucaoRouteImport.update({
+  id: '/evolucao',
+  path: '/evolucao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedHojeRoute = AuthenticatedHojeRouteImport.update({
@@ -61,6 +75,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPatrimonioRoute = AuthenticatedPatrimonioRouteImport.update({
+  id: '/patrimonio',
+  path: '/patrimonio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
@@ -69,6 +88,11 @@ const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
 const AuthenticatedPlanoRoute = AuthenticatedPlanoRouteImport.update({
   id: '/plano',
   path: '/plano',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
+  id: '/revisao',
+  path: '/revisao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminConteudoRoute =
@@ -89,11 +113,15 @@ export interface FileRoutesByFullPath {
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
   '/sobre': typeof SobreRoute
+  '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
+  '/evolucao': typeof AuthenticatedEvolucaoRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/plano': typeof AuthenticatedPlanoRoute
+  '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
 }
@@ -102,11 +130,15 @@ export interface FileRoutesByTo {
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
   '/sobre': typeof SobreRoute
+  '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
+  '/evolucao': typeof AuthenticatedEvolucaoRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/plano': typeof AuthenticatedPlanoRoute
+  '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
 }
@@ -117,11 +149,15 @@ export interface FileRoutesById {
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
   '/sobre': typeof SobreRoute
+  '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
+  '/_authenticated/evolucao': typeof AuthenticatedEvolucaoRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/plano': typeof AuthenticatedPlanoRoute
+  '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
 }
@@ -132,11 +168,15 @@ export interface FileRouteTypes {
     | '/calculadora'
     | '/entrar'
     | '/sobre'
+    | '/contas'
     | '/diario'
+    | '/evolucao'
     | '/hoje'
     | '/onboarding'
+    | '/patrimonio'
     | '/perfil'
     | '/plano'
+    | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
   fileRoutesByTo: FileRoutesByTo
@@ -145,11 +185,15 @@ export interface FileRouteTypes {
     | '/calculadora'
     | '/entrar'
     | '/sobre'
+    | '/contas'
     | '/diario'
+    | '/evolucao'
     | '/hoje'
     | '/onboarding'
+    | '/patrimonio'
     | '/perfil'
     | '/plano'
+    | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
   id:
@@ -159,11 +203,15 @@ export interface FileRouteTypes {
     | '/calculadora'
     | '/entrar'
     | '/sobre'
+    | '/_authenticated/contas'
     | '/_authenticated/diario'
+    | '/_authenticated/evolucao'
     | '/_authenticated/hoje'
     | '/_authenticated/onboarding'
+    | '/_authenticated/patrimonio'
     | '/_authenticated/perfil'
     | '/_authenticated/plano'
+    | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/programa/$dia'
   fileRoutesById: FileRoutesById
@@ -213,11 +261,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SobreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/contas': {
+      id: '/_authenticated/contas'
+      path: '/contas'
+      fullPath: '/contas'
+      preLoaderRoute: typeof AuthenticatedContasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/diario': {
       id: '/_authenticated/diario'
       path: '/diario'
       fullPath: '/diario'
       preLoaderRoute: typeof AuthenticatedDiarioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/evolucao': {
+      id: '/_authenticated/evolucao'
+      path: '/evolucao'
+      fullPath: '/evolucao'
+      preLoaderRoute: typeof AuthenticatedEvolucaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/hoje': {
@@ -234,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/patrimonio': {
+      id: '/_authenticated/patrimonio'
+      path: '/patrimonio'
+      fullPath: '/patrimonio'
+      preLoaderRoute: typeof AuthenticatedPatrimonioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/perfil': {
       id: '/_authenticated/perfil'
       path: '/perfil'
@@ -246,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/plano'
       fullPath: '/plano'
       preLoaderRoute: typeof AuthenticatedPlanoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/revisao': {
+      id: '/_authenticated/revisao'
+      path: '/revisao'
+      fullPath: '/revisao'
+      preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/conteudo': {
@@ -266,21 +342,29 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDiarioRoute: typeof AuthenticatedDiarioRoute
+  AuthenticatedEvolucaoRoute: typeof AuthenticatedEvolucaoRoute
   AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPatrimonioRoute: typeof AuthenticatedPatrimonioRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPlanoRoute: typeof AuthenticatedPlanoRoute
+  AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
   AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
   AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDiarioRoute: AuthenticatedDiarioRoute,
+  AuthenticatedEvolucaoRoute: AuthenticatedEvolucaoRoute,
   AuthenticatedHojeRoute: AuthenticatedHojeRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPatrimonioRoute: AuthenticatedPatrimonioRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPlanoRoute: AuthenticatedPlanoRoute,
+  AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
   AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
 }

@@ -16,3 +16,4 @@
 - Screens read/write through `src/lib/data/` (currently `demo-store.ts`, localStorage, mirrors the SQL RPC semantics); swap that layer for Supabase calls rather than touching screens — keeps login wiring isolated.
 - Gamification rules duplicated client-side in `src/lib/gamification/rules.ts` only for demo mode; the database functions remain the source of truth once login is wired.
 - Program/mission copy lives in `src/content/` (generated from the spec §10/§11); `supabase/seed-content.sql` inserts the same content as drafts.
+- Visual identity is a dark "Black Card" theme in Soldiers Nutrition colors: yellow `#F6C800` as the main color on near-black, Poppins for headings and text, Oswald for key numbers, rounded corners, elevated cards instead of bordered boxes; change the tokens in `src/styles.css`, not the screens.

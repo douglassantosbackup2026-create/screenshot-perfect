@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano em 21 dias e registre seus aportes todo mês.",
+          "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano numa jornada de lições curtas e acompanhe sua evolução todo mês.",
       },
       { property: "og:title", content: "Previdência Intelligence" },
       {
@@ -72,22 +72,31 @@ function Index() {
   useEffect(() => setHasProgress(!!localStorage.getItem("pi_demo_state_v1")), []);
 
   return (
-    <main className="mx-auto w-full max-w-[480px] px-5 pb-16 pt-10">
-      <header className="flex items-center justify-between">
-        <span className="font-display text-lg font-semibold text-primary">Previdência Intelligence</span>
-        {hasProgress ? (
-          <Link to="/hoje" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
-            Abrir o app
-          </Link>
-        ) : (
-          <Link to="/entrar" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
-            Entrar
-          </Link>
-        )}
+    <>
+      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-5 py-2">
+          <span className="flex items-center gap-2 font-semibold tracking-tight">
+            <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+            Previdência Intelligence
+          </span>
+          {hasProgress ? (
+            <Link to="/hoje" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
+              Abrir o app
+            </Link>
+          ) : (
+            <Link to="/entrar" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
+              Entrar
+            </Link>
+          )}
+        </div>
       </header>
+    <main className="mx-auto w-full max-w-[480px] px-5 pb-16 pt-10">
 
-      <h1 className="mt-10">Quanto falta para você se aposentar sem depender do INSS?</h1>
-      <p className="mt-4 text-lg text-muted-foreground">Monte seu plano em 21 dias, 5 minutos por dia. Grátis e sem vender nada para você.</p>
+      <p className="eyebrow">Aposentadoria sem depender do governo</p>
+      <h1 className="mt-3 text-[34px] leading-[40px]">
+        Quanto falta para você se aposentar <span className="text-primary">sem depender do INSS?</span>
+      </h1>
+      <p className="mt-4 text-lg text-muted-foreground">Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você.</p>
       <div className="mt-6 flex flex-col gap-2">
         <Button onClick={startFree}>Começar grátis</Button>
         <Button variant="ghost" onClick={seeExample}>
@@ -95,7 +104,7 @@ function Index() {
         </Button>
       </div>
 
-      <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl border border-border bg-card p-5">
+      <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">
         <div className="grid grid-cols-2 gap-4">
           <NumberField label="Sua idade" value={age} onChange={setAge} suffix="anos" min={16} max={90} />
           <NumberField label="Aposentar aos" value={retire} onChange={setRetire} suffix="anos" min={30} max={90} />
@@ -116,7 +125,7 @@ function Index() {
           ) : null}
         </div>
         <Button className="mt-5 w-full" onClick={start}>
-          Montar meu plano em 21 dias
+          Começar minha jornada
         </Button>
         <Link to="/calculadora" className="mt-3 block text-center text-sm font-semibold text-primary">
           Ver a conta completa
@@ -131,7 +140,7 @@ function Index() {
       <Pricing onStart={startFree} />
       <Faq />
 
-      <section className="mt-16 rounded-2xl border border-border bg-card p-6 text-center">
+      <section className="mt-16 rounded-2xl bg-card shadow-card p-6 text-center">
         <h2>Comece hoje. Leva 5 minutos.</h2>
         <Button className="mt-5 w-full" onClick={startFree}>
           Começar grátis
@@ -147,5 +156,6 @@ function Index() {
         </LegalNote>
       </footer>
     </main>
+    </>
   );
 }

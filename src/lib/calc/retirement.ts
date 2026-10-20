@@ -1,8 +1,8 @@
-// Motor de cálculo de aposentadoria — versão calc-1.0.0
+// Motor de cálculo de aposentadoria — versão calc-1.1.0
 // Funções puras. Todos os valores em reais de hoje (termos reais), exceto quando indicado.
 // Convenções: aportes e retiradas no fim de cada mês; taxa mensal equivalente composta.
 
-export const ENGINE_VERSION = 'calc-1.0.0';
+export const ENGINE_VERSION = 'calc-1.1.0';
 
 export type ScenarioKey = 'conservador' | 'central' | 'otimista';
 export const SCENARIOS: ScenarioKey[] = ['conservador', 'central', 'otimista'];
@@ -29,6 +29,8 @@ export interface ScenarioResult {
   monthsToRetirement: number;
   retirementMonths: number;
   projectedWealthAtRetirement: number;
+  fvFromInitial: number;         // parte do patrimônio projetado que vem do patrimônio inicial
+  fvFromContributions: number;   // parte que vem dos aportes mensais
   projectedWealthNominal: number;
   incomeNeededFromWealth: number;
   targetWealth: number;
@@ -110,7 +112,9 @@ export function simulate(i: PlanInputs, scenario: ScenarioKey, includeInss: bool
   const rm = monthlyRate(eff);
   const n = Math.round((i.retirementAge - i.currentAge) * 12);
   const m = Math.round((i.horizonAge - i.retirementAge) * 12);
-  const projected = futureValue(i.initialWealth, i.monthlyContribution, rm, n);
+  const fromInitial = futureValue(i.initialWealth, 0, rm, n);
+  const fromContributions = futureValue(0, i.monthlyContribution, rm, n);
+  const projected = fromInitial + fromContributions;
   const inss = includeInss && i.inssEstimate ? i.inssEstimate : 0;
   const need = Math.max(i.desiredMonthlyIncome - inss, 0);
   const target = annuityPresentValue(need, rm, m);
@@ -123,6 +127,8 @@ export function simulate(i: PlanInputs, scenario: ScenarioKey, includeInss: bool
     monthsToRetirement: n,
     retirementMonths: m,
     projectedWealthAtRetirement: projected,
+    fvFromInitial: fromInitial,
+    fvFromContributions: fromContributions,
     projectedWealthNominal: projected * Math.pow(1 + i.inflationAA, n / 12),
     incomeNeededFromWealth: need,
     targetWealth: target,
@@ -140,6 +146,40 @@ export function simulateAll(i: PlanInputs) {
     ? Object.fromEntries(SCENARIOS.map(s => [s, simulate(i, s, true)])) as Record<ScenarioKey, ScenarioResult>
     : null;
   return { engineVersion: ENGINE_VERSION, semInss, comInss };
+}
+
+export interface SensitivityItem {
+  key: string;
+  label: string;
+  deltaSustainableIncome: number; // variação da renda sustentável, R$ de hoje por mês
+  deltaGap: number;               // variação da diferença até o patrimônio necessário
+}
+
+// Quanto o resultado muda ao alterar uma variável por vez, mantendo as demais.
+// Ordenado pelo impacto absoluto na renda sustentável.
+export function sensitivity(i: PlanInputs, scenario: ScenarioKey, includeInss: boolean): SensitivityItem[] {
+  const base = simulate(i, scenario, includeInss);
+  const r = i.returns[scenario];
+  const variants: { key: string; label: string; inputs: PlanInputs }[] = [
+    { key: 'idade+2', label: 'Aposentar 2 anos depois', inputs: { ...i, retirementAge: Math.min(i.retirementAge + 2, i.horizonAge - 1) } },
+    { key: 'idade-2', label: 'Aposentar 2 anos antes', inputs: { ...i, retirementAge: Math.max(i.retirementAge - 2, i.currentAge + 1) } },
+    { key: 'aporte+20', label: 'Aporte 20% maior', inputs: { ...i, monthlyContribution: i.monthlyContribution * 1.2 } },
+    { key: 'aporte-20', label: 'Aporte 20% menor', inputs: { ...i, monthlyContribution: i.monthlyContribution * 0.8 } },
+    { key: 'retorno+1', label: 'Retorno real 1 p.p. maior', inputs: { ...i, returns: { ...i.returns, [scenario]: r + 0.01 } } },
+    { key: 'retorno-1', label: 'Retorno real 1 p.p. menor', inputs: { ...i, returns: { ...i.returns, [scenario]: r - 0.01 } } },
+    { key: 'custo+0.5', label: 'Custos 0,5 p.p. maiores', inputs: { ...i, costsAA: i.costsAA + 0.005 } },
+  ];
+  return variants
+    .map(({ key, label, inputs }) => {
+      const v = simulate(inputs, scenario, includeInss);
+      return {
+        key,
+        label,
+        deltaSustainableIncome: v.sustainableMonthlyIncome - base.sustainableMonthlyIncome,
+        deltaGap: v.gap - base.gap,
+      };
+    })
+    .sort((a, b) => Math.abs(b.deltaSustainableIncome) - Math.abs(a.deltaSustainableIncome));
 }
 
 // Série anual para o gráfico: acumulação até a aposentadoria e consumo até o horizonte.

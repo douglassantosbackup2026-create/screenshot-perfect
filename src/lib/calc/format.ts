@@ -6,3 +6,7 @@ export const formatWealth = (v: number) => brl.format(Math.round(v / 1000) * 100
 export const formatPercent = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
 export const formatAge = (age: number) => `${Math.floor(age)} anos`;
+
+const brlExact = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Livro-caixa: valor exato, a partir de centavos.
+export const formatMoney = (cents: number) => brlExact.format(cents / 100);

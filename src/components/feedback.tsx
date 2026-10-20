@@ -1,6 +1,21 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Award, CalendarCheck, Flag, Map, RefreshCw, Shield, Sprout, Share2, type LucideIcon } from "lucide-react";
+import {
+  Award,
+  CalendarCheck,
+  CalendarRange,
+  CheckCircle2,
+  Flag,
+  Map,
+  Mountain,
+  RefreshCw,
+  Shield,
+  Sprout,
+  Share2,
+  Target,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { AchievementCode } from "@/lib/gamification/rules";
@@ -15,6 +30,11 @@ export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
   "refresh-cw": RefreshCw,
   flag: Flag,
   award: Award,
+  "trending-up": TrendingUp,
+  target: Target,
+  "check-circle": CheckCircle2,
+  "calendar-range": CalendarRange,
+  mountain: Mountain,
 };
 
 /** Toast discreto de XP. */
@@ -63,7 +83,7 @@ export function AchievementSheet() {
               <span className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground">
                 <Icon size={28} strokeWidth={1.75} aria-hidden />
               </span>
-              <SheetTitle className="font-display text-xl">{info.title}</SheetTitle>
+              <SheetTitle className="text-xl font-semibold">{info.title}</SheetTitle>
               <SheetDescription>{info.description}</SheetDescription>
             </SheetHeader>
             <div className="mt-6 flex flex-col gap-2 pb-2">
@@ -88,9 +108,9 @@ function achievementImage(title: string): Promise<Blob> {
   const g = c.getContext("2d")!;
   const css = getComputedStyle(document.documentElement);
   const color = (v: string, fb: string) => css.getPropertyValue(v).trim() || fb;
-  g.fillStyle = color("--background", "#F4F7F6");
+  g.fillStyle = color("--background", "#0C0C0B");
   g.fillRect(0, 0, 1080, 1080);
-  g.strokeStyle = color("--border", "#CFD9D6");
+  g.strokeStyle = color("--border", "#2C2C29");
   g.lineWidth = 6;
   g.beginPath();
   g.moveTo(200, 160);
@@ -99,14 +119,14 @@ function achievementImage(title: string): Promise<Blob> {
   for (let i = 0; i < 6; i++) {
     g.beginPath();
     g.arc(200, 220 + i * 130, 26, 0, Math.PI * 2);
-    g.fillStyle = color("--accent", "#E0A526");
+    g.fillStyle = color("--accent", "#F6C800");
     g.fill();
   }
-  g.fillStyle = color("--foreground", "#17302C");
-  g.font = "600 72px 'Bricolage Grotesque', sans-serif";
-  wrap(g, title, 300, 480, 680, 84);
-  g.font = "400 36px 'Public Sans', sans-serif";
-  g.fillStyle = color("--muted-foreground", "#5B6F6B");
+  g.fillStyle = color("--foreground", "#F5F5F2");
+  g.font = "600 76px 'Poppins', sans-serif";
+  wrap(g, title, 300, 480, 680, 92);
+  g.font = "500 36px 'Poppins', sans-serif";
+  g.fillStyle = color("--muted-foreground", "#A6A49C");
   g.fillText("Previdência Intelligence", 300, 900);
   return new Promise((res) => c.toBlob((b) => res(b!), "image/png"));
 }

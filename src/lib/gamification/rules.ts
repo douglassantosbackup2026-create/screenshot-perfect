@@ -10,19 +10,40 @@ export type XpAction =
   | "plan_quick_review"
   | "plan_life_event"
   | "program_completed"
-  | "annual_review";
+  | "annual_review"
+  | "wealth_logged"
+  | "goal_created"
+  | "goal_completed"
+  | "challenge_completed"
+  | "daily_mission";
 
 export const XP: Record<XpAction, number> = {
   lesson_completed: 10,
   quiz_correct: 2,
   weekly_mission: 30,
   first_plan_created: 100,
-  contribution_logged: 50,
+  // Registrar o mês conta (inclusive "não aportei"); aportar mais nunca dá XP.
+  contribution_logged: 20,
   plan_quick_review: 20,
   plan_life_event: 40,
   program_completed: 200,
   annual_review: 150,
+  // Registrar informação conta; o valor registrado nunca muda o XP.
+  wealth_logged: 30,
+  goal_created: 20,
+  goal_completed: 60,
+  challenge_completed: 40,
+  // Missão do dia: uma vez por dia, qualquer que seja o tipo.
+  daily_mission: 10,
 };
+
+/** Metas criadas só dão XP até 3 vezes por mês (periodKey "G:YYYY-MM:<id>"). */
+export const GOAL_CREATED_XP_PER_MONTH = 3;
+export function goalCreatedPeriodKey(events: XpEvent[], month: string, goalId: string): string | null {
+  const prefix = `G:${month.slice(0, 7)}:`;
+  const used = events.filter((e) => e.action === "goal_created" && e.periodKey.startsWith(prefix)).length;
+  return used < GOAL_CREATED_XP_PER_MONTH ? prefix + goalId : null;
+}
 
 export type XpEvent = { action: XpAction; periodKey: string; xp: number; at: string };
 export type WeekStatus = "ativa" | "pausa";
@@ -116,20 +137,57 @@ export function computeStreak(weeks: WeekRecord[], today: string) {
   return { streak, weeks: [...weeks, ...added] };
 }
 
-// ---------- Níveis ----------
-export function computeLevel(contributionMonthsWithXp: number, hasPlan: boolean): number {
-  if (contributionMonthsWithXp >= 6) return 3;
-  if (hasPlan && contributionMonthsWithXp >= 2) return 2;
-  return 1;
+// ---------- Sequência diária ----------
+/** Dias sem atividade cobertos automaticamente por semana (segunda a domingo). */
+export const PROTECTED_DAYS_PER_WEEK = 2;
+
+/**
+ * Conta dias ativos seguidos. Hoje sem atividade não quebra.
+ * Até 2 dias vazios por semana são protegidos: não somam, mas não quebram.
+ */
+export function computeDayStreak(days: string[], today: string) {
+  const active = new Set(days);
+  const earliest = [...active].sort()[0];
+  const protectedDays: string[] = [];
+  const protectedPerWeek = new Map<string, number>();
+  let pending: string[] = []; // proteções só valem se houver dia ativo antes delas
+  let streak = 0;
+  let day = active.has(today) ? today : addDays(today, -1);
+  for (let guard = 0; earliest && day >= earliest && guard < 3660; guard++) {
+    if (active.has(day)) {
+      streak++;
+      protectedDays.push(...pending);
+      pending = [];
+    } else {
+      const ws = weekStartOf(day);
+      const used = protectedPerWeek.get(ws) ?? 0;
+      if (used >= PROTECTED_DAYS_PER_WEEK) break;
+      protectedPerWeek.set(ws, used + 1);
+      pending.push(day);
+    }
+    day = addDays(day, -1);
+  }
+  return { streak, protectedDays };
 }
 
+// ---------- Níveis ----------
+// Níveis medem aprendizado e constância (XP), nunca patrimônio ou renda.
 export const LEVELS = [
-  { level: 1, name: "Despertar", how: "Ao criar a conta", available: true },
-  { level: 2, name: "Plano", how: "Plano criado e 2 meses com aporte registrado em dia", available: true },
-  { level: 3, name: "Constância", how: "6 meses com aporte registrado em dia", available: true },
-  { level: 4, name: "Estratégia", how: "Programa avançado e revisão anual", available: false },
-  { level: 5, name: "Independência", how: "Programa de desacumulação", available: false },
+  { level: 1, name: "Iniciante", minXp: 0 },
+  { level: 2, name: "Planejador", minXp: 100 },
+  { level: 3, name: "Construtor", minXp: 300 },
+  { level: 4, name: "Estrategista", minXp: 600 },
+  { level: 5, name: "Mestre do plano", minXp: 1000 },
 ] as const;
+
+/** Nível atual e quanto falta para o próximo (`next` é null no último nível). */
+export function levelFromXp(totalXp: number) {
+  let idx = 0;
+  for (let i = 0; i < LEVELS.length; i++) if (totalXp >= LEVELS[i]!.minXp) idx = i;
+  const cur = LEVELS[idx]!;
+  const nxt = LEVELS[idx + 1] ?? null;
+  return { level: cur.level, name: cur.name, min: cur.minXp, next: nxt ? nxt.minXp : null };
+}
 
 // ---------- Conquistas ----------
 export type AchievementCode =
@@ -139,16 +197,28 @@ export type AchievementCode =
   | "reserva_montada"
   | "plano_ajustado"
   | "programa_21_concluido"
-  | "primeira_revisao_anual";
+  | "primeira_revisao_anual"
+  | "primeiro_registro_patrimonio"
+  | "primeira_meta"
+  | "meta_concluida"
+  | "revisao_trimestral"
+  | "primeiro_desafio"
+  | "diagnostico_inicial";
 
 export const ACHIEVEMENTS: { code: AchievementCode; title: string; description: string; icon: string }[] = [
   { code: "primeiro_plano", title: "Primeiro plano", description: "Você criou seu plano de aposentadoria.", icon: "map" },
-  { code: "primeiro_aporte", title: "Primeiro aporte", description: "Seu fio da constância começou.", icon: "sprout" },
-  { code: "tres_meses_seguidos", title: "Três meses de constância", description: "Aportes registrados em três meses seguidos.", icon: "calendar-check" },
+  { code: "primeiro_aporte", title: "Primeiro mês registrado", description: "Seu fio da constância começou.", icon: "sprout" },
+  { code: "tres_meses_seguidos", title: "Três meses de constância", description: "Você registrou três meses seguidos, com ou sem aporte.", icon: "calendar-check" },
   { code: "reserva_montada", title: "Reserva de emergência", description: "Você informou que sua reserva está montada.", icon: "shield" },
   { code: "plano_ajustado", title: "Plano ajustado", description: "Você revisou o plano depois de uma mudança de vida.", icon: "refresh-cw" },
-  { code: "programa_21_concluido", title: "21 dias concluídos", description: "Você terminou o programa Meu plano sem depender do INSS.", icon: "flag" },
+  { code: "programa_21_concluido", title: "Jornada concluída", description: "Você concluiu as quatro unidades da jornada.", icon: "flag" },
+  { code: "diagnostico_inicial", title: "Diagnóstico inicial", description: "Você concluiu a Unidade 1: conheceu sua realidade.", icon: "compass" },
   { code: "primeira_revisao_anual", title: "Primeira revisão anual", description: "Você fez a revisão completa do seu plano.", icon: "award" },
+  { code: "primeiro_registro_patrimonio", title: "Primeiro registro", description: "Você registrou seu patrimônio pela primeira vez.", icon: "trending-up" },
+  { code: "primeira_meta", title: "Primeira meta", description: "Você criou sua primeira meta.", icon: "target" },
+  { code: "meta_concluida", title: "Meta concluída", description: "Você concluiu uma meta que definiu.", icon: "check-circle" },
+  { code: "revisao_trimestral", title: "Revisão trimestral", description: "Patrimônio registrado nos três meses de um trimestre e plano revisado.", icon: "calendar-range" },
+  { code: "primeiro_desafio", title: "Primeiro desafio", description: "Você concluiu um desafio pessoal.", icon: "mountain" },
 ];
 
 export function hasThreeConsecutiveMonths(monthKeys: string[]): boolean {
@@ -163,6 +233,18 @@ export function hasThreeConsecutiveMonths(monthKeys: string[]): boolean {
   return false;
 }
 
+/** Algum trimestre civil com patrimônio registrado nos 3 meses e ao menos uma revisão do plano. */
+export function hasFullQuarter(wealthMonthKeys: string[], reviewDays: string[]): boolean {
+  const months = new Set(wealthMonthKeys.map((k) => k.slice(0, 7)));
+  const reviewed = new Set(reviewDays.map(quarterKey));
+  for (const q of reviewed) {
+    const [y, n] = q.split("-Q");
+    const first = (Number(n) - 1) * 3 + 1;
+    if ([0, 1, 2].every((i) => months.has(`${y}-${pad(first + i)}`))) return true;
+  }
+  return false;
+}
+
 export function eligibleAchievements(s: {
   hasPlan: boolean;
   contributionMonthKeys: string[];
@@ -170,6 +252,12 @@ export function eligibleAchievements(s: {
   hasLifeEvent: boolean;
   programCompleted: boolean;
   hasAnnualReview: boolean;
+  hasWealthEntry?: boolean;
+  hasGoal?: boolean;
+  hasCompletedGoal?: boolean;
+  hasFullQuarter?: boolean;
+  hasCompletedChallenge?: boolean;
+  hasCompletedFirstUnit?: boolean;
 }): AchievementCode[] {
   const out: AchievementCode[] = [];
   if (s.hasPlan) out.push("primeiro_plano");
@@ -179,5 +267,42 @@ export function eligibleAchievements(s: {
   if (s.hasLifeEvent) out.push("plano_ajustado");
   if (s.programCompleted) out.push("programa_21_concluido");
   if (s.hasAnnualReview) out.push("primeira_revisao_anual");
+  if (s.hasWealthEntry) out.push("primeiro_registro_patrimonio");
+  if (s.hasGoal) out.push("primeira_meta");
+  if (s.hasCompletedGoal) out.push("meta_concluida");
+  if (s.hasFullQuarter) out.push("revisao_trimestral");
+  if (s.hasCompletedChallenge) out.push("primeiro_desafio");
+  if (s.hasCompletedFirstUnit) out.push("diagnostico_inicial");
   return out;
+}
+
+// ---------- Desafios pessoais ----------
+export type ChallengeMetric = "missions" | "active_days" | "wealth_months" | "plan_reviews" | "goals_completed";
+export type ChallengeDef = {
+  slug: string;
+  title: string;
+  description: string;
+  metric: ChallengeMetric;
+  target: number;
+  windowDays: number;
+};
+
+/** Datas ("YYYY-MM-DD", horário de Brasília) de cada evento que conta para os desafios. */
+export type ChallengeInputs = Record<ChallengeMetric, string[]>;
+
+/** Progresso calculado só a partir do que já foi registrado; nada novo é guardado. */
+export function challengeProgress(def: ChallengeDef, startedDay: string, inputs: ChallengeInputs, today: string) {
+  const end = addDays(startedDay, def.windowDays - 1);
+  const inWindow = inputs[def.metric].filter((d) => d >= startedDay && d <= end);
+  // Meses de patrimônio contam uma vez por mês; os demais, uma vez por dia.
+  const keys = def.metric === "wealth_months" ? inWindow.map((d) => d.slice(0, 7)) : inWindow;
+  const count = new Set(keys).size;
+  const completed = count >= def.target;
+  return {
+    done: Math.min(count, def.target),
+    target: def.target,
+    completed,
+    expired: !completed && today > end,
+    endsOn: end,
+  };
 }

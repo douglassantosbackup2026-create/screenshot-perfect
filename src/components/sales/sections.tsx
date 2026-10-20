@@ -6,7 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { LESSONS } from "@/content/program";
-import { FREE_FEATURES, PREMIUM_FEATURES, PREMIUM_PRICE } from "@/content/pricing";
+import { UNITS } from "@/content/journey";
+import { PLANS, PRICING_NOTE, type PlanTier } from "@/content/pricing";
 
 export function Problem() {
   const items = [
@@ -19,7 +20,7 @@ export function Problem() {
       <h2>Por que pensar nisso agora</h2>
       <div className="mt-5 space-y-4">
         {items.map(([t, d]) => (
-          <div key={t} className="rounded-2xl border border-border bg-card p-4">
+          <div key={t} className="rounded-2xl bg-card shadow-card p-4">
             <p className="font-semibold">{t}</p>
             <p className="mt-1 text-sm text-muted-foreground">{d}</p>
           </div>
@@ -31,9 +32,9 @@ export function Problem() {
 
 export function HowItWorks() {
   const steps = [
-    "Uma lição de 5 minutos por dia.",
-    "No dia 14, seu plano fica pronto.",
-    "Todo mês, você registra seu aporte e vê o fio da constância crescer.",
+    "Jornada: lições de 2 a 5 minutos em 4 unidades, com missão do dia, XP e sequência sem punição por pausas.",
+    "Na Unidade 2, seu plano de aposentadoria fica pronto.",
+    "Evolução: todo mês, você registra aporte e patrimônio e vê seu progresso rumo à independência.",
   ];
   return (
     <section className="mt-16">
@@ -41,7 +42,7 @@ export function HowItWorks() {
       <ol className="mt-5 space-y-4">
         {steps.map((t, i) => (
           <li key={t} className="flex gap-4">
-            <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-primary">
+            <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
               {i + 1}
             </span>
             <span className="pt-1.5">{t}</span>
@@ -58,14 +59,14 @@ export function ProductPreview() {
       <h2>O que você vai usar</h2>
       <p className="mt-2 text-sm text-muted-foreground">Telas de exemplo.</p>
       <div className="mt-5 space-y-3">
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Hoje · Dia 3 de 21</p>
-          <p className="mt-1 font-semibold">{LESSONS[2]?.title}</p>
+        <div className="rounded-2xl bg-card shadow-card p-4">
+          <p className="text-xs text-muted-foreground">Jornada · Unidade 1 · Lição 2 de 5</p>
+          <p className="mt-1 font-semibold">{LESSONS[1]?.title}</p>
           <div className="mt-3 h-2 rounded-full bg-muted">
             <div className="h-2 w-[14%] rounded-full bg-accent" />
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="rounded-2xl bg-card shadow-card p-4">
           <p className="text-xs text-muted-foreground">Plano</p>
           <p className="mt-1 font-semibold">Três cenários, premissas sempre visíveis</p>
           <div className="mt-3 flex items-end gap-2" aria-hidden>
@@ -74,7 +75,15 @@ export function ProductPreview() {
             ))}
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="rounded-2xl bg-card shadow-card p-4">
+          <p className="text-xs text-muted-foreground">Evolução</p>
+          <p className="mt-1 font-semibold">Seu progresso comparado só com você mesmo</p>
+          <div className="mt-3 h-2 rounded-full bg-muted">
+            <div className="h-2 w-[38%] rounded-full bg-accent" />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Metas, desafios pessoais e linha do tempo do patrimônio.</p>
+        </div>
+        <div className="rounded-2xl bg-card shadow-card p-4">
           <p className="text-xs text-muted-foreground">Diário</p>
           <p className="mt-1 font-semibold">Registre o aporte do mês em segundos</p>
           <div className="mt-3 flex gap-1.5" aria-hidden>
@@ -89,23 +98,25 @@ export function ProductPreview() {
 }
 
 export function Curriculum() {
-  const weeks = [LESSONS.slice(0, 7), LESSONS.slice(7, 14), LESSONS.slice(14, 21)];
   return (
     <section className="mt-16">
-      <h2>Os 21 dias</h2>
+      <h2>As 4 unidades</h2>
       <Accordion type="single" collapsible className="mt-4">
-        {weeks.map((w, i) => (
-          <AccordionItem key={i} value={`s${i}`}>
-            <AccordionTrigger>Semana {i + 1}</AccordionTrigger>
+        {UNITS.map((u) => (
+          <AccordionItem key={u.n} value={`u${u.n}`}>
+            <AccordionTrigger>
+              Unidade {u.n} · {u.title}
+            </AccordionTrigger>
             <AccordionContent>
               <ol className="space-y-2">
-                {w.map((l) => (
-                  <li key={l.day} className="flex gap-3 text-sm">
-                    <span className="w-12 shrink-0 text-muted-foreground">Dia {l.day}</span>
-                    <span>{l.title}</span>
+                {u.lessons.map((d, i) => (
+                  <li key={d} className="flex gap-3 text-sm">
+                    <span className="w-16 shrink-0 text-muted-foreground">Lição {i + 1}</span>
+                    <span>{LESSONS.find((l) => l.day === d)?.title}</span>
                   </li>
                 ))}
               </ol>
+              <p className="mt-3 text-sm text-primary">Ao concluir: {u.result}</p>
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -128,16 +139,64 @@ export function WhatWeDont() {
 }
 
 export function Pricing({ onStart }: { onStart: () => void }) {
+  return (
+    <section className="mt-16" aria-label="Planos">
+      <h2>Planos</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        O aprendizado é gratuito. Os planos pagos vendem clareza, planejamento e acompanhamento, nunca produtos financeiros.
+      </p>
+      <div className="mt-5 space-y-4">
+        {PLANS.map((plan) => (
+          <PlanCard key={plan.slug} plan={plan} onStart={onStart} />
+        ))}
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">{PRICING_NOTE}</p>
+    </section>
+  );
+}
+
+function PlanCard({ plan, onStart }: { plan: PlanTier; onStart: () => void }) {
+  return (
+    <div className={`rounded-3xl bg-card p-6 shadow-card ${plan.highlight ? "ring-2 ring-primary" : ""}`}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-display text-xl font-semibold">{plan.name}</p>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${plan.highlight ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+          {plan.tag}
+        </span>
+      </div>
+      <p className="money mt-1 text-2xl font-semibold">
+        {plan.price}
+        {plan.period && <span className="text-sm font-normal text-muted-foreground">{plan.period}</span>}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">{plan.summary}</p>
+      <ul className="mt-4 space-y-2 text-sm">
+        {plan.features.map((f) => (
+          <li key={f}>· {f}</li>
+        ))}
+      </ul>
+      {plan.waitlistSource ? (
+        <Waitlist source={plan.waitlistSource} planName={plan.name} />
+      ) : (
+        <Button className="mt-5 w-full" variant={plan.highlight ? "default" : "outline"} onClick={onStart}>
+          Começar grátis
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function Waitlist({ source, planName }: { source: string; planName: string }) {
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const id = `wl-${source}`;
 
   async function join(e: React.FormEvent) {
     e.preventDefault();
     if (!consent) return;
     setSending(true);
-    const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source: "premium_waitlist" });
+    const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source });
     setSending(false);
     if (error) {
       toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
@@ -146,59 +205,27 @@ export function Pricing({ onStart }: { onStart: () => void }) {
     setSent(true);
   }
 
+  if (sent) {
+    return (
+      <p className="mt-5 text-sm" role="status">
+        Pronto. Avisamos você por e-mail quando o {planName} lançar.
+      </p>
+    );
+  }
   return (
-    <section className="mt-16" aria-label="Planos">
-      <h2>Planos</h2>
-      <div className="mt-5 space-y-4">
-        <div className="rounded-2xl border-2 border-primary bg-card p-5">
-          <p className="font-display text-xl font-semibold">Gratuito</p>
-          <p className="money mt-1 text-2xl font-semibold">R$ 0</p>
-          <ul className="mt-4 space-y-2 text-sm">
-            {FREE_FEATURES.map((f) => (
-              <li key={f}>· {f}</li>
-            ))}
-          </ul>
-          <Button className="mt-5 w-full" onClick={onStart}>
-            Começar grátis
-          </Button>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between">
-            <p className="font-display text-xl font-semibold">Premium</p>
-            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">Em breve</span>
-          </div>
-          <p className="money mt-1 text-2xl font-semibold">
-            {PREMIUM_PRICE.monthly}
-            <span className="text-sm font-normal text-muted-foreground">/mês</span>
-          </p>
-          <p className="money text-sm text-muted-foreground">ou {PREMIUM_PRICE.yearly} por ano</p>
-          <ul className="mt-4 space-y-2 text-sm">
-            {PREMIUM_FEATURES.map((f) => (
-              <li key={f}>· {f}</li>
-            ))}
-          </ul>
-          {sent ? (
-            <p className="mt-5 text-sm" role="status">
-              Pronto. Avisamos você por e-mail quando o Premium lançar.
-            </p>
-          ) : (
-            <form onSubmit={join} className="mt-5 space-y-3">
-              <label htmlFor="wl-email" className="text-sm font-semibold">
-                Avisar quando lançar
-              </label>
-              <Input id="wl-email" type="email" required placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
-              <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
-                Aceito receber e-mails sobre o lançamento.
-              </label>
-              <Button type="submit" variant="outline" className="w-full" disabled={!consent || sending}>
-                {sending ? "Enviando…" : "Quero ser avisado"}
-              </Button>
-            </form>
-          )}
-        </div>
-      </div>
-    </section>
+    <form onSubmit={join} className="mt-5 space-y-3">
+      <label htmlFor={id} className="text-sm font-semibold">
+        Avisar quando lançar
+      </label>
+      <Input id={id} type="email" required placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
+      <label className="flex items-start gap-2 text-sm text-muted-foreground">
+        <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
+        Aceito receber e-mails sobre o lançamento.
+      </label>
+      <Button type="submit" variant="outline" className="w-full" disabled={!consent || sending}>
+        {sending ? "Enviando…" : "Quero ser avisado"}
+      </Button>
+    </form>
   );
 }
 
@@ -207,7 +234,8 @@ export function Faq() {
     ["Isso é um investimento?", "Não. É um programa de educação e planejamento. Você escolhe onde e como investir."],
     ["Preciso dar dados do meu banco?", "Não. Você só informa valores aproximados, se quiser."],
     ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
-    ["E se eu perder um dia?", "Tudo bem. Você continua de onde parou, sem perder nada."],
+    ["E se eu perder um dia?", "Tudo bem. Até dois dias por semana ficam protegidos e sua sequência continua."],
+    ["Tem ranking de patrimônio?", "Não. Você só se compara com você mesmo. O app reconhece hábitos e progresso, nunca quanto dinheiro alguém tem."],
     ["Os valores são garantidos?", "Não. São simulações com premissas que você vê e pode mudar."],
   ];
   return (

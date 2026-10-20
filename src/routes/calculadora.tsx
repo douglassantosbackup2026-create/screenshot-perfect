@@ -83,7 +83,7 @@ function Calculator() {
       <h1 className="mt-6">Quanto falta para me aposentar sem o INSS</h1>
       <p className="mt-3 text-muted-foreground">Sem login. Nada do que você digita é gravado.</p>
 
-      <section className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-5" aria-label="Seus dados">
+      <section className="mt-6 space-y-4 rounded-2xl bg-card shadow-card p-5" aria-label="Seus dados">
         <div className="grid grid-cols-2 gap-4">
           <NumberField label="Idade atual" value={age} onChange={setAge} suffix="anos" />
           <NumberField label="Aposentar aos" value={retire} onChange={setRetire} suffix="anos" />
@@ -107,7 +107,7 @@ function Calculator() {
         )}
       </section>
 
-      <section className="mt-10 rounded-2xl border border-border p-5">
+      <section className="mt-10 rounded-2xl bg-card shadow-card p-5">
         <h2 className="text-lg">E se o INSS pagar algo?</h2>
         <div className="mt-4">
           <NumberField label="Estimativa do Meu INSS por mês" value={inss} onChange={setInss} prefix="R$" optional hint={INSS_HELP} />
@@ -121,7 +121,7 @@ function Calculator() {
       </section>
 
       <Button className="mt-8 w-full" onClick={start}>
-        Montar meu plano em 21 dias
+        Começar minha jornada
       </Button>
 
       <section className="mt-10">
@@ -199,7 +199,7 @@ function Compare({ title, r }: { title: string; r: ScenarioResult }) {
 function Assumptions() {
   const a = DEFAULT_ASSUMPTIONS;
   return (
-    <p className="mt-4 rounded-[10px] bg-muted p-3 text-sm text-muted-foreground">
+    <p className="mt-4 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
       Premissas: retorno real de {formatPercent(a.returns.central)} ao ano, dinheiro até os {a.horizonAge} anos, sem custos, sem INSS.
       Valores em reais de hoje.
     </p>

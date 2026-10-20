@@ -57,7 +57,7 @@ export function ConstancyThread({ months }: { months: ThreadMonth[] }) {
               type="button"
               onClick={m.onSelect}
               disabled={!m.onSelect}
-              className="-mt-0.5 flex min-h-11 flex-1 flex-wrap items-center gap-2 rounded-[10px] px-2 text-left enabled:hover:bg-muted"
+              className="-mt-0.5 flex min-h-11 flex-1 flex-wrap items-center gap-2 rounded-xl px-2 text-left enabled:hover:bg-muted"
             >
               <span className="font-semibold">{monthYear(m.month)}</span>
               <span className="sr-only">, {stateLabel[m.state]}</span>

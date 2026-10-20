@@ -52,7 +52,7 @@ function Profile() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[480px] px-5 pb-28 pt-8">
+    <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <h1>{s.profile.displayName || "Perfil"}</h1>
 
       <section className="mt-8" aria-label="Níveis">
@@ -67,7 +67,6 @@ function Profile() {
                 className={cn(
                   "flex items-center gap-4 rounded-2xl border p-4",
                   current ? "border-primary bg-card" : "border-border",
-                  !l.available && "opacity-60",
                 )}
                 aria-current={current ? "step" : undefined}
               >
@@ -77,32 +76,30 @@ function Profile() {
                     reached ? "border-primary text-primary" : "border-border text-muted-foreground",
                   )}
                 >
-                  {l.available ? l.level : <Lock size={16} strokeWidth={1.75} aria-label="Bloqueado" />}
+                  {reached ? l.level : <Lock size={16} strokeWidth={1.75} aria-label="Bloqueado" />}
                 </span>
                 <div>
-                  <p className="font-semibold">
-                    {l.name}
-                    {!l.available && <span className="font-normal text-muted-foreground"> · em breve</span>}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{l.how}</p>
+                  <p className="font-semibold">{l.name}</p>
+                  <p className="text-sm text-muted-foreground">{l.minXp === 0 ? "Ao começar a jornada" : `A partir de ${l.minXp} XP`}</p>
                 </div>
               </li>
             );
           })}
         </ol>
         <p className="mt-3 text-sm text-muted-foreground">
-          <span className="money">{s.stats.totalXp}</span> XP · melhor sequência: {s.stats.bestWeekStreak} semanas
+          <span className="money">{s.stats.totalXp}</span> XP · melhor sequência: {s.stats.bestDayStreak} {s.stats.bestDayStreak === 1 ? "dia" : "dias"} · {s.stats.bestWeekStreak}{" "}
+          {s.stats.bestWeekStreak === 1 ? "semana" : "semanas"}
         </p>
       </section>
 
       <section className="mt-10" aria-label="Conquistas">
         <h2 className="text-lg">Conquistas</h2>
-        <ul className="mt-4 grid grid-cols-2 gap-3">
+        <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {ACHIEVEMENTS.map((a) => {
             const Icon = ACH_ICONS[a.icon] ?? Lock;
             const got = earned.has(a.code);
             return (
-              <li key={a.code} className="rounded-2xl border border-border p-4">
+              <li key={a.code} className="rounded-2xl bg-card shadow-card p-4">
                 <span
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full",
@@ -151,6 +148,9 @@ function Profile() {
 
       <section className="mt-10 divide-y divide-border">
         <h2 className="pb-2 text-lg">Privacidade</h2>
+        <Row label="Ocultar valores por padrão" hint="Diário e Evolução abrem com os valores escondidos.">
+          <Switch checked={s.profile.hideValues} onCheckedChange={(v) => demo.updateProfile({ hideValues: v })} />
+        </Row>
         <Row label="Permitir dados de uso anônimos" hint="Nunca inclui valores financeiros.">
           <Switch checked={s.profile.analyticsConsent} onCheckedChange={(v) => demo.updateProfile({ analyticsConsent: v })} />
         </Row>

@@ -2,26 +2,45 @@
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
 import { useSyncExternalStore } from "react";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
+import { validateAsset, type AssetCategory } from "@/lib/calc/assets";
+import { snapshotFromAssets, type BreakdownItem } from "@/lib/calc/networth";
+import { isSavingsAccount, type AccountKind } from "@/lib/calc/ledger";
+import { dueOccurrences, validateRule, type RecurrenceRule } from "@/lib/calc/recurring";
+import { applyRules, normalize, type CategoryRule, type RuleOp } from "@/lib/calc/categorize";
+import { dedupe, type ImportedTx } from "@/lib/calc/import";
 import {
   addMonths,
   awardXp,
-  computeLevel,
+  challengeProgress,
+  computeDayStreak,
+  levelFromXp,
   computeStreak,
   eligibleAchievements,
+  goalCreatedPeriodKey,
+  hasFullQuarter,
   isoWeekKey,
   monthOf,
   quarterKey,
   spDate,
   weekStartOf,
+  XP,
   type AchievementCode,
+  type ChallengeInputs,
   type WeekRecord,
   type XpEvent,
 } from "@/lib/gamification/rules";
 import { PROGRAM } from "@/content/program";
+import { CHALLENGES, challengeBySlug } from "@/content/challenges";
+import { UNITS } from "@/content/journey";
+import { dailyMission, gradePlacement, gradeReview, isLessonUnlocked, missionAccepts, canTakePlacement, unitProgress, type DailyKind } from "@/lib/journey/journey";
 
 export type WorkType = "pj" | "autonomo" | "mei" | "clt" | "servidor" | "outro";
 export type Destination = "previdencia" | "investimentos" | "reserva" | "outro";
 export type SnapshotReason = "created" | "edit" | "quick_review" | "life_event" | "annual_review";
+export type Objective = "entender" | "organizar" | "previdencia";
+export type ReviewCadence = "mensal" | "trimestral" | "semestral";
+/** Dados que a pessoa pulou ou ainda não informou; aparecem como aviso, nunca são inventados. */
+export type MissingField = "idade" | "renda" | "patrimonio" | "aporte";
 
 export type Profile = {
   displayName: string;
@@ -36,6 +55,11 @@ export type Profile = {
   onboardingCompletedAt: string | null;
   goalRetirementAge: number | null;
   goalIncome: number | null;
+  /** Privacidade por padrão: valores aparecem ocultos até a pessoa pedir para ver. */
+  hideValues: boolean;
+  objective: Objective | null;
+  reviewCadence: ReviewCadence;
+  missingFields: MissingField[];
 };
 
 export type Plan = { id: string; createdAt: string; updatedAt: string; inputs: PlanInputs };
@@ -58,8 +82,100 @@ export type Contribution = {
   createdAt: string;
 };
 
+/** Foto do patrimônio em um mês (o último registro do mês vale). */
+export type WealthEntry = {
+  id: string;
+  month: string;
+  total: number;
+  previdencia: number | null;
+  note: string | null;
+  /** Itens que compõem o total, quando o registro foi montado a partir do Patrimônio. */
+  breakdown: BreakdownItem[] | null;
+  createdAt: string;
+};
+export type GoalKind = "valor" | "habito";
+export type Goal = {
+  id: string;
+  title: string;
+  kind: GoalKind;
+  target: number | null;
+  deadline: string | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+export type ChallengeRun = { slug: string; startedAt: string; completedAt: string | null };
+/** Item do patrimônio informado pela pessoa (espelho de public.assets). */
+export type Asset = {
+  id: string;
+  name: string;
+  category: AssetCategory;
+  value: number;
+  forRetirement: boolean;
+  note: string | null;
+  source: "manual";
+  updatedAt: string;
+};
+/** Valor de um item em um mês (espelho de public.asset_valuations); o último registro do mês vale. */
+export type AssetValuation = { assetId: string; month: string; value: number; at: string };
+
+// ---------- Livro-caixa (valores em centavos, com sinal) ----------
+export type Account = { id: string; name: string; kind: AccountKind; openingBalance: number; createdAt: string };
+export type CategoryKind = "receita" | "despesa";
+export type Category = { id: string; name: string; kind: CategoryKind };
+export type TxSource = "manual" | "importado" | "recorrente";
+export type Transaction = {
+  id: string;
+  accountId: string;
+  date: string;
+  amount: number;
+  payee: string;
+  categoryId: string | null;
+  note: string | null;
+  /** Outra perna da transferência; transferências não têm categoria. */
+  transferId: string | null;
+  importedId: string | null;
+  source: TxSource;
+  recurringId: string | null;
+  occurrenceDate: string | null;
+  /** Aporte do Diário criado junto com esta transferência. */
+  contributionId: string | null;
+  createdAt: string;
+};
+export type RecurringRule = RecurrenceRule & {
+  id: string;
+  accountId: string;
+  amount: number;
+  payee: string;
+  categoryId: string | null;
+  note: string | null;
+  active: boolean;
+};
+
+/** Categorias iniciais; a pessoa pode criar outras. */
+export const DEFAULT_CATEGORIES: Category[] = [
+  { id: "cat-renda", name: "Renda do trabalho", kind: "receita" },
+  { id: "cat-outras-receitas", name: "Outras receitas", kind: "receita" },
+  { id: "cat-moradia", name: "Moradia", kind: "despesa" },
+  { id: "cat-mercado", name: "Mercado", kind: "despesa" },
+  { id: "cat-transporte", name: "Transporte", kind: "despesa" },
+  { id: "cat-saude", name: "Saúde", kind: "despesa" },
+  { id: "cat-educacao", name: "Educação", kind: "despesa" },
+  { id: "cat-restaurantes", name: "Restaurantes", kind: "despesa" },
+  { id: "cat-lazer", name: "Lazer", kind: "despesa" },
+  { id: "cat-assinaturas", name: "Assinaturas", kind: "despesa" },
+  { id: "cat-impostos", name: "Impostos e taxas", kind: "despesa" },
+  { id: "cat-outros", name: "Outros gastos", kind: "despesa" },
+];
+
+export type DailyMissionRecord = { day: string; kind: DailyKind; at: string };
+export type Journey = {
+  /** Unidades liberadas pelo teste de nivelamento (as lições ficam abertas, não concluídas). */
+  testedOutUnits: number[];
+  dailyMissions: DailyMissionRecord[];
+};
+
 export type DemoState = {
-  version: 1;
+  version: 6;
   profile: Profile;
   plan: Plan | null;
   snapshots: Snapshot[];
@@ -71,8 +187,33 @@ export type DemoState = {
   xpEvents: XpEvent[];
   weeks: WeekRecord[];
   achievements: { code: AchievementCode; at: string }[];
-  stats: { totalXp: number; level: number; weekStreak: number; bestWeekStreak: number };
+  wealthEntries: WealthEntry[];
+  goals: Goal[];
+  challenges: ChallengeRun[];
+  assets: Asset[];
+  assetValuations: AssetValuation[];
+  accounts: Account[];
+  categories: Category[];
+  transactions: Transaction[];
+  recurring: RecurringRule[];
+  categoryRules: CategoryRule[];
+  journey: Journey;
+  /** Dias ativos ("YYYY-MM-DD", horário de Brasília) para a sequência diária. */
+  days: string[];
+  stats: Stats;
 };
+type Stats = {
+  totalXp: number;
+  level: number;
+  weekStreak: number;
+  bestWeekStreak: number;
+  dayStreak: number;
+  bestDayStreak: number;
+};
+const EMPTY_STATS: Stats = { totalXp: 0, level: 1, weekStreak: 0, bestWeekStreak: 0, dayStreak: 0, bestDayStreak: 0 };
+
+/** Desafios em andamento ao mesmo tempo. */
+export const MAX_ACTIVE_CHALLENGES = 2;
 
 export type ActionResult = {
   xpAwarded: number;
@@ -80,6 +221,7 @@ export type ActionResult = {
   totalXp: number;
   level: number;
   weekStreak: number;
+  dayStreak: number;
 };
 
 const KEY = "pi_demo_state_v1";
@@ -128,18 +270,94 @@ export function makeSeed(now = new Date()): DemoState {
   const lessonCompletions: Record<number, string> = {};
   for (let d = 1; d <= 14; d++) lessonCompletions[d] = new Date(now.getTime() - (15 - d) * 86400000).toISOString();
   const xpEvents: XpEvent[] = [];
-  for (let d = 1; d <= 14; d++) xpEvents.push({ action: "lesson_completed", periodKey: `D:seed-${d}`, xp: 10, at: iso });
+  for (let d = 1; d <= 14; d++) xpEvents.push({ action: "lesson_completed", periodKey: `L:${d}`, xp: XP.lesson_completed, at: iso });
   xpEvents.push({ action: "first_plan_created", periodKey: "ONCE", xp: 100, at: iso });
   // Só o mês anterior ainda gera XP em tempo real; os mais antigos foram "registrados em dia" na época.
-  for (const c of contributions.filter((c) => c.made))
-    xpEvents.push({ action: "contribution_logged", periodKey: "M:" + c.month.slice(0, 7), xp: 50, at: iso });
+  for (const c of contributions)
+    xpEvents.push({ action: "contribution_logged", periodKey: "M:" + c.month.slice(0, 7), xp: XP.contribution_logged, at: iso });
   const thisWeek = weekStartOf(today);
   const weeks: WeekRecord[] = [1, 2, 3].map((k) => ({
     weekStart: weekStartOf(addDaysIso(thisWeek, -7 * k)),
     status: "ativa" as const,
   }));
+  // Seis meses de patrimônio registrado, um por mês; o mês atual bate com o plano.
+  const wealthEntries: WealthEntry[] = [6000, 7100, 7200, 8300, 9400, 10000].map((total, k) => {
+    const m = addMonths(month, k - 5);
+    return {
+      id: newId(),
+      month: m,
+      total,
+      previdencia: total,
+      note: null,
+      breakdown: null,
+      createdAt: k === 5 ? iso : `${m.slice(0, 8)}15T12:00:00.000Z`,
+    };
+  });
+  for (const w of wealthEntries.slice(0, -1))
+    xpEvents.push({ action: "wealth_logged", periodKey: "M:" + w.month.slice(0, 7), xp: 30, at: w.createdAt });
+  xpEvents.push({ action: "wealth_logged", periodKey: "M:" + month.slice(0, 7), xp: 30, at: iso });
+  const goalId = newId();
+  xpEvents.push({ action: "goal_created", periodKey: `G:${month.slice(0, 7)}:${goalId}`, xp: 20, at: iso });
+  const days = Object.values(lessonCompletions).map((d) => spDate(new Date(d)));
+  // Patrimônio item a item: os R$ 10 mil para a aposentadoria batem com o plano; a reserva fica de fora.
+  const assets: Asset[] = [
+    { name: "PGBL da corretora", category: "pgbl" as const, value: 8000, forRetirement: true },
+    { name: "Tesouro IPCA+", category: "investimentos" as const, value: 2000, forRetirement: true },
+    { name: "Reserva no CDB de liquidez diária", category: "reserva" as const, value: 6000, forRetirement: false },
+  ].map((a) => ({ ...a, id: newId(), note: null, source: "manual" as const, updatedAt: iso }));
+  // Histórico dos itens nos últimos meses; a soma do que é para a aposentadoria bate com os registros mensais.
+  const history: number[][] = [
+    [6000, 7100, 7200, 7300, 7900, 8000],
+    [NaN, NaN, NaN, 1000, 1500, 2000],
+    [5000, NaN, NaN, NaN, NaN, 6000],
+  ];
+  const assetValuations: AssetValuation[] = assets.flatMap((a, i) =>
+    history[i]!.flatMap((value, k) => {
+      const m = addMonths(month, k - 5);
+      return Number.isNaN(value) ? [] : [{ assetId: a.id, month: m, value, at: k === 5 ? iso : `${m.slice(0, 8)}15T12:00:00.000Z` }];
+    }),
+  );
+  // Livro-caixa: conta corrente, cartão e previdência, com o mês passado e o atual até hoje.
+  const accounts: Account[] = [
+    { id: newId(), name: "Conta corrente", kind: "corrente", openingBalance: 350000, createdAt: iso },
+    { id: newId(), name: "Cartão de crédito", kind: "cartao", openingBalance: 0, createdAt: iso },
+    { id: newId(), name: "PGBL da corretora", kind: "previdencia", openingBalance: 0, createdAt: iso },
+  ];
+  const [cc, card, prev] = accounts.map((a) => a.id) as [string, string, string];
+  const prevMonth = addMonths(month, -1);
+  const day = (m: string, d: number) => `${m.slice(0, 8)}${String(d).padStart(2, "0")}`;
+  const tx = (accountId: string, date: string, amount: number, payee: string, categoryId: string | null): Transaction => ({
+    id: newId(), accountId, date, amount, payee, categoryId, note: null, transferId: null, importedId: null,
+    source: "manual", recurringId: null, occurrenceDate: null, contributionId: null, createdAt: iso,
+  });
+  const transactions: Transaction[] = [
+    tx(cc, day(prevMonth, 5), 800000, "Cliente Alfa", "cat-renda"),
+    tx(card, day(prevMonth, 8), -64230, "Supermercado", "cat-mercado"),
+    tx(card, day(prevMonth, 14), -8900, "Uber", "cat-transporte"),
+    tx(card, day(prevMonth, 21), -12750, "Restaurante", "cat-restaurantes"),
+    tx(cc, day(prevMonth, 25), -42000, "Imposto do MEI e DAS", "cat-impostos"),
+    tx(cc, day(month, 5), 800000, "Cliente Alfa", "cat-renda"),
+    tx(card, day(month, 7), -58110, "Supermercado", "cat-mercado"),
+    tx(card, day(month, 12), -6400, "Uber", "cat-transporte"),
+  ].filter((t) => t.date <= today);
+  // O aporte do mês passado saiu da conta corrente para a previdência.
+  const contribution = contributions[contributions.length - 1]!;
+  const out = tx(cc, day(prevMonth, 10), -100000, "Transferência para PGBL da corretora", null);
+  const inn = tx(prev, out.date, 100000, "Transferência da Conta corrente", null);
+  out.transferId = inn.id;
+  inn.transferId = out.id;
+  out.contributionId = contribution.id;
+  transactions.push(out, inn);
+  const recurring: RecurringRule[] = [
+    { payee: "Aluguel", amount: -200000, categoryId: "cat-moradia", accountId: cc, d: 10, weekend: "antes" as const },
+    { payee: "Streaming", amount: -5590, categoryId: "cat-assinaturas", accountId: card, d: 15, weekend: "manter" as const },
+  ].map(({ d, ...r }) => ({ ...r, id: newId(), note: null, active: true, startDate: day(prevMonth, d), frequency: "mensal" as const, interval: 1, endDate: null }));
+  const categoryRules: CategoryRule[] = [
+    { id: newId(), op: "contem", value: "uber", categoryId: "cat-transporte", renameTo: "Uber" },
+    { id: newId(), op: "contem", value: "supermercado", categoryId: "cat-mercado", renameTo: null },
+  ];
   const s: DemoState = {
-    version: 1,
+    version: 6,
     profile: {
       displayName: "Ana",
       birthYear: Number(today.slice(0, 4)) - 30,
@@ -153,6 +371,10 @@ export function makeSeed(now = new Date()): DemoState {
       onboardingCompletedAt: iso,
       goalRetirementAge: 60,
       goalIncome: 8000,
+      hideValues: true,
+      objective: "entender",
+      reviewCadence: "trimestral",
+      missingFields: [],
     },
     plan: { id: newId(), createdAt: iso, updatedAt: iso, inputs },
     snapshots: [
@@ -173,8 +395,31 @@ export function makeSeed(now = new Date()): DemoState {
     xpEvents,
     weeks,
     achievements: [],
-    stats: { totalXp: 0, level: 1, weekStreak: 0, bestWeekStreak: 0 },
+    wealthEntries,
+    goals: [
+      {
+        id: goalId,
+        title: "Chegar a R$ 20 mil guardados para a aposentadoria",
+        kind: "valor",
+        target: 20000,
+        deadline: addMonths(month, 12),
+        createdAt: iso,
+        completedAt: null,
+      },
+    ],
+    challenges: [{ slug: CHALLENGES[0]!.slug, startedAt: new Date(now.getTime() - 3 * 86400000).toISOString(), completedAt: null }],
+    assets,
+    assetValuations,
+    accounts,
+    categories: [...DEFAULT_CATEGORIES],
+    transactions,
+    recurring,
+    categoryRules,
+    journey: { testedOutUnits: [], dailyMissions: [] },
+    days,
+    stats: { ...EMPTY_STATS },
   };
+  materializeRecurring(s, now);
   refresh(s, now);
   s.achievements = s.achievements.map((a) => ({ ...a }));
   return s;
@@ -186,13 +431,46 @@ function addDaysIso(day: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Recalcula sequência, nível, conquistas e XP total (espelho de _refresh_progress). */
-function refresh(s: DemoState, now: Date): AchievementCode[] {
+const dayOf = (iso: string) => spDate(new Date(iso));
+
+/** Datas que contam para os desafios, derivadas do que já está registrado. */
+export function challengeInputs(s: DemoState): ChallengeInputs {
+  return {
+    missions: s.missionCompletions.map((m) => dayOf(m.at)),
+    active_days: s.days,
+    wealth_months: s.wealthEntries.map((w) => dayOf(w.createdAt)),
+    plan_reviews: s.snapshots.filter((x) => x.reason !== "created").map((x) => dayOf(x.createdAt)),
+    goals_completed: s.goals.flatMap((g) => (g.completedAt ? [dayOf(g.completedAt)] : [])),
+  };
+}
+
+/** Conclui desafios que atingiram a meta. Devolve o XP concedido. */
+function settleChallenges(s: DemoState, now: Date): number {
   const today = spDate(now);
+  const inputs = challengeInputs(s);
+  let xp = 0;
+  s.challenges = s.challenges.map((c) => {
+    const def = challengeBySlug(c.slug);
+    if (c.completedAt || !def) return c;
+    const p = challengeProgress(def, dayOf(c.startedAt), inputs, today);
+    if (!p.completed) return c;
+    const a = awardXp(s.xpEvents, "challenge_completed", `C:${c.slug}:${c.startedAt}`, now.toISOString());
+    s.xpEvents = a.events;
+    xp += a.awarded;
+    return { ...c, completedAt: now.toISOString() };
+  });
+  return xp;
+}
+
+/** Recalcula sequências, nível, conquistas e XP total (espelho de _refresh_progress). */
+function refresh(s: DemoState, now: Date): { fresh: AchievementCode[]; xp: number } {
+  const today = spDate(now);
+  const xp = settleChallenges(s, now);
   const { streak, weeks } = computeStreak(s.weeks, today);
   s.weeks = weeks;
+  const day = computeDayStreak(s.days, today);
   const contribMonths = s.xpEvents.filter((e) => e.action === "contribution_logged").map((e) => e.periodKey.slice(2) + "-01");
-  const level = computeLevel(contribMonths.length, !!s.plan);
+  const reviews = s.snapshots.filter((x) => x.reason !== "created").map((x) => dayOf(x.createdAt));
   const eligible = eligibleAchievements({
     hasPlan: !!s.plan,
     contributionMonthKeys: contribMonths,
@@ -200,18 +478,69 @@ function refresh(s: DemoState, now: Date): AchievementCode[] {
     hasLifeEvent: s.snapshots.some((x) => x.reason === "life_event"),
     programCompleted: !!s.program.completedAt,
     hasAnnualReview: s.xpEvents.some((e) => e.action === "annual_review"),
+    hasWealthEntry: s.wealthEntries.length > 0,
+    hasGoal: s.goals.length > 0,
+    hasCompletedGoal: s.goals.some((g) => g.completedAt),
+    hasFullQuarter: hasFullQuarter(
+      s.wealthEntries.map((w) => w.month),
+      reviews,
+    ),
+    hasCompletedChallenge: s.challenges.some((c) => c.completedAt),
+    hasCompletedFirstUnit: unitProgress(UNITS[0]!, completedDays(s)).complete,
   });
   const have = new Set(s.achievements.map((a) => a.code));
   const fresh = eligible.filter((c) => !have.has(c));
   s.achievements = [...s.achievements, ...fresh.map((code) => ({ code, at: now.toISOString() }))];
   const totalXp = s.xpEvents.reduce((a, e) => a + e.xp, 0);
-  s.stats = { totalXp, level, weekStreak: streak, bestWeekStreak: Math.max(s.stats.bestWeekStreak, streak) };
-  return fresh;
+  s.stats = {
+    totalXp,
+    level: levelFromXp(totalXp).level,
+    weekStreak: streak,
+    bestWeekStreak: Math.max(s.stats.bestWeekStreak, streak),
+    dayStreak: day.streak,
+    bestDayStreak: Math.max(s.stats.bestDayStreak, day.streak),
+  };
+  return { fresh, xp };
 }
 
-function markWeekActive(s: DemoState, now: Date) {
-  const ws = weekStartOf(spDate(now));
+/** Marca hoje como dia ativo e a semana como ativa (espelho de _mark_week_active). */
+function markActive(s: DemoState, now: Date) {
+  const today = spDate(now);
+  const ws = weekStartOf(today);
   s.weeks = [...s.weeks.filter((w) => w.weekStart !== ws), { weekStart: ws, status: "ativa" }];
+  if (!s.days.includes(today)) s.days = [...s.days, today];
+}
+
+/** Completa um estado salvo por versões anteriores com os campos novos. */
+function migrate(raw: DemoState): DemoState {
+  if (raw.version === 6) return raw;
+  const assets = raw.assets ?? [];
+  return {
+    ...raw,
+    version: 6,
+    accounts: raw.accounts ?? [],
+    categories: raw.categories ?? [...DEFAULT_CATEGORIES],
+    transactions: raw.transactions ?? [],
+    recurring: raw.recurring ?? [],
+    categoryRules: raw.categoryRules ?? [],
+    journey: raw.journey ?? { testedOutUnits: [], dailyMissions: [] },
+    profile: {
+      ...raw.profile,
+      hideValues: raw.profile.hideValues ?? true,
+      objective: raw.profile.objective ?? null,
+      reviewCadence: raw.profile.reviewCadence ?? "trimestral",
+      missingFields: raw.profile.missingFields ?? [],
+    },
+    assets,
+    // Sem histórico salvo: o valor atual de cada item vira o primeiro ponto, no mês da última atualização.
+    assetValuations:
+      raw.assetValuations ?? assets.map((a) => ({ assetId: a.id, month: monthOf(dayOf(a.updatedAt)), value: a.value, at: a.updatedAt })),
+    wealthEntries: (raw.wealthEntries ?? []).map((w) => ({ ...w, breakdown: w.breakdown ?? null })),
+    goals: raw.goals ?? [],
+    challenges: raw.challenges ?? [],
+    days: raw.days ?? [],
+    stats: { ...EMPTY_STATS, ...raw.stats },
+  };
 }
 
 // ---------- Store ----------
@@ -222,7 +551,7 @@ function load(): DemoState {
   if (state) return state;
   try {
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;
-    state = raw ? (JSON.parse(raw) as DemoState) : makeSeed();
+    state = raw ? migrate(JSON.parse(raw) as DemoState) : makeSeed();
   } catch {
     state = makeSeed();
   }
@@ -241,9 +570,16 @@ function mutate(fn: (s: DemoState, now: Date) => number): ActionResult {
   const now = new Date();
   const s: DemoState = structuredClone(load());
   const xp = fn(s, now);
-  const fresh = refresh(s, now);
+  const r = refresh(s, now);
   commit(s);
-  return { xpAwarded: xp, newAchievements: fresh, totalXp: s.stats.totalXp, level: s.stats.level, weekStreak: s.stats.weekStreak };
+  return {
+    xpAwarded: xp + r.xp,
+    newAchievements: r.fresh,
+    totalXp: s.stats.totalXp,
+    level: s.stats.level,
+    weekStreak: s.stats.weekStreak,
+    dayStreak: s.stats.dayStreak,
+  };
 }
 
 let serverSeed: DemoState | null = null;
@@ -267,7 +603,26 @@ export const demo = {
     const s = makeSeed();
     commit({
       ...s,
-      profile: { ...s.profile, displayName: "", onboardingCompletedAt: null, birthYear: null, workType: null, hasOverdueDebt: null },
+      profile: {
+        ...s.profile,
+        displayName: "",
+        onboardingCompletedAt: null,
+        birthYear: null,
+        workType: null,
+        hasOverdueDebt: null,
+        goalRetirementAge: null,
+        goalIncome: null,
+        objective: null,
+        missingFields: [],
+      },
+      assets: [],
+      assetValuations: [],
+      accounts: [],
+      categories: [...DEFAULT_CATEGORIES],
+      transactions: [],
+      recurring: [],
+      categoryRules: [],
+      journey: { testedOutUnits: [], dailyMissions: [] },
       plan: null,
       snapshots: [],
       contributions: [],
@@ -278,7 +633,11 @@ export const demo = {
       xpEvents: [],
       weeks: [],
       achievements: [],
-      stats: { totalXp: 0, level: 1, weekStreak: 0, bestWeekStreak: 0 },
+      wealthEntries: [],
+      goals: [],
+      challenges: [],
+      days: [],
+      stats: { ...EMPTY_STATS },
     });
   },
   updateProfile(patch: Partial<Profile>) {
@@ -309,14 +668,19 @@ export const demo = {
   completeLesson(day: number): ActionResult & { programCompleted: boolean } {
     let done = false;
     const r = mutate((s, now) => {
-      if (day > s.program.currentDay) throw new Error("Esta lição ainda não abriu.");
+      if (!isLessonUnlocked(day, completedDays(s), s.journey.testedOutUnits)) throw new Error("Esta lição ainda não abriu.");
+      // A missão do dia é avaliada antes da conclusão, com a trilha como estava ao abrir o app.
+      const mission = todayMission(s, now);
       let xp = 0;
       if (!s.lessonCompletions[day]) {
         s.lessonCompletions[day] = now.toISOString();
-        const a = awardXp(s.xpEvents, "lesson_completed", "D:" + spDate(now), now.toISOString());
+        // Progresso livre: XP uma vez por lição, sem limite por dia.
+        const a = awardXp(s.xpEvents, "lesson_completed", "L:" + day, now.toISOString());
         s.xpEvents = a.events;
         xp += a.awarded;
+        if (missionAccepts(mission, "learn")) xp += settleDailyMission(s, now, "learn");
       }
+      // currentDay fica só por compatibilidade com dados antigos; quem abre lições é a trilha.
       s.program.currentDay = Math.max(s.program.currentDay, day + 1);
       if (Object.keys(s.lessonCompletions).length >= PROGRAM.totalDays) {
         s.program.completedAt ??= now.toISOString();
@@ -325,10 +689,32 @@ export const demo = {
         xp += a.awarded;
         done = true;
       }
-      markWeekActive(s, now);
+      markActive(s, now);
       return xp;
     });
     return { ...r, programCompleted: done };
+  },
+  /** Teste de nivelamento: acertando todas, a unidade fica liberada. Não dá XP pelas lições puladas. */
+  submitPlacement(unit: number, answers: Record<string, string>): ActionResult & { passed: boolean; correct: number; total: number } {
+    let g = { correct: 0, total: 0, passed: false };
+    const r = mutate((s) => {
+      if (!canTakePlacement(unit, completedDays(s), s.journey.testedOutUnits)) throw new Error("Este teste não está disponível agora.");
+      g = gradePlacement(unit, answers);
+      if (g.passed) s.journey.testedOutUnits = [...s.journey.testedOutUnits, unit];
+      return 0;
+    });
+    return { ...r, ...g };
+  },
+  /** Conclui a missão do dia, se a atividade for a de hoje. Quiz e revisão exigem acertar 2 de 3. */
+  completeDailyMission(kind: DailyKind, answers?: Record<string, string>): ActionResult {
+    return mutate((s, now) => {
+      if (!missionAccepts(todayMission(s, now), kind)) throw new Error("Esta não é a missão de hoje.");
+      if ((kind === "quiz" || kind === "review") && !gradeReview(answers ?? {}, completedDays(s)).passed)
+        throw new Error("Para a revisão contar, acerte pelo menos 2 de 3.");
+      const xp = settleDailyMission(s, now, kind);
+      markActive(s, now);
+      return xp;
+    });
   },
   completeMission(slug: string): ActionResult {
     return mutate((s, now) => {
@@ -337,7 +723,7 @@ export const demo = {
       s.missionCompletions.push({ isoWeek: week, slug, at: now.toISOString() });
       const a = awardXp(s.xpEvents, "weekly_mission", "W:" + week, now.toISOString());
       s.xpEvents = a.events;
-      markWeekActive(s, now);
+      markActive(s, now);
       return a.awarded;
     });
   },
@@ -348,6 +734,8 @@ export const demo = {
       const created = !s.plan;
       s.plan = s.plan ? { ...s.plan, inputs, updatedAt: iso } : { id: newId(), createdAt: iso, updatedAt: iso, inputs };
       const r: SnapshotReason = created ? "created" : reason;
+      // Revisar as premissas no plano confirma os dados que estavam marcados como ausentes.
+      if (!created) s.profile.missingFields = [];
       s.snapshots.unshift({
         id: newId(),
         reason: r,
@@ -365,33 +753,12 @@ export const demo = {
       else if (r === "annual_review" && planAgeDays(s.plan.createdAt, now) >= 180)
         a = awardXp(s.xpEvents, "annual_review", "Y:" + today.slice(0, 4), iso);
       s.xpEvents = a.events;
-      markWeekActive(s, now);
+      markActive(s, now);
       return a.awarded;
     });
   },
   logContribution(input: { month: string; made: boolean; amount?: number | null; destination?: Destination | null; note?: string | null }): ActionResult {
-    return mutate((s, now) => {
-      const current = monthOf(spDate(now));
-      const month = monthOf(input.month);
-      if (month > current) throw new Error("Não é possível registrar um mês futuro.");
-      s.contributions.push({
-        id: newId(),
-        month,
-        made: input.made,
-        amount: input.made ? (input.amount ?? null) : null,
-        destination: input.destination ?? null,
-        note: input.note ?? null,
-        createdAt: now.toISOString(),
-      });
-      let xp = 0;
-      if (input.made && month >= addMonths(current, -1)) {
-        const a = awardXp(s.xpEvents, "contribution_logged", "M:" + month.slice(0, 7), now.toISOString());
-        s.xpEvents = a.events;
-        xp = a.awarded;
-      }
-      markWeekActive(s, now);
-      return xp;
-    });
+    return mutate((s, now) => recordContribution(s, now, input).xp);
   },
   updateContribution(id: string, patch: Partial<Pick<Contribution, "amount" | "destination" | "note">>) {
     const s = structuredClone(load());
@@ -403,25 +770,447 @@ export const demo = {
     s.contributions = s.contributions.filter((c) => c.id !== id);
     commit(s);
   },
+  /** Registra o patrimônio de um mês; um novo registro no mesmo mês substitui o anterior. */
+  logWealth(input: { month: string; total: number; previdencia?: number | null; note?: string | null }): ActionResult {
+    return mutate((s, now) => recordWealth(s, now, { ...input, breakdown: null }));
+  },
+  /** Registra o patrimônio deste mês com os itens cadastrados (espelho de log_wealth_from_assets). */
+  logWealthFromAssets(note?: string | null): ActionResult {
+    return mutate((s, now) => {
+      if (s.assets.length === 0) throw new Error("Cadastre ao menos um item no Patrimônio.");
+      const snap = snapshotFromAssets(s.assets);
+      return recordWealth(s, now, { month: monthOf(spDate(now)), ...snap, note: note ?? null });
+    });
+  },
+  /** Cria ou atualiza um item do patrimônio (espelho de upsert_asset). Não concede XP. */
+  saveAsset(input: { id?: string | undefined; name: string; category: AssetCategory; value: number; forRetirement: boolean; note?: string | null }) {
+    const errors = validateAsset(input);
+    if (errors.length) throw new Error(errors[0]);
+    const s = structuredClone(load());
+    const now = new Date();
+    const previous = input.id ? s.assets.find((a) => a.id === input.id) : undefined;
+    if (input.id && !previous) throw new Error("Item não encontrado.");
+    const item: Asset = {
+      id: input.id ?? newId(),
+      name: input.name.trim(),
+      category: input.category,
+      value: input.value,
+      forRetirement: input.forRetirement,
+      note: input.note ?? null,
+      source: "manual",
+      updatedAt: now.toISOString(),
+    };
+    s.assets = input.id ? s.assets.map((a) => (a.id === input.id ? item : a)) : [...s.assets, item];
+    // Guarda o valor no histórico do item quando ele muda; no mesmo mês, o novo valor substitui o anterior.
+    if (!previous || previous.value !== item.value) {
+      const month = monthOf(spDate(now));
+      s.assetValuations = [
+        ...s.assetValuations.filter((v) => !(v.assetId === item.id && v.month === month)),
+        { assetId: item.id, month, value: item.value, at: item.updatedAt },
+      ];
+    }
+    commit(s);
+  },
+  deleteAsset(id: string) {
+    const s = structuredClone(load());
+    s.assets = s.assets.filter((a) => a.id !== id);
+    s.assetValuations = s.assetValuations.filter((v) => v.assetId !== id);
+    commit(s);
+  },
+  updateWealth(id: string, patch: Partial<Pick<WealthEntry, "total" | "previdencia" | "note">>) {
+    const s = structuredClone(load());
+    s.wealthEntries = s.wealthEntries.map((w) => (w.id === id ? { ...w, ...patch } : w));
+    commit(s);
+  },
+  deleteWealth(id: string) {
+    const s = structuredClone(load());
+    s.wealthEntries = s.wealthEntries.filter((w) => w.id !== id);
+    commit(s);
+  },
+  createGoal(input: { title: string; kind: GoalKind; target?: number | null; deadline?: string | null }): ActionResult {
+    return mutate((s, now) => {
+      const title = input.title.trim();
+      if (!title) throw new Error("Dê um nome para a meta.");
+      if (input.kind === "valor" && !(input.target && input.target > 0)) throw new Error("Informe o valor da meta.");
+      const id = newId();
+      s.goals.push({
+        id,
+        title,
+        kind: input.kind,
+        target: input.kind === "valor" ? (input.target ?? null) : null,
+        deadline: input.deadline ?? null,
+        createdAt: now.toISOString(),
+        completedAt: null,
+      });
+      let xp = 0;
+      const key = goalCreatedPeriodKey(s.xpEvents, spDate(now), id);
+      if (key) {
+        const a = awardXp(s.xpEvents, "goal_created", key, now.toISOString());
+        s.xpEvents = a.events;
+        xp = a.awarded;
+      }
+      markActive(s, now);
+      return xp;
+    });
+  },
+  completeGoal(id: string): ActionResult {
+    return mutate((s, now) => {
+      const goal = s.goals.find((g) => g.id === id);
+      if (!goal || goal.completedAt) return 0;
+      goal.completedAt = now.toISOString();
+      const a = awardXp(s.xpEvents, "goal_completed", "G:" + id, now.toISOString());
+      s.xpEvents = a.events;
+      markActive(s, now);
+      return a.awarded;
+    });
+  },
+  deleteGoal(id: string) {
+    const s = structuredClone(load());
+    s.goals = s.goals.filter((g) => g.id !== id);
+    commit(s);
+  },
+  startChallenge(slug: string): ActionResult {
+    return mutate((s, now) => {
+      if (!challengeBySlug(slug)) throw new Error("Desafio não encontrado.");
+      const running = activeChallenges(s, now);
+      if (running.some((c) => c.run.slug === slug)) return 0;
+      if (running.length >= MAX_ACTIVE_CHALLENGES)
+        throw new Error(`Você já tem ${MAX_ACTIVE_CHALLENGES} desafios em andamento.`);
+      s.challenges.push({ slug, startedAt: now.toISOString(), completedAt: null });
+      return 0;
+    });
+  },
+  abandonChallenge(slug: string) {
+    const s = structuredClone(load());
+    const running = new Set(activeChallenges(s).map((c) => c.run.startedAt));
+    s.challenges = s.challenges.filter((c) => !(c.slug === slug && running.has(c.startedAt)));
+    commit(s);
+  },
+  // ---------- Livro-caixa: contas, lançamentos, recorrências, importação e regras. Não concedem XP. ----------
+  saveAccount(input: { id?: string | undefined; name: string; kind: AccountKind; openingBalance: number }) {
+    const name = input.name.trim();
+    if (!name) throw new Error("Dê um nome à conta.");
+    if (!Number.isInteger(input.openingBalance)) throw new Error("Saldo inicial inválido.");
+    const s = structuredClone(load());
+    if (input.id) {
+      if (!s.accounts.some((a) => a.id === input.id)) throw new Error("Conta não encontrada.");
+      s.accounts = s.accounts.map((a) => (a.id === input.id ? { ...a, name, kind: input.kind, openingBalance: input.openingBalance } : a));
+    } else s.accounts.push({ id: newId(), name, kind: input.kind, openingBalance: input.openingBalance, createdAt: new Date().toISOString() });
+    commit(s);
+  },
+  /** Exclui a conta com seus lançamentos, recorrências e a outra perna das transferências. */
+  deleteAccount(id: string) {
+    const s = structuredClone(load());
+    const gone = new Set(s.transactions.filter((t) => t.accountId === id).flatMap((t) => [t.id, ...(t.transferId ? [t.transferId] : [])]));
+    s.accounts = s.accounts.filter((a) => a.id !== id);
+    s.transactions = s.transactions.filter((t) => !gone.has(t.id));
+    s.recurring = s.recurring.filter((r) => r.accountId !== id);
+    commit(s);
+  },
+  saveCategory(input: { id?: string | undefined; name: string; kind: CategoryKind }) {
+    const name = input.name.trim();
+    if (!name) throw new Error("Dê um nome à categoria.");
+    const s = structuredClone(load());
+    if (s.categories.some((c) => c.id !== input.id && c.kind === input.kind && normalize(c.name) === normalize(name)))
+      throw new Error("Já existe uma categoria com esse nome.");
+    if (input.id) s.categories = s.categories.map((c) => (c.id === input.id ? { ...c, name, kind: input.kind } : c));
+    else s.categories.push({ id: newId(), name, kind: input.kind });
+    commit(s);
+  },
+  /** Os lançamentos da categoria ficam sem categoria; as regras e recorrências dela, também. */
+  deleteCategory(id: string) {
+    const s = structuredClone(load());
+    s.categories = s.categories.filter((c) => c.id !== id);
+    s.transactions = s.transactions.map((t) => (t.categoryId === id ? { ...t, categoryId: null } : t));
+    s.recurring = s.recurring.map((r) => (r.categoryId === id ? { ...r, categoryId: null } : r));
+    s.categoryRules = s.categoryRules.filter((r) => r.categoryId !== id);
+    commit(s);
+  },
+  /**
+   * Lança uma entrada ou saída. Sem categoria, as regras escolhem uma.
+   * `remember` cria a regra "favorecido igual a … → esta categoria" para os próximos.
+   */
+  addTransaction(input: { accountId: string; date: string; amount: number; payee: string; categoryId?: string | null; note?: string | null; remember?: boolean }) {
+    const s = structuredClone(load());
+    const t = validTx(s, input);
+    const withRule = applyRules(s.categoryRules, { ...t, categoryId: input.categoryId ?? null });
+    s.transactions.push(newTransaction({ ...withRule, note: input.note ?? null }, new Date()));
+    if (input.remember) rememberRule(s, t.payee, input.categoryId ?? null);
+    commit(s);
+  },
+  /** Edita um lançamento. Numa transferência, valor, data e nota mudam nas duas pernas. */
+  updateTransaction(id: string, patch: { date?: string; amount?: number; payee?: string; categoryId?: string | null; note?: string | null; remember?: boolean }) {
+    const s = structuredClone(load());
+    const t = s.transactions.find((x) => x.id === id);
+    if (!t) throw new Error("Lançamento não encontrado.");
+    const next = { ...t, ...validTx(s, { ...t, ...patch }), note: patch.note === undefined ? t.note : patch.note };
+    if (t.transferId) {
+      next.categoryId = null;
+      if (next.amount * t.amount < 0) throw new Error("Numa transferência, troque a direção excluindo e lançando de novo.");
+      s.transactions = s.transactions.map((x) =>
+        x.id === t.transferId ? { ...x, date: next.date, amount: -next.amount, note: next.note } : x.id === id ? next : x,
+      );
+    } else {
+      next.categoryId = patch.categoryId === undefined ? t.categoryId : patch.categoryId;
+      s.transactions = s.transactions.map((x) => (x.id === id ? next : x));
+      if (patch.remember) rememberRule(s, next.payee, next.categoryId);
+    }
+    commit(s);
+  },
+  /** Exclui o lançamento e, se for transferência, a outra perna. O aporte do Diário, se houver, continua lá. */
+  deleteTransaction(id: string) {
+    const s = structuredClone(load());
+    const t = s.transactions.find((x) => x.id === id);
+    s.transactions = s.transactions.filter((x) => x.id !== id && x.id !== t?.transferId);
+    commit(s);
+  },
+  /**
+   * Transfere entre duas contas (espelho de create_transfer). Para previdência ou investimentos,
+   * `contribution` também registra o aporte do mês no Diário, com o XP de sempre.
+   */
+  addTransfer(input: { fromId: string; toId: string; date: string; amount: number; note?: string | null; contribution?: Destination | null }): ActionResult {
+    return mutate((s, now) => {
+      if (input.fromId === input.toId) throw new Error("Escolha duas contas diferentes.");
+      const from = s.accounts.find((a) => a.id === input.fromId);
+      const to = s.accounts.find((a) => a.id === input.toId);
+      if (!from || !to) throw new Error("Conta não encontrada.");
+      if (!(Number.isInteger(input.amount) && input.amount > 0)) throw new Error("Informe um valor maior que zero.");
+      if (!isDate(input.date)) throw new Error("Data inválida.");
+      const out = newTransaction({ accountId: from.id, date: input.date, amount: -input.amount, payee: `Transferência para ${to.name}`, note: input.note ?? null }, now);
+      const inn = newTransaction({ accountId: to.id, date: input.date, amount: input.amount, payee: `Transferência de ${from.name}`, note: input.note ?? null }, now);
+      out.transferId = inn.id;
+      inn.transferId = out.id;
+      let xp = 0;
+      if (input.contribution) {
+        if (!isSavingsAccount(to.kind)) throw new Error("Só transferências para previdência ou investimentos contam como aporte.");
+        const c = recordContribution(s, now, { month: input.date, made: true, amount: input.amount / 100, destination: input.contribution, note: input.note ?? null });
+        out.contributionId = c.id;
+        xp = c.xp;
+      }
+      s.transactions.push(out, inn);
+      return xp;
+    });
+  },
+  saveRecurring(input: Omit<RecurringRule, "id" | "active"> & { id?: string | undefined; active?: boolean }) {
+    const errors = validateRule(input);
+    if (errors.length) throw new Error(errors[0]);
+    const s = structuredClone(load());
+    validTx(s, { accountId: input.accountId, date: input.startDate, amount: input.amount, payee: input.payee });
+    const { id, active, ...rest } = input;
+    const rule: RecurringRule = { ...rest, payee: input.payee.trim(), id: id ?? newId(), active: active ?? true };
+    s.recurring = id ? s.recurring.map((r) => (r.id === id ? rule : r)) : [...s.recurring, rule];
+    materializeRecurring(s, new Date());
+    commit(s);
+  },
+  /** Remove a regra; os lançamentos que ela já gerou continuam. */
+  deleteRecurring(id: string) {
+    const s = structuredClone(load());
+    s.recurring = s.recurring.filter((r) => r.id !== id);
+    s.transactions = s.transactions.map((t) => (t.recurringId === id ? { ...t, recurringId: null } : t));
+    commit(s);
+  },
+  /** Lança as recorrências vencidas. Pode rodar quantas vezes quiser: nunca duplica. */
+  runRecurring(): number {
+    const s = structuredClone(load());
+    const added = materializeRecurring(s, new Date());
+    if (added) commit(s);
+    return added;
+  },
+  /** Importa um extrato para a conta (espelho de import_transactions). Duplicados ficam de fora. */
+  importTransactions(accountId: string, rows: ImportedTx[]) {
+    const s = structuredClone(load());
+    if (!s.accounts.some((a) => a.id === accountId)) throw new Error("Conta não encontrada.");
+    const existing = s.transactions
+      .filter((t) => t.accountId === accountId && !t.transferId)
+      .map((t) => ({ id: t.id, date: t.date, amount: t.amount, payee: t.payee, importedId: t.importedId, imported: t.source === "importado" }));
+    const r = dedupe(rows, existing);
+    const now = new Date();
+    // O lançamento manual fica (com a categoria da pessoa) e passa a carregar o identificador do banco.
+    const link = new Map(r.matched.map((m) => [m.existingId, m.tx.importedId]));
+    s.transactions = s.transactions.map((t) => (link.has(t.id) ? { ...t, importedId: link.get(t.id) ?? t.importedId } : t));
+    for (const row of r.fresh) {
+      const t = applyRules(s.categoryRules, { accountId, date: row.date, amount: row.amount, payee: row.payee.slice(0, 120), categoryId: null as string | null });
+      s.transactions.push(newTransaction({ ...t, note: row.memo, importedId: row.importedId, source: "importado" }, now));
+    }
+    commit(s);
+    return { added: r.fresh.length, matched: r.matched.length, duplicates: r.duplicates.length };
+  },
+  saveCategoryRule(input: { id?: string | undefined; op: RuleOp; value: string; categoryId: string; renameTo?: string | null }) {
+    const value = input.value.trim();
+    if (!value) throw new Error("Informe o texto que a regra procura.");
+    const s = structuredClone(load());
+    if (!s.categories.some((c) => c.id === input.categoryId)) throw new Error("Categoria não encontrada.");
+    const rule: CategoryRule = { id: input.id ?? newId(), op: input.op, value, categoryId: input.categoryId, renameTo: input.renameTo?.trim() || null };
+    s.categoryRules = input.id ? s.categoryRules.map((r) => (r.id === input.id ? rule : r)) : [...s.categoryRules, rule];
+    commit(s);
+  },
+  deleteCategoryRule(id: string) {
+    const s = structuredClone(load());
+    s.categoryRules = s.categoryRules.filter((r) => r.id !== id);
+    commit(s);
+  },
   exportData() {
     return { exported_at: new Date().toISOString(), modo: "demonstracao", ...load() };
   },
 };
+
+/** Confere conta, data, valor e favorecido de um lançamento. */
+function validTx(s: DemoState, t: { accountId: string; date: string; amount: number; payee: string }) {
+  if (!s.accounts.some((a) => a.id === t.accountId)) throw new Error("Conta não encontrada.");
+  if (!isDate(t.date)) throw new Error("Data inválida.");
+  if (!(Number.isInteger(t.amount) && t.amount !== 0)) throw new Error("Informe um valor diferente de zero.");
+  const payee = t.payee.trim();
+  if (!payee) throw new Error("Informe a descrição.");
+  return { accountId: t.accountId, date: t.date, amount: t.amount, payee: payee.slice(0, 120) };
+}
+
+/** Cria "favorecido igual a … → categoria", se ainda não houver uma regra igual. */
+function rememberRule(s: DemoState, payee: string, categoryId: string | null) {
+  if (!categoryId) return;
+  const existing = s.categoryRules.find((r) => r.op === "igual" && normalize(r.value) === normalize(payee));
+  if (existing) existing.categoryId = categoryId;
+  else s.categoryRules.push({ id: newId(), op: "igual", value: payee, categoryId, renameTo: null });
+}
+
+/** Desafios em andamento: nem concluídos nem expirados. */
+export function activeChallenges(s: DemoState, now = new Date()) {
+  const today = spDate(now);
+  const inputs = challengeInputs(s);
+  return s.challenges.flatMap((run) => {
+    const def = challengeBySlug(run.slug);
+    if (!def || run.completedAt) return [];
+    const progress = challengeProgress(def, dayOf(run.startedAt), inputs, today);
+    return progress.expired ? [] : [{ run, def, progress }];
+  });
+}
 
 export function planAgeDays(createdAt: string, now = new Date()) {
   return Math.floor((now.getTime() - new Date(createdAt).getTime()) / 86400000);
 }
 
 /** Lição de hoje: uma nova por dia (horário de Brasília). */
-export function lessonStatus(s: DemoState, now = new Date()) {
-  const today = spDate(now);
-  const doneToday = Object.values(s.lessonCompletions).some((iso) => spDate(new Date(iso)) === today);
-  const day = Math.min(s.program.currentDay, PROGRAM.totalDays);
-  return { day, doneToday, finished: !!s.program.completedAt };
+export const completedDays = (s: DemoState) => Object.keys(s.lessonCompletions).map(Number);
+
+export function todayMission(s: DemoState, now = new Date()) {
+  return dailyMission(spDate(now), completedDays(s), s.journey.testedOutUnits);
 }
 
-/** Plano padrão a partir do onboarding. */
-export function inputsFromProfile(p: Profile, now = new Date()): PlanInputs {
+export function dailyMissionDone(s: DemoState, now = new Date()) {
+  const today = spDate(now);
+  return s.journey.dailyMissions.some((m) => m.day === today);
+}
+
+/** Grava o registro do mês no Diário (espelho de log_contribution) e devolve o XP e o id. */
+function recordContribution(
+  s: DemoState,
+  now: Date,
+  input: { month: string; made: boolean; amount?: number | null; destination?: Destination | null; note?: string | null },
+): { xp: number; id: string } {
+  const current = monthOf(spDate(now));
+  const month = monthOf(input.month);
+  if (month > current) throw new Error("Não é possível registrar um mês futuro.");
+  const id = newId();
+  s.contributions.push({
+    id,
+    month,
+    made: input.made,
+    amount: input.made ? (input.amount ?? null) : null,
+    destination: input.destination ?? null,
+    note: input.note ?? null,
+    createdAt: now.toISOString(),
+  });
+  // XP pelo hábito de registrar o mês (inclusive "não aportei"), nunca pelo valor aportado.
+  let xp = 0;
+  if (month >= addMonths(current, -1)) {
+    const a = awardXp(s.xpEvents, "contribution_logged", "M:" + month.slice(0, 7), now.toISOString());
+    s.xpEvents = a.events;
+    xp = a.awarded;
+  }
+  markActive(s, now);
+  return { xp, id };
+}
+
+const isDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d + "T00:00:00Z"));
+
+function newTransaction(t: Pick<Transaction, "accountId" | "date" | "amount" | "payee"> & Partial<Transaction>, now: Date): Transaction {
+  return {
+    categoryId: null,
+    note: null,
+    transferId: null,
+    importedId: null,
+    source: "manual",
+    recurringId: null,
+    occurrenceDate: null,
+    contributionId: null,
+    ...t,
+    id: newId(),
+    createdAt: now.toISOString(),
+  };
+}
+
+/** Lança as ocorrências recorrentes vencidas até hoje (espelho de materialize_recurring). Devolve quantas lançou. */
+function materializeRecurring(s: DemoState, now: Date): number {
+  const today = spDate(now);
+  let added = 0;
+  for (const r of s.recurring) {
+    if (!r.active || !s.accounts.some((a) => a.id === r.accountId)) continue;
+    const generated = new Set(s.transactions.flatMap((t) => (t.recurringId === r.id && t.occurrenceDate ? [t.occurrenceDate] : [])));
+    for (const o of dueOccurrences(r, generated, today)) {
+      const t = newTransaction(
+        { accountId: r.accountId, date: o.date, amount: r.amount, payee: r.payee, categoryId: r.categoryId, note: r.note, source: "recorrente", recurringId: r.id, occurrenceDate: o.occurrenceDate },
+        now,
+      );
+      s.transactions.push(t);
+      added++;
+    }
+  }
+  return added;
+}
+
+/** Grava o patrimônio de um mês (espelho de log_wealth): substitui o registro do mesmo mês e devolve o XP. */
+function recordWealth(
+  s: DemoState,
+  now: Date,
+  input: { month: string; total: number; previdencia?: number | null; note?: string | null; breakdown: BreakdownItem[] | null },
+): number {
+  const current = monthOf(spDate(now));
+  const month = monthOf(input.month);
+  if (month > current) throw new Error("Não é possível registrar um mês futuro.");
+  if (!(input.total >= 0)) throw new Error("Informe um valor igual ou maior que zero.");
+  s.wealthEntries = [
+    ...s.wealthEntries.filter((w) => w.month !== month),
+    {
+      id: newId(),
+      month,
+      total: input.total,
+      previdencia: input.previdencia ?? null,
+      note: input.note ?? null,
+      breakdown: input.breakdown,
+      createdAt: now.toISOString(),
+    },
+  ];
+  // XP pelo hábito de registrar neste mês, não pelo valor nem pelo mês registrado.
+  const a = awardXp(s.xpEvents, "wealth_logged", "M:" + current.slice(0, 7), now.toISOString());
+  s.xpEvents = a.events;
+  markActive(s, now);
+  return a.awarded;
+}
+
+/** Registra a missão do dia (uma por dia) e devolve o XP. */
+function settleDailyMission(s: DemoState, now: Date, kind: DailyKind): number {
+  const today = spDate(now);
+  if (s.journey.dailyMissions.some((m) => m.day === today)) return 0;
+  s.journey.dailyMissions = [...s.journey.dailyMissions, { day: today, kind, at: now.toISOString() }];
+  const a = awardXp(s.xpEvents, "daily_mission", "D:" + today, now.toISOString());
+  s.xpEvents = a.events;
+  return a.awarded;
+}
+
+/**
+ * Plano padrão a partir do onboarding. Sem idade ou renda, usa valores provisórios;
+ * quem chama registra o dado em `profile.missingFields` para que apareça como ausente.
+ */
+export function inputsFromProfile(p: Pick<Profile, "birthYear" | "goalRetirementAge" | "goalIncome">, now = new Date()): PlanInputs {
   const year = Number(spDate(now).slice(0, 4));
   return {
     currentAge: p.birthYear ? year - p.birthYear : 30,

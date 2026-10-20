@@ -90,3 +90,51 @@ insert into public.weekly_missions (slug,title,description,action_hint,sort_orde
 insert into public.weekly_missions (slug,title,description,action_hint,sort_order,status) values ('meses-de-reserva','Quantos meses de reserva?','Calcule quantos meses de despesas sua reserva já cobre.','reflection',6,'rascunho');
 insert into public.weekly_missions (slug,title,description,action_hint,sort_order,status) values ('inflacao-de-novo','Inflação, de novo','Uma lição de 2 minutos sobre poder de compra.','micro_lesson',7,'rascunho');
 insert into public.weekly_missions (slug,title,description,action_hint,sort_order,status) values ('conte-para-alguem','Conte para alguém','Compartilhe uma conquista, sem valores, com alguém de confiança.','challenge',8,'rascunho');
+insert into public.challenges (slug,title,description,metric,target,window_days,sort_order,status) values ('sete-dias-em-dez','7 dias ativos em 10','Faça uma lição, missão, revisão ou registro em 7 dos próximos 10 dias.','active_days',7,10,1,'rascunho');
+insert into public.challenges (slug,title,description,metric,target,window_days,sort_order,status) values ('quatro-missoes','4 missões em 4 semanas','Complete a missão da semana por quatro semanas.','missions',4,28,2,'rascunho');
+insert into public.challenges (slug,title,description,metric,target,window_days,sort_order,status) values ('patrimonio-tres-meses','Patrimônio em 3 meses','Registre seu patrimônio em três meses diferentes. Vale qualquer valor.','wealth_months',3,92,3,'rascunho');
+insert into public.challenges (slug,title,description,metric,target,window_days,sort_order,status) values ('revisar-orcamento','Revisar o orçamento','Faça uma revisão rápida do plano e confira se o aporte ainda cabe no mês.','plan_reviews',1,7,4,'rascunho');
+insert into public.challenges (slug,title,description,metric,target,window_days,sort_order,status) values ('primeira-meta-concluida','Uma meta até o fim','Conclua uma meta que você definiu nos próximos 30 dias.','goals_completed',1,30,5,'rascunho');
+
+
+-- Jornada: unidade, ordem na trilha e perguntas do teste de nivelamento (mesmo que 20261021120000_jornada.sql).
+update public.lessons l set unit = v.unit, journey_order = v.ord
+from (values
+  (1, 1, 1),
+  (2, 1, 2),
+  (4, 1, 3),
+  (5, 1, 4),
+  (8, 1, 5),
+  (6, 2, 6),
+  (7, 2, 7),
+  (9, 2, 8),
+  (11, 2, 9),
+  (14, 2, 10),
+  (3, 3, 11),
+  (10, 3, 12),
+  (12, 3, 13),
+  (13, 3, 14),
+  (16, 3, 15),
+  (15, 4, 16),
+  (17, 4, 17),
+  (18, 4, 18),
+  (19, 4, 19),
+  (20, 4, 20),
+  (21, 4, 21)
+) as v(day, unit, ord), public.programs p
+where p.id = l.program_id and p.slug = 'plano-sem-inss-21' and l.day = v.day;
+
+update public.lesson_questions q set placement = true
+from public.lessons l, public.programs p, (values
+  (1, 1),
+  (2, 1),
+  (5, 1),
+  (6, 1),
+  (9, 1),
+  (11, 1),
+  (3, 1),
+  (10, 1),
+  (12, 1)
+) as v(day, position)
+where l.id = q.lesson_id and p.id = l.program_id and p.slug = 'plano-sem-inss-21'
+  and l.day = v.day and q.position = v.position;

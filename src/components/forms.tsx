@@ -54,7 +54,7 @@ export function NumberField({
         </label>
         {help && <Help text={help} label={label.toLowerCase()} />}
       </div>
-      <div className="mt-1.5 flex items-center gap-2 rounded-[10px] border border-input bg-card px-3 focus-within:ring-2 focus-within:ring-ring">
+      <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-input bg-muted px-3 focus-within:ring-2 focus-within:ring-ring">
         {prefix && <span className="text-muted-foreground">{prefix}</span>}
         <Input
           id={id}
@@ -87,7 +87,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-full border border-border bg-muted p-1">
+    <div role="radiogroup" aria-label={label} className="flex rounded-full bg-muted p-1">
       {options.map((o) => (
         <button
           key={o.value}
@@ -97,7 +97,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={
             "min-h-10 flex-1 rounded-full px-3 text-sm transition-colors " +
-            (value === o.value ? "bg-card font-semibold text-foreground" : "text-muted-foreground")
+            (value === o.value ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground")
           }
         >
           {o.label}

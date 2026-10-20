@@ -78,7 +78,7 @@ function Admin() {
           {!lesson ? (
             <section className="mt-4">
               <h2 className="text-lg">{PROGRAM.title}</h2>
-              <ul className="mt-3 divide-y divide-border rounded-2xl border border-border bg-card">
+              <ul className="mt-3 divide-y divide-border rounded-2xl bg-card shadow-card">
                 {lessons.map((l) => (
                   <li key={l.day}>
                     <button type="button" onClick={() => setSel(l.day)} className="flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left hover:bg-muted">
@@ -217,12 +217,12 @@ function LessonForm({ lesson, update, back }: { lesson: EditLesson; update: (p: 
       </div>
       {lesson.questions.map((q, i) =>
         preview ? (
-          <div key={i} className="rounded-2xl border border-border bg-card p-4">
+          <div key={i} className="rounded-2xl bg-card shadow-card p-4">
             <p className="text-sm text-muted-foreground">Pergunta {i + 1}</p>
             <p className="mt-1 font-semibold">{q.prompt}</p>
             <ul className="mt-3 grid gap-2">
               {q.options.map((o) => (
-                <li key={o.id} className={cn("rounded-[10px] border px-3 py-2", o.id === q.correct ? "border-primary text-primary" : "border-border")}>
+                <li key={o.id} className={cn("rounded-xl border px-3 py-2", o.id === q.correct ? "border-primary text-primary" : "border-border")}>
                   {o.text}
                 </li>
               ))}
@@ -230,7 +230,7 @@ function LessonForm({ lesson, update, back }: { lesson: EditLesson; update: (p: 
             {q.explanation && <p className="mt-2 text-sm text-muted-foreground">{q.explanation}</p>}
           </div>
         ) : (
-          <div key={i} className="space-y-2 rounded-2xl border border-border p-4">
+          <div key={i} className="space-y-2 rounded-2xl bg-card shadow-card p-4">
             <Field label={`Pergunta ${i + 1}`}>
               <Input value={q.prompt} onChange={(e) => setQ(i, { prompt: e.target.value })} />
             </Field>
@@ -254,7 +254,7 @@ function LessonForm({ lesson, update, back }: { lesson: EditLesson; update: (p: 
         ),
       )}
 
-      <div className="rounded-2xl border border-border p-4">
+      <div className="rounded-2xl bg-card shadow-card p-4">
         <p className="text-sm font-semibold">Status</p>
         <div className="mt-2">
           <Segmented
@@ -278,7 +278,7 @@ function MissionsEditor({ missions, setMissions }: { missions: EditMission[]; se
         .slice()
         .sort((a, b) => a.order - b.order)
         .map((m) => (
-          <div key={m.slug} className="space-y-2 rounded-2xl border border-border p-4">
+          <div key={m.slug} className="space-y-2 rounded-2xl bg-card shadow-card p-4">
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm text-muted-foreground">Ordem {m.order}</span>
               <StatusChip status={m.status} />
