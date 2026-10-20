@@ -1,12 +1,13 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { QuickAdd } from "@/components/QuickAdd";
 import { AREAS, areaOf } from "@/components/nav/areas";
-import { useDemo } from "@/lib/data/demo-store";
+import { useDemoSelect } from "@/lib/data/demo-store";
 import { cn } from "@/lib/utils";
 
 function ProfileButton({ className }: { className?: string }) {
-  const s = useDemo();
-  const initial = (s.profile.displayName || "V").charAt(0).toUpperCase();
+  // Só o nome importa aqui: com useDemoSelect, o botão não re-renderiza a cada lançamento.
+  const name = useDemoSelect((s) => s.profile.displayName);
+  const initial = (name || "V").charAt(0).toUpperCase();
   return (
     <Link
       to="/perfil"

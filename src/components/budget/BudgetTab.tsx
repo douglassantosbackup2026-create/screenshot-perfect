@@ -1,6 +1,6 @@
 // Aba Orçamento do Plano: "a distribuir", o envelope Aposentadoria ligado ao plano, os envelopes de gasto e as contas fixas.
 // Só exibe; as contas vêm de src/lib/calc/budget.ts por src/lib/data/selectors.ts.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Repeat, Sparkles, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -35,8 +35,9 @@ export function BudgetTab({ s }: { s: DemoState }) {
   const [month, setMonth] = useState(current);
   const [editing, setEditing] = useState<Envelope | null>(null);
   const [moving, setMoving] = useState<Envelope | null>(null);
-  const v = budgetView(s, month);
-  const bills = billsOfMonth(s, month);
+  // Recalcula só quando o estado ou o mês mudam (não a cada tecla nos campos).
+  const v = useMemo(() => budgetView(s, month), [s, month]);
+  const bills = useMemo(() => billsOfMonth(s, month), [s, month]);
   const toBudget = v.month.toBudget;
 
   function applyTemplates() {

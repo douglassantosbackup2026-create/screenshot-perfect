@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Check, Eye, EyeOff, Landmark, Mountain, Star, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -333,7 +333,7 @@ function TimelineChart({ s, showValues }: { s: DemoState; showValues: boolean })
 }
 
 function GrowthCard({ s, showValues }: { s: DemoState; showValues: boolean }) {
-  const g = wealthGrowth(s);
+  const g = useMemo(() => wealthGrowth(s), [s]);
   const money = (v: number) => (showValues ? signed(v, formatMonthly) : HIDDEN);
   if (!g.summary) {
     return (

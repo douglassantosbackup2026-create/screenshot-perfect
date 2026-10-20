@@ -616,3 +616,26 @@ describe("sem digitar duas vezes", () => {
     expect(state().wealthEntries[0].total).toBe(9999);
   });
 });
+
+describe("useDemoSelect", () => {
+  it("re-renderiza só quando a parte escolhida muda", async () => {
+    const { renderHook, act } = await import("@testing-library/react");
+    const { demo, useDemoSelect } = await freshStore();
+    demo.startFresh();
+    demo.updateProfile({ displayName: "Bia" });
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders++;
+      return useDemoSelect((s) => s.profile.displayName);
+    });
+    expect(result.current).toBe("Bia");
+    const before = renders;
+    act(() => {
+      demo.saveCategory({ name: "Pets", kind: "despesa" });
+    });
+    expect(renders).toBe(before);
+    act(() => demo.updateProfile({ displayName: "Bia Souza" }));
+    expect(result.current).toBe("Bia Souza");
+    expect(renders).toBe(before + 1);
+  });
+});

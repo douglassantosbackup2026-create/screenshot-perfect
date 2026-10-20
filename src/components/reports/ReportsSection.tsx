@@ -1,7 +1,7 @@
 // Relatórios do Progresso: fluxo de caixa, gastos por categoria e patrimônio por grupo.
 // Só exibe; as contas vêm de src/lib/calc/reports.ts por src/lib/data/selectors.ts.
 // Cores de série em --series-1..5 (src/styles.css), fixas por entidade; um só eixo por gráfico.
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { usePlanAccess } from "@/lib/data/access";
@@ -81,7 +81,7 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
   const [period, setPeriod] = useState<Period>("6");
   const access = usePlanAccess();
   const navigate = useNavigate();
-  const v = reportsView(s, Number(period));
+  const v = useMemo(() => reportsView(s, Number(period)), [s, period]);
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
   const yAxis = (fmt: (n: number) => string) => (
     <YAxis width={showValues ? 52 : 4} tick={showValues ? axis : false} tickLine={false} axisLine={false} tickFormatter={fmt} />

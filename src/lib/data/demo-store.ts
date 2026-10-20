@@ -1,6 +1,6 @@
 // Camada de dados em MODO DEMONSTRAÇÃO (sem login): guarda o estado só neste aparelho.
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
 import { validateAsset, type AssetCategory } from "@/lib/calc/assets";
 import { snapshotFromAssets, type BreakdownItem } from "@/lib/calc/networth";
@@ -746,14 +746,32 @@ function mutate(fn: (s: DemoState, now: Date) => number): ActionResult {
 }
 
 let serverSeed: DemoState | null = null;
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+const serverSnapshot = () => (serverSeed ??= makeSeed());
+
 export function useDemo(): DemoState {
+  return useSyncExternalStore(subscribe, load, serverSnapshot);
+}
+
+/**
+ * Lê só uma parte do estado: a tela re-renderiza apenas quando essa parte muda (compare valores simples ou
+ * referências estáveis do estado, como `s.profile`). O seletor roda uma vez por versão do estado.
+ */
+export function useDemoSelect<T>(select: (s: DemoState) => T): T {
+  const last = useRef<{ state: DemoState; value: T } | null>(null);
+  const read = (state: DemoState) => {
+    if (last.current?.state !== state) last.current = { state, value: select(state) };
+    return last.current.value;
+  };
   return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    load,
-    () => (serverSeed ??= makeSeed()),
+    subscribe,
+    () => read(load()),
+    () => read(serverSnapshot()),
   );
 }
 

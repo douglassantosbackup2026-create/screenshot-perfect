@@ -1,6 +1,6 @@
 // Investimentos no Patrimônio: posições pelo preço médio, alocação x metas e onde aportar este mês.
 // Só exibe; as contas vêm de src/lib/calc/portfolio.ts por src/lib/data/selectors.ts.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, Plus, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ const qty = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 6 
 const signedPct = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + formatPercent(Math.abs(v));
 
 export function PortfolioSection({ s, showValues }: { s: DemoState; showValues: boolean }) {
-  const v = portfolioView(s);
+  const v = useMemo(() => portfolioView(s), [s]);
   const [editing, setEditing] = useState<{ holding: Holding | null } | null>(null);
   const [targetsOpen, setTargetsOpen] = useState(false);
   const money = (c: number) => (showValues ? formatMoney(c) : HIDDEN);

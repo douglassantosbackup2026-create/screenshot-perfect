@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { AreaTabs } from "@/components/nav/areas";
@@ -36,7 +36,7 @@ function Accounts() {
   const s = useDemo();
   const [showValues, setShowValues] = useState(!s.profile.hideValues);
   const [editing, setEditing] = useState<Editing>(null);
-  const overview = accountsOverview(s);
+  const overview = useMemo(() => accountsOverview(s), [s]);
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
 
   return (

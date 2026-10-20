@@ -1,6 +1,6 @@
 // Lançamentos do mês no Diário: resumo, gastos por categoria, próximas recorrências e a lista por dia.
 // Só exibe; as contas vêm de src/lib/calc e src/lib/data/selectors.
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftRight, ChevronLeft, ChevronRight, FileUp, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,8 @@ export function LedgerSection({
   const [importOpen, setImportOpen] = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
-  const m = ledgerMonth(s, month, accountId === ALL ? null : accountId);
-  const upcoming = upcomingRecurring(s).slice(0, 4);
+  const m = useMemo(() => ledgerMonth(s, month, accountId === ALL ? null : accountId), [s, month, accountId]);
+  const upcoming = useMemo(() => upcomingRecurring(s).slice(0, 4), [s]);
   const topSpending = m.byCategory.slice(0, 5);
 
   return (
