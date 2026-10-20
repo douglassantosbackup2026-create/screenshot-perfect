@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AccountSelect } from "@/components/ledger/fields";
 import { handleResult, xpToast } from "@/components/feedback";
+import { Upsell } from "@/components/PlanGate";
+import { usePlanAccess } from "@/lib/data/access";
 import { BANKS, parseCSV, parseOFX, type BankId, type ImportedTx } from "@/lib/calc/import";
 import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState } from "@/lib/data/demo-store";
@@ -18,6 +20,7 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
   const [fileName, setFileName] = useState("");
   // null = segue o banco reconhecido; escolher à mão vence.
   const [invert, setInvert] = useState<boolean | null>(null);
+  const access = usePlanAccess();
   useEffect(() => {
     if (!open) return;
     setAccountId(s.accounts[0]?.id ?? null);
@@ -69,7 +72,11 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
             Baixe o extrato no app do banco em OFX (ou CSV) e escolha o arquivo. Ele é lido aqui no aparelho; o app não pede senha do banco.
           </SheetDescription>
         </SheetHeader>
-        {s.accounts.length === 0 ? (
+        {!access.can("importacao", s.transactions.some((t) => t.source === "importado")) ? (
+          <div className="mt-6 pb-4">
+            <Upsell feature="importacao" />
+          </div>
+        ) : s.accounts.length === 0 ? (
           <p className="mt-6 pb-4 text-sm text-muted-foreground">Cadastre uma conta em Contas antes de importar.</p>
         ) : (
           <div className="mt-6 space-y-4 pb-4">

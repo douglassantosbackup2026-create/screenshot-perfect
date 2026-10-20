@@ -17,6 +17,7 @@ import type { HistoryPoint } from "@/lib/calc/networth";
 import { demo, linkedAccountOf, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
 import { PortfolioSection } from "@/components/portfolio/PortfolioSection";
 import { AreaTabs } from "@/components/nav/areas";
+import { PlanGate } from "@/components/PlanGate";
 import { assetHistories, hasWealthRecord } from "@/lib/data/selectors";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -188,7 +189,11 @@ function Wealth() {
         </div>
       )}
 
-      <PortfolioSection s={s} showValues={showValues} />
+      <div className="mt-8">
+        <PlanGate feature="investimentos" hasData={s.holdings.length > 0 || Object.keys(s.allocationTargets).length > 0}>
+          <PortfolioSection s={s} showValues={showValues} />
+        </PlanGate>
+      </div>
 
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         Crescimento do patrimônio informado não é o mesmo que rendimento: aportes, retiradas, valorização e atualização dos dados mexem no total de

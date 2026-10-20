@@ -2,7 +2,9 @@
 // Só exibe; as contas vêm de src/lib/calc/reports.ts por src/lib/data/selectors.ts.
 // Cores de série em --series-1..5 (src/styles.css), fixas por entidade; um só eixo por gráfico.
 import { useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { usePlanAccess } from "@/lib/data/access";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Segmented } from "@/components/forms";
 import { ChartCard, HIDDEN } from "@/components/dashboard";
@@ -77,6 +79,8 @@ function DataTable({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
 
 export function ReportsSection({ s, showValues }: { s: DemoState; showValues: boolean }) {
   const [period, setPeriod] = useState<Period>("6");
+  const access = usePlanAccess();
+  const navigate = useNavigate();
   const v = reportsView(s, Number(period));
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
   const yAxis = (fmt: (n: number) => string) => (
@@ -94,7 +98,18 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg">Relatórios</h2>
         <div className="w-56">
-          <Segmented label="Período dos relatórios" value={period} onChange={setPeriod} options={[...PERIODS]} />
+          <Segmented
+            label="Período dos relatórios"
+            value={period}
+            onChange={(v) => {
+              if (v === "12" && !access.can("relatorios_12m")) {
+                toast("Relatórios de 12 meses fazem parte do plano Inteligência.", { action: { label: "Ver planos", onClick: () => void navigate({ to: "/assinatura" }) } });
+                return;
+              }
+              setPeriod(v);
+            }}
+            options={[...PERIODS]}
+          />
         </div>
       </div>
 

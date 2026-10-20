@@ -19,6 +19,7 @@ import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
 import { Route as AuthenticatedEvolucaoRouteImport } from './routes/_authenticated/evolucao'
@@ -34,6 +35,7 @@ import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authen
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
 import { Route as ApiLembretesSairRouteImport } from './routes/api/lembretes/sair'
+import { Route as ApiPagamentosWebhookRouteImport } from './routes/api/pagamentos/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -83,6 +85,11 @@ const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
   id: '/contas',
@@ -161,6 +168,11 @@ const ApiLembretesSairRoute = ApiLembretesSairRouteImport.update({
   path: '/api/lembretes/sair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPagamentosWebhookRoute = ApiPagamentosWebhookRouteImport.update({
+  id: '/api/pagamentos/webhook',
+  path: '/api/pagamentos/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -172,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -187,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/lembretes/sair': typeof ApiLembretesSairRoute
+  '/api/pagamentos/webhook': typeof ApiPagamentosWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,6 +212,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -213,6 +228,7 @@ export interface FileRoutesByTo {
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/lembretes/sair': typeof ApiLembretesSairRoute
+  '/api/pagamentos/webhook': typeof ApiPagamentosWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -226,6 +242,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
   '/_authenticated/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -241,6 +258,7 @@ export interface FileRoutesById {
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/lembretes/sair': typeof ApiLembretesSairRoute
+  '/api/pagamentos/webhook': typeof ApiPagamentosWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -254,6 +272,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sobre'
     | '/termos'
+    | '/assinatura'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -269,6 +288,7 @@ export interface FileRouteTypes {
     | '/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/lembretes/sair'
+    | '/api/pagamentos/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -280,6 +300,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sobre'
     | '/termos'
+    | '/assinatura'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -295,6 +316,7 @@ export interface FileRouteTypes {
     | '/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/lembretes/sair'
+    | '/api/pagamentos/webhook'
   id:
     | '__root__'
     | '/'
@@ -307,6 +329,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sobre'
     | '/termos'
+    | '/_authenticated/assinatura'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
     | '/_authenticated/evolucao'
@@ -322,6 +345,7 @@ export interface FileRouteTypes {
     | '/_authenticated/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/lembretes/sair'
+    | '/api/pagamentos/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -337,6 +361,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiCronLembretesRoute: typeof ApiCronLembretesRoute
   ApiLembretesSairRoute: typeof ApiLembretesSairRoute
+  ApiPagamentosWebhookRoute: typeof ApiPagamentosWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -410,6 +435,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/assinatura': {
+      id: '/_authenticated/assinatura'
+      path: '/assinatura'
+      fullPath: '/assinatura'
+      preLoaderRoute: typeof AuthenticatedAssinaturaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/contas': {
       id: '/_authenticated/contas'
@@ -516,10 +548,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLembretesSairRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pagamentos/webhook': {
+      id: '/api/pagamentos/webhook'
+      path: '/api/pagamentos/webhook'
+      fullPath: '/api/pagamentos/webhook'
+      preLoaderRoute: typeof ApiPagamentosWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDiarioRoute: typeof AuthenticatedDiarioRoute
   AuthenticatedEvolucaoRoute: typeof AuthenticatedEvolucaoRoute
@@ -536,6 +576,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDiarioRoute: AuthenticatedDiarioRoute,
   AuthenticatedEvolucaoRoute: AuthenticatedEvolucaoRoute,
@@ -567,6 +608,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiCronLembretesRoute: ApiCronLembretesRoute,
   ApiLembretesSairRoute: ApiLembretesSairRoute,
+  ApiPagamentosWebhookRoute: ApiPagamentosWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

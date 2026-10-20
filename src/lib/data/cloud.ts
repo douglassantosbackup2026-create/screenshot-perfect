@@ -31,14 +31,15 @@ import {
 } from "./demo-store";
 import type { CategoryRule } from "@/lib/calc/categorize";
 import type { BudgetTemplate } from "@/lib/calc/budget";
+import type { Entitlement } from "@/lib/billing";
 
 // Os tipos gerados ainda não têm as tabelas novas; até regenerar, o acesso é sem tipo.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as unknown as SupabaseClient<any>;
 
 // ---------- Estado do sincronizador (para a tela de carregamento e o perfil) ----------
-type CloudStatus = { userId: string | null; loaded: boolean; syncing: boolean; isAdmin: boolean; error: string | null };
-let status: CloudStatus = { userId: null, loaded: false, syncing: false, isAdmin: false, error: null };
+type CloudStatus = { userId: string | null; loaded: boolean; syncing: boolean; isAdmin: boolean; error: string | null; entitlement: Entitlement | null };
+let status: CloudStatus = { userId: null, loaded: false, syncing: false, isAdmin: false, error: null, entitlement: null };
 const listeners = new Set<() => void>();
 const setStatus = (patch: Partial<CloudStatus>) => {
   status = { ...status, ...patch };
@@ -111,6 +112,7 @@ export async function loadAll(userId: string): Promise<DemoState> {
     lessons,
     weekly,
     roles,
+    entitlements,
   ] = await Promise.all([
     must(db.from("profiles").select("*").eq("id", userId).maybeSingle()),
     rows("retirement_plans"),
@@ -144,6 +146,11 @@ export async function loadAll(userId: string): Promise<DemoState> {
     rows("lessons", "id, day"),
     rows("weekly_missions", "id, slug"),
     rows("user_roles", "role"),
+    // Sem a migração de assinaturas, a leitura falha: segue como plano gratuito.
+    (async () => {
+      const r = await db.from("entitlements").select("plan, valid_until");
+      return r.error ? [] : ((r.data ?? []) as Record<string, unknown>[]);
+    })(),
   ]);
 
   if (categories.length === 0) {
@@ -421,7 +428,11 @@ export async function loadAll(userId: string): Promise<DemoState> {
         }
       : base.program,
   };
-  setStatus({ isAdmin: roles.some((r) => r["role"] === "admin") });
+  const ent = entitlements[0];
+  setStatus({
+    isAdmin: roles.some((r) => r["role"] === "admin"),
+    entitlement: ent ? { plan: ent["plan"] as Entitlement["plan"], validUntil: String(ent["valid_until"]) } : null,
+  });
   return s;
 }
 
@@ -844,7 +855,7 @@ export async function reload() {
 /** Entra no modo nuvem para a conta. */
 export async function startCloud(userId: string) {
   if (status.userId === userId) return;
-  setStatus({ userId, loaded: false, syncing: true, error: null, isAdmin: false });
+  setStatus({ userId, loaded: false, syncing: true, error: null, isAdmin: false, entitlement: null });
   identify(userId);
   useBackend("cloud", enqueue);
   await reload();
@@ -854,7 +865,7 @@ export async function startCloud(userId: string) {
 export function stopCloud() {
   if (!status.userId) return;
   planId = null;
-  setStatus({ userId: null, loaded: false, syncing: false, isAdmin: false, error: null });
+  setStatus({ userId: null, loaded: false, syncing: false, isAdmin: false, error: null, entitlement: null });
   useBackend("demo");
 }
 

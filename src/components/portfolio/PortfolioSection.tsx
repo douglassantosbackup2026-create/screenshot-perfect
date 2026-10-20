@@ -34,7 +34,7 @@ export function PortfolioSection({ s, showValues }: { s: DemoState; showValues: 
   const eligible = s.assets.filter((a) => holdsPositions(a.category));
 
   return (
-    <section className="mt-8" aria-label="Investimentos">
+    <section aria-label="Investimentos">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl">Investimentos</h2>

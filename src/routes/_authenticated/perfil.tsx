@@ -190,6 +190,7 @@ function Profile() {
       </section>
 
       <nav className="mt-10 flex flex-col border-t border-border pt-4 text-sm" aria-label="Links">
+        {session && <Link to="/assinatura" className="min-h-11 py-3">Assinatura</Link>}
         <Link to="/termos" className="min-h-11 py-3">Termos de uso</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
