@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { demo } from "@/lib/data/demo-store";
 import { account, setDemoMode, useSession } from "@/lib/data/session";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/entrar")({
   validateSearch: (s: Record<string, unknown>): { confirmado?: boolean } => (s["confirmado"] ? { confirmado: true } : {}),
@@ -40,6 +41,7 @@ function SignIn() {
     try {
       if (mode === "entrar") {
         await account.signIn(email, password);
+        track("login");
         navigate({ to: "/hoje" });
       } else {
         await account.requestPasswordReset(email);

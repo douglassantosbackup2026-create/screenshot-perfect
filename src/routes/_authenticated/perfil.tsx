@@ -11,6 +11,7 @@ import { ACH_ICONS, handleResult } from "@/components/feedback";
 import { demo, useDemo } from "@/lib/data/demo-store";
 import { useCloudStatus } from "@/lib/data/cloud";
 import { account, setDemoMode, useSession } from "@/lib/data/session";
+import { setConsent } from "@/lib/analytics";
 import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 
@@ -173,7 +174,10 @@ function Profile() {
           <Switch checked={s.profile.hideValues} onCheckedChange={(v) => demo.updateProfile({ hideValues: v })} />
         </Row>
         <Row label="Permitir dados de uso anônimos" hint="Nunca inclui valores financeiros.">
-          <Switch checked={s.profile.analyticsConsent} onCheckedChange={(v) => demo.updateProfile({ analyticsConsent: v })} />
+          <Switch checked={s.profile.analyticsConsent} onCheckedChange={(v) => {
+              demo.updateProfile({ analyticsConsent: v });
+              setConsent(v);
+            }} />
         </Row>
         <div className="flex flex-col gap-2 pt-4">
           <Button variant="outline" onClick={exportData}>
@@ -186,8 +190,8 @@ function Profile() {
       </section>
 
       <nav className="mt-10 flex flex-col border-t border-border pt-4 text-sm" aria-label="Links">
-        <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
-        <Link to="/sobre" className="min-h-11 py-3">Política de privacidade</Link>
+        <Link to="/termos" className="min-h-11 py-3">Termos de uso</Link>
+        <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {(!session || cloud.isAdmin) && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
         {/* Só no modo demonstração: restaurar apaga o que a pessoa registrou, então pede um segundo toque. */}

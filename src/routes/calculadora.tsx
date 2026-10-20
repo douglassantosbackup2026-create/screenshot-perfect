@@ -9,6 +9,7 @@ import { simulate, validateInputs, type PlanInputs, type ScenarioResult } from "
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
 import { useSession } from "@/lib/data/session";
+import { track } from "@/lib/analytics";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,6 +61,7 @@ function Calculator() {
 
   // Leva tudo o que foi digitado para o onboarding, que abre preenchido depois de criar a conta.
   function start() {
+    track("calc_done", { withWealth: wealth != null, withInss: !!inss });
     setCalcPrefill(
       age && retire && income
         ? { currentAge: age, retirementAge: retire, desiredIncome: income, initialWealth: wealth, monthlyContribution: monthly, inssEstimate: inss && inss > 0 ? inss : null }

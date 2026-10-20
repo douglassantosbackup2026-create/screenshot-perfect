@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { account, passwordProblem, PASSWORD_MIN } from "@/lib/data/session";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/cadastro")({
   head: () => ({
@@ -28,6 +29,7 @@ function SignUp() {
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const problem = password ? passwordProblem(password) : null;
+  useEffect(() => track("signup_start"), []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +44,7 @@ function SignUp() {
     setBusy(true);
     try {
       const r = await account.signUp(email, password, name);
+      track("signup_done", { needsConfirmation: r.needsConfirmation });
       if (r.needsConfirmation) setSentTo(email.trim());
       else navigate({ to: "/onboarding" });
     } catch (err) {
@@ -114,8 +117,12 @@ function SignUp() {
                 <Checkbox checked={terms} onCheckedChange={(v) => setTerms(v === true)} className="mt-0.5" />
                 <span className="text-muted-foreground">
                   Li e aceito os{" "}
-                  <Link to="/sobre" className="text-primary underline">
-                    termos de uso e a política de privacidade
+                  <Link to="/termos" className="text-primary underline">
+                    termos de uso
+                  </Link>{" "}
+                  e a{" "}
+                  <Link to="/privacidade" className="text-primary underline">
+                    política de privacidade
                   </Link>
                   .
                 </span>

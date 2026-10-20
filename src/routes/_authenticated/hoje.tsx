@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { JourneyMap } from "@/components/JourneyMap";
+import { FirstStepsCard } from "@/components/FirstSteps";
 import { SuggestionCard } from "@/components/portfolio/PortfolioSection";
 import { handleResult, xpToast } from "@/components/feedback";
 import { completedDays, demo, monthCloseSteps, useDemo, type DemoState } from "@/lib/data/demo-store";
@@ -87,6 +88,8 @@ function JourneyPage() {
           </section>
 
           <DailyMissionCard mission={j.mission} done={j.missionDone} />
+
+          <FirstStepsCard s={s} />
 
           <MonthCloseCard s={s} />
 

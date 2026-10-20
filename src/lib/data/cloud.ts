@@ -6,6 +6,7 @@ import { useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { identify } from "@/lib/analytics";
 import { ENGINE_VERSION, type PlanInputs } from "@/lib/calc/retirement";
 import type { AssetClass } from "@/lib/calc/portfolio";
 import {
@@ -828,6 +829,7 @@ export async function reload() {
 export async function startCloud(userId: string) {
   if (status.userId === userId) return;
   setStatus({ userId, loaded: false, syncing: true, error: null, isAdmin: false });
+  identify(userId);
   useBackend("cloud", enqueue);
   await reload();
 }

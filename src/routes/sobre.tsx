@@ -23,7 +23,15 @@ function About() {
       <p className="mt-4">{ABOUT_TEXT}</p>
       <h2 className="mt-10 text-lg">Termos de uso e privacidade</h2>
       <p className="mt-2 text-muted-foreground">
-        Os termos de uso e a política de privacidade estão em redação e serão revisados por um advogado antes do beta aberto.
+        Leia os{" "}
+        <Link to="/termos" className="text-primary underline">
+          termos de uso
+        </Link>{" "}
+        e a{" "}
+        <Link to="/privacidade" className="text-primary underline">
+          política de privacidade
+        </Link>
+        .
       </p>
     </main>
   );

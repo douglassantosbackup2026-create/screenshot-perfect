@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { AchievementSheet } from "@/components/feedback";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -129,6 +130,7 @@ function RootComponent() {
       <Outlet />
       <Toaster position="top-center" />
       <AchievementSheet />
+      <ConsentBanner />
     </QueryClientProvider>
   );
 }

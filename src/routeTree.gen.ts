@@ -14,8 +14,10 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SobreRouteImport } from './routes/sobre'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
 import { Route as AuthenticatedEvolucaoRouteImport } from './routes/_authenticated/evolucao'
@@ -54,6 +56,11 @@ const EntrarRoute = EntrarRouteImport.update({
   path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   id: '/redefinir-senha',
   path: '/redefinir-senha',
@@ -62,6 +69,11 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
 const SobreRoute = SobreRouteImport.update({
   id: '/sobre',
   path: '/sobre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
@@ -137,8 +149,10 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
+  '/termos': typeof TermosRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -158,8 +172,10 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
+  '/termos': typeof TermosRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -181,8 +197,10 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
+  '/termos': typeof TermosRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
   '/_authenticated/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -204,8 +222,10 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/calculadora'
     | '/entrar'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
+    | '/termos'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -225,8 +245,10 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/calculadora'
     | '/entrar'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
+    | '/termos'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -247,8 +269,10 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/calculadora'
     | '/entrar'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
+    | '/termos'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
     | '/_authenticated/evolucao'
@@ -270,8 +294,10 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   CalculadoraRoute: typeof CalculadoraRoute
   EntrarRoute: typeof EntrarRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SobreRoute: typeof SobreRoute
+  TermosRoute: typeof TermosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -311,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/redefinir-senha': {
       id: '/redefinir-senha'
       path: '/redefinir-senha'
@@ -323,6 +356,13 @@ declare module '@tanstack/react-router' {
       path: '/sobre'
       fullPath: '/sobre'
       preLoaderRoute: typeof SobreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/contas': {
@@ -460,8 +500,10 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   CalculadoraRoute: CalculadoraRoute,
   EntrarRoute: EntrarRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SobreRoute: SobreRoute,
+  TermosRoute: TermosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

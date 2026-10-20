@@ -1332,6 +1332,14 @@ const rawDemo = {
 };
 
 type DemoOps = typeof rawDemo;
+type OpObserver = (op: string, prev: DemoState, next: DemoState) => void;
+const observers = new Set<OpObserver>();
+/** Acompanha cada operação feita (nos dois modos), por exemplo para o analytics do funil. */
+export function observeOps(fn: OpObserver) {
+  observers.add(fn);
+  return () => observers.delete(fn);
+}
+
 /**
  * As operações que as telas usam. No modo nuvem, cada uma roda aqui na hora (a tela responde sem esperar a rede)
  * e o sincronizador recebe o estado de antes e de depois para gravar no banco e recarregar de lá.
@@ -1341,11 +1349,19 @@ export const demo: DemoOps = Object.fromEntries(
     name,
     (...args: unknown[]) => {
       const run = fn as (...a: unknown[]) => unknown;
-      if (backend !== "cloud" || !syncHandler || name === "exportData") return run(...args);
+      if (name === "exportData") return run(...args);
       const prev = load();
       const out = run(...args);
       const next = load();
-      if (next !== prev || name === "runRecurring") syncHandler(name, args, prev, next);
+      if (backend === "cloud" && syncHandler && (next !== prev || name === "runRecurring")) syncHandler(name, args, prev, next);
+      if (next !== prev)
+        observers.forEach((o) => {
+          try {
+            o(name, prev, next);
+          } catch {
+            /* um observador nunca derruba a operação */
+          }
+        });
       return out;
     },
   ]),
