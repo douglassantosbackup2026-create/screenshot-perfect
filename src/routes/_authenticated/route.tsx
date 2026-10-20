@@ -3,7 +3,8 @@ import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } fro
 import { BottomNav } from "@/components/BottomNav";
 import { MobileHeader, TopNav } from "@/components/TopNav";
 import { startCloud, stopCloud, useCloudStatus } from "@/lib/data/cloud";
-import { useDemo } from "@/lib/data/demo-store";
+import { demo, useDemo } from "@/lib/data/demo-store";
+import { xpToast } from "@/components/feedback";
 import { getSession, isDemoMode, useSession } from "@/lib/data/session";
 
 // Só entra com login ou no modo "experimentar sem conta". Roda no navegador (a sessão fica lá).
@@ -41,6 +42,15 @@ function AuthenticatedLayout() {
   useEffect(() => {
     if (needsOnboarding) navigate({ to: "/onboarding", replace: true });
   }, [needsOnboarding, navigate]);
+
+  // O registro do patrimônio do mês acompanha os itens sozinho (sem digitar de novo).
+  const assetsKey = s.assets.map((a) => `${a.id}:${a.value}:${a.forRetirement}:${a.category}`).join("|");
+  useEffect(() => {
+    if (loading || needsOnboarding || !s.profile.onboardingCompletedAt) return;
+    const r = demo.refreshMonthlyWealth();
+    if (r && r.xpAwarded > 0) xpToast("Patrimônio do mês registrado com os seus itens.", r.xpAwarded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, needsOnboarding, assetsKey]);
 
   const hideNav = pathname.startsWith("/onboarding") || pathname.startsWith("/programa");
 

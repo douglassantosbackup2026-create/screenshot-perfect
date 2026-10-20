@@ -14,7 +14,7 @@ import { HIDDEN } from "@/components/dashboard";
 import { ASSET_CATEGORIES, categoryLabel, isIncomeSource, isLiability, summarizeAssets, type AssetCategory } from "@/lib/calc/assets";
 import { formatMoney, formatMonthly, formatWealth } from "@/lib/calc/format";
 import type { HistoryPoint } from "@/lib/calc/networth";
-import { demo, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
+import { demo, linkedAccountOf, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
 import { PortfolioSection } from "@/components/portfolio/PortfolioSection";
 import { AreaTabs } from "@/components/nav/areas";
 import { assetHistories, hasWealthRecord } from "@/lib/data/selectors";
@@ -199,6 +199,7 @@ function Wealth() {
         editing={editing}
         history={editing?.asset ? (histories.get(editing.asset.id) ?? []) : []}
         fromHoldings={!!editing?.asset && valuedByHoldings(s, editing.asset.id)}
+        linkedTo={editing?.asset ? (linkedAccountOf(s, editing.asset.id)?.name ?? null) : null}
         onClose={() => setEditing(null)}
       />
     </main>
@@ -227,11 +228,14 @@ function AssetSheet({
   editing,
   history,
   fromHoldings,
+  linkedTo,
   onClose,
 }: {
   editing: Editing;
   history: HistoryPoint[];
   fromHoldings: boolean;
+  /** Nome da conta do livro-caixa ligada a este item, se houver. */
+  linkedTo: string | null;
   onClose: () => void;
 }) {
   const asset = editing?.asset ?? null;
@@ -293,7 +297,12 @@ function AssetSheet({
               </button>
             ))}
           </div>
-          {fromHoldings ? (
+          {linkedTo ? (
+            <p className="rounded-xl bg-muted p-4 text-sm">
+              Valor atual: <span className="money font-semibold">{formatWealth(value ?? 0)}</span>. Vem do saldo da conta “{linkedTo}” no livro-caixa; para mudar,
+              lance ou transfira nessa conta.
+            </p>
+          ) : fromHoldings ? (
             <p className="rounded-xl bg-muted p-4 text-sm">
               Valor atual: <span className="money font-semibold">{formatWealth(value ?? 0)}</span>. Vem das posições de investimento deste item; para
               mudar, lance operações ou atualize os preços em Investimentos.

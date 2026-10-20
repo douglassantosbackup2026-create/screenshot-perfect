@@ -571,3 +571,48 @@ describe("fechamento do mês", () => {
     expect(c.uncategorized).toHaveLength(1);
   });
 });
+
+describe("sem digitar duas vezes", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+  const today = () => spDate(new Date());
+
+  it("conta ligada a um item: o saldo vira o valor do item, com histórico", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.saveAsset({ name: "PGBL", category: "pgbl", value: 5000, forRetirement: true });
+    const assetId = state().assets[0].id;
+    demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 500000 });
+    expect(() => demo.saveAccount({ name: "Errada", kind: "corrente", openingBalance: 0, assetId })).toThrow();
+    demo.saveAccount({ name: "PGBL", kind: "previdencia", openingBalance: 500000, assetId });
+    expect(state().assets[0].value).toBe(5000);
+    const [cc, prev] = state().accounts.map((a: { id: string }) => a.id);
+    expect(() => demo.saveAccount({ name: "Outra", kind: "investimento", openingBalance: 0, assetId })).toThrow();
+    demo.addTransfer({ fromId: cc, toId: prev, date: today(), amount: 100000 });
+    expect(state().assets[0].value).toBe(6000);
+    expect(state().assetValuations.at(-1)).toMatchObject({ assetId, value: 6000 });
+    // Editar o item não muda o valor: ele vem da conta.
+    demo.saveAsset({ ...state().assets[0], value: 1 });
+    expect(state().assets[0].value).toBe(6000);
+    // Excluir o item desfaz a ligação.
+    demo.deleteAsset(assetId);
+    expect(state().accounts.find((a: { id: string }) => a.id === prev).assetId).toBeNull();
+  });
+
+  it("registro do mês acompanha os itens, sem sobrescrever o feito à mão", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    expect(demo.refreshMonthlyWealth()).toBeNull();
+    demo.saveAsset({ name: "PGBL", category: "pgbl", value: 5000, forRetirement: true });
+    const r = demo.refreshMonthlyWealth();
+    expect(r?.xpAwarded).toBe(30);
+    expect(state().wealthEntries[0]).toMatchObject({ total: 5000, previdencia: 5000 });
+    expect(demo.refreshMonthlyWealth()).toBeNull();
+    demo.saveAsset({ ...state().assets[0], value: 7000 });
+    expect(demo.refreshMonthlyWealth()?.xpAwarded).toBe(0);
+    expect(state().wealthEntries[0].total).toBe(7000);
+    demo.logWealth({ month: monthOf(today()), total: 9999 });
+    demo.saveAsset({ ...state().assets[0], value: 8000 });
+    expect(demo.refreshMonthlyWealth()).toBeNull();
+    expect(state().wealthEntries[0].total).toBe(9999);
+  });
+});

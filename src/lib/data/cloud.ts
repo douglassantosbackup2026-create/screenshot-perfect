@@ -287,6 +287,7 @@ export async function loadAll(userId: string): Promise<DemoState> {
         kind: a["kind"] as Account["kind"],
         openingBalance: Number(a["opening_balance"]),
         createdAt: String(a["created_at"]),
+        assetId: (a["asset_id"] as string) ?? null,
       }),
     ),
     categories: categories.map((c): Category => ({ id: String(c["id"]), name: String(c["name"]), kind: c["kind"] as Category["kind"] })),
@@ -439,7 +440,7 @@ const accountsSpec: Spec<Account> = {
   table: "accounts",
   items: (s) => s.accounts,
   key: (a) => a.id,
-  row: (a, user_id) => ({ id: a.id, user_id, name: a.name, kind: a.kind, opening_balance: a.openingBalance }),
+  row: (a, user_id) => ({ id: a.id, user_id, name: a.name, kind: a.kind, opening_balance: a.openingBalance, asset_id: a.assetId }),
   ops: ["insert", "update", "delete"],
 };
 const categoriesSpec: Spec<Category> = {
@@ -648,6 +649,16 @@ async function syncAssetValues(prev: DemoState, next: DemoState) {
   }
 }
 
+/** Itens ligados a uma conta cujo valor mudou com esta operação. */
+async function syncLinkedAssets(prev: DemoState, next: DemoState) {
+  for (const a of next.assets) {
+    if (!next.accounts.some((x) => x.assetId === a.id) || valuedByHoldings(next, a.id)) continue;
+    const before = prev.assets.find((x) => x.id === a.id);
+    if (before && before.value === a.value) continue;
+    await rpc("upsert_asset", { p_name: a.name, p_category: a.category, p_value: a.value, p_for_retirement: a.forRetirement, p_note: a.note, p_id: a.id });
+  }
+}
+
 // ---------- Gravar: operações com regra no servidor (RPC) ----------
 type Handler = (args: unknown[], prev: DemoState, next: DemoState, userId: string) => Promise<void>;
 const rpc = (fn: string, params?: Record<string, unknown>) => must(db.rpc(fn, params));
@@ -781,6 +792,9 @@ const HANDLERS: Record<string, Handler> = {
   closeMonth: async () => {
     await rpc("complete_month_close");
   },
+  refreshMonthlyWealth: async () => {
+    await rpc("log_wealth_from_assets", { p_note: null });
+  },
 };
 
 // ---------- Fila ----------
@@ -800,6 +814,8 @@ export function enqueue(op: string, args: unknown[], prev: DemoState, next: Demo
       else await applyDiff(prev, next, userId);
       // Operações em posições e operações mudam o valor do item do Patrimônio.
       if (["saveHolding", "deleteHolding", "addTrade", "deleteTrade"].includes(op)) await syncAssetValues(prev, next);
+      // Contas ligadas a itens: o saldo novo vira o valor do item (upsert_asset também guarda o histórico).
+      else if (op !== "saveAsset") await syncLinkedAssets(prev, next);
     })
     .catch((e: unknown) => {
       toast.error(`Não foi possível salvar: ${(e as Error).message}`);

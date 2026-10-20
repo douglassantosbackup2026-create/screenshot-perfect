@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NumberField, Segmented } from "@/components/forms";
 import { HIDDEN } from "@/components/dashboard";
-import { ACCOUNT_KINDS, accountGroup, accountKindLabel, toCents, type AccountKind } from "@/lib/calc/ledger";
+import { ACCOUNT_KINDS, accountGroup, accountKindLabel, isSavingsAccount, toCents, type AccountKind } from "@/lib/calc/ledger";
+import { holdsPositions } from "@/lib/calc/portfolio";
 import type { RuleOp } from "@/lib/calc/categorize";
 import { formatMoney } from "@/lib/calc/format";
-import { demo, useDemo, type Account, type CategoryKind, type DemoState } from "@/lib/data/demo-store";
+import { demo, linkedAccountOf, useDemo, valuedByHoldings, type Account, type CategoryKind, type DemoState } from "@/lib/data/demo-store";
 import { accountsOverview } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/_authenticated/contas")({
 });
 
 type Editing = { account: Account | null } | null;
+const NO_ASSET = "nenhum";
 
 function Accounts() {
   const s = useDemo();
@@ -106,7 +108,7 @@ function Accounts() {
 
       <Categories s={s} />
       <Rules s={s} />
-      <AccountSheet editing={editing} onClose={() => setEditing(null)} />
+      <AccountSheet s={s} editing={editing} onClose={() => setEditing(null)} />
     </main>
   );
 }
@@ -251,8 +253,9 @@ function Rules({ s }: { s: DemoState }) {
   );
 }
 
-function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => void }) {
+function AccountSheet({ s, editing, onClose }: { s: DemoState; editing: Editing; onClose: () => void }) {
   const account = editing?.account ?? null;
+  const [assetId, setAssetId] = useState<string>(NO_ASSET);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<AccountKind>("corrente");
   const [opening, setOpening] = useState<number | null>(null);
@@ -263,6 +266,7 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
     // Em cartões e dívidas, a pessoa informa quanto deve; guardamos como saldo negativo.
     setOpening(account ? Math.abs(account.openingBalance) / 100 : null);
     setConfirmDelete(false);
+    setAssetId(account?.assetId ?? NO_ASSET);
   }, [editing, account]);
   if (!editing) return null;
   const debt = accountGroup(kind) === "dividas";
@@ -270,7 +274,7 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
   function save() {
     try {
       const cents = toCents(opening ?? 0);
-      demo.saveAccount({ id: account?.id, name, kind, openingBalance: debt ? -cents : cents });
+      demo.saveAccount({ id: account?.id, name, kind, openingBalance: debt ? -cents : cents, assetId: isSavingsAccount(kind) && assetId !== NO_ASSET ? assetId : null });
       toast.success(account ? "Conta atualizada." : "Conta criada.");
       onClose();
     } catch (e) {
@@ -315,6 +319,27 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
             step={0.01}
             hint="O ponto de partida. Daqui em diante, o saldo segue os lançamentos."
           />
+          {isSavingsAccount(kind) && (
+            <div>
+              <p className="text-sm font-semibold">Item do Patrimônio que esta conta representa</p>
+              <Select value={assetId} onValueChange={setAssetId}>
+                <SelectTrigger className="mt-1.5 h-11 rounded-xl bg-muted" aria-label="Item do Patrimônio ligado">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_ASSET}>Nenhum</SelectItem>
+                  {s.assets
+                    .filter((a) => holdsPositions(a.category) && !valuedByHoldings(s, a.id) && (!linkedAccountOf(s, a.id) || linkedAccountOf(s, a.id)?.id === account?.id))
+                    .map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1.5 text-sm text-muted-foreground">Ligada, o valor do item passa a ser o saldo desta conta: lançou ou transferiu, o Patrimônio acompanha.</p>
+            </div>
+          )}
           <Button className="w-full" onClick={save}>
             {account ? "Salvar alterações" : "Criar conta"}
           </Button>

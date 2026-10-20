@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
 import { validateAsset, type AssetCategory } from "@/lib/calc/assets";
 import { snapshotFromAssets, type BreakdownItem } from "@/lib/calc/networth";
-import { isOnBudget, isSavingsAccount, type AccountKind } from "@/lib/calc/ledger";
+import { accountBalances, isOnBudget, isSavingsAccount, type AccountKind } from "@/lib/calc/ledger";
 import {
   budgetActivity,
   computeBudget,
@@ -130,7 +130,15 @@ export type Asset = {
 export type AssetValuation = { assetId: string; month: string; value: number; at: string };
 
 // ---------- Livro-caixa (valores em centavos, com sinal) ----------
-export type Account = { id: string; name: string; kind: AccountKind; openingBalance: number; createdAt: string };
+export type Account = {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  openingBalance: number;
+  createdAt: string;
+  /** Item do Patrimônio que esta conta representa (previdência ou investimentos): o valor do item é o saldo da conta. */
+  assetId: string | null;
+};
 export type CategoryKind = "receita" | "despesa";
 export type Category = { id: string; name: string; kind: CategoryKind };
 export type TxSource = "manual" | "importado" | "recorrente";
@@ -348,9 +356,9 @@ export function makeSeed(now = new Date()): DemoState {
   );
   // Livro-caixa: conta corrente, cartão e previdência, com o mês passado e o atual até hoje.
   const accounts: Account[] = [
-    { id: newId(), name: "Conta corrente", kind: "corrente", openingBalance: 350000, createdAt: iso },
-    { id: newId(), name: "Cartão de crédito", kind: "cartao", openingBalance: 0, createdAt: iso },
-    { id: newId(), name: "PGBL da corretora", kind: "previdencia", openingBalance: 0, createdAt: iso },
+    { id: newId(), name: "Conta corrente", kind: "corrente", openingBalance: 350000, createdAt: iso, assetId: null },
+    { id: newId(), name: "Cartão de crédito", kind: "cartao", openingBalance: 0, createdAt: iso, assetId: null },
+    { id: newId(), name: "PGBL da corretora", kind: "previdencia", openingBalance: 0, createdAt: iso, assetId: null },
   ];
   const [cc, card, prev] = accounts.map((a) => a.id) as [string, string, string];
   const prevMonth = addMonths(month, -1);
@@ -599,7 +607,7 @@ function migrate(raw: DemoState): DemoState {
     trades: raw.trades ?? [],
     allocationTargets: raw.allocationTargets ?? {},
     budget: raw.budget ?? { assigned: {}, templates: [] },
-    accounts: raw.accounts ?? [],
+    accounts: (raw.accounts ?? []).map((a) => ({ ...a, assetId: a.assetId ?? null })),
     categories: raw.categories ?? [...DEFAULT_CATEGORIES],
     transactions: raw.transactions ?? [],
     recurring: raw.recurring ?? [],
@@ -692,7 +700,8 @@ function load(): DemoState {
   }
   return state;
 }
-function commit(next: DemoState) {
+function commit(raw: DemoState) {
+  const next = withLinkedAssets(raw, new Date());
   state = next;
   if (backend === "demo") {
     try {
@@ -898,6 +907,20 @@ const rawDemo = {
       return recordWealth(s, now, { month: monthOf(spDate(now)), ...snap, note: note ?? null });
     });
   },
+  /**
+   * Com itens no Patrimônio, o registro do mês acompanha os itens sozinho: cria o do mês se não houver
+   * e atualiza o que foi montado a partir dos itens. Um registro feito à mão (sem detalhamento) nunca é sobrescrito.
+   * Devolve null quando não há nada a fazer.
+   */
+  refreshMonthlyWealth(): ActionResult | null {
+    const s0 = load();
+    if (s0.assets.length === 0) return null;
+    const month = monthOf(spDate(new Date()));
+    const entry = s0.wealthEntries.find((w) => w.month === month);
+    const snap = snapshotFromAssets(s0.assets);
+    if (entry && (entry.breakdown === null || (entry.total === snap.total && entry.previdencia === snap.previdencia))) return null;
+    return mutate((s, now) => recordWealth(s, now, { month, ...snap, note: entry?.note ?? null }));
+  },
   /** Cria ou atualiza um item do patrimônio (espelho de upsert_asset). Não concede XP. */
   saveAsset(input: { id?: string | undefined; name: string; category: AssetCategory; value: number; forRetirement: boolean; note?: string | null }) {
     const errors = validateAsset(input);
@@ -906,7 +929,8 @@ const rawDemo = {
     const now = new Date();
     const previous = input.id ? s.assets.find((a) => a.id === input.id) : undefined;
     if (input.id && !previous) throw new Error("Item não encontrado.");
-    const withHoldings = !!input.id && valuedByHoldings(s, input.id);
+    // Com posições ou ligado a uma conta, o valor vem de lá, não do campo.
+    const withHoldings = !!input.id && (valuedByHoldings(s, input.id) || !!linkedAccountOf(s, input.id));
     if (!!input.id && s.holdings.some((h) => h.assetId === input.id) && !holdsPositions(input.category)) throw new Error("Este item tem posições de investimento. Remova-as antes de mudar a categoria.");
     const item: Asset = {
       id: input.id ?? newId(),
@@ -928,6 +952,7 @@ const rawDemo = {
     const gone = new Set(s.holdings.filter((h) => h.assetId === id).map((h) => h.id));
     s.assets = s.assets.filter((a) => a.id !== id);
     s.assetValuations = s.assetValuations.filter((v) => v.assetId !== id);
+    s.accounts = s.accounts.map((a) => (a.assetId === id ? { ...a, assetId: null } : a));
     s.holdings = s.holdings.filter((h) => !gone.has(h.id));
     s.trades = s.trades.filter((t) => !gone.has(t.holdingId));
     commit(s);
@@ -1086,15 +1111,24 @@ const rawDemo = {
     commit(s);
   },
   // ---------- Livro-caixa: contas, lançamentos, recorrências, importação e regras. Não concedem XP. ----------
-  saveAccount(input: { id?: string | undefined; name: string; kind: AccountKind; openingBalance: number }) {
+  /** Cria ou edita a conta. `assetId` liga a conta (previdência ou investimentos) a um item do Patrimônio. */
+  saveAccount(input: { id?: string | undefined; name: string; kind: AccountKind; openingBalance: number; assetId?: string | null }) {
     const name = input.name.trim();
     if (!name) throw new Error("Dê um nome à conta.");
     if (!Number.isInteger(input.openingBalance)) throw new Error("Saldo inicial inválido.");
     const s = structuredClone(load());
+    const assetId = input.assetId ?? null;
+    if (assetId) {
+      if (!isSavingsAccount(input.kind)) throw new Error("Só contas de previdência ou investimentos podem ser ligadas a um item do Patrimônio.");
+      const asset = s.assets.find((a) => a.id === assetId);
+      if (!asset) throw new Error("Item do Patrimônio não encontrado.");
+      if (valuedByHoldings(s, assetId)) throw new Error("O valor deste item já vem das posições de investimento.");
+      if (s.accounts.some((a) => a.assetId === assetId && a.id !== input.id)) throw new Error("Este item já está ligado a outra conta.");
+    }
     if (input.id) {
       if (!s.accounts.some((a) => a.id === input.id)) throw new Error("Conta não encontrada.");
-      s.accounts = s.accounts.map((a) => (a.id === input.id ? { ...a, name, kind: input.kind, openingBalance: input.openingBalance } : a));
-    } else s.accounts.push({ id: newId(), name, kind: input.kind, openingBalance: input.openingBalance, createdAt: new Date().toISOString() });
+      s.accounts = s.accounts.map((a) => (a.id === input.id ? { ...a, name, kind: input.kind, openingBalance: input.openingBalance, assetId } : a));
+    } else s.accounts.push({ id: newId(), name, kind: input.kind, openingBalance: input.openingBalance, createdAt: new Date().toISOString(), assetId });
     commit(s);
   },
   /** Exclui a conta com seus lançamentos, recorrências e a outra perna das transferências. */
@@ -1420,6 +1454,29 @@ function awardBudgetPlanned(s: DemoState, now: Date, month: string): number {
   s.xpEvents = a.events;
   markActive(s, now);
   return a.awarded;
+}
+
+/** O item está ligado a uma conta do livro-caixa: o valor dele é o saldo da conta. */
+export const linkedAccountOf = (s: Pick<DemoState, "accounts">, assetId: string) => s.accounts.find((a) => a.assetId === assetId) ?? null;
+
+/** Leva o saldo das contas ligadas para o valor dos itens do Patrimônio (com histórico), a cada gravação. */
+function withLinkedAssets(s: DemoState, now: Date): DemoState {
+  const linked = s.accounts.filter((a) => a.assetId);
+  if (!linked.length) return s;
+  const balances = accountBalances(s.accounts, s.transactions);
+  let changed = false;
+  const assets = s.assets.map((a) => {
+    const acc = linked.find((x) => x.assetId === a.id);
+    if (!acc || valuedByHoldings(s, a.id)) return a;
+    const value = Math.max(balances[acc.id] ?? 0, 0) / 100;
+    if (value === a.value) return a;
+    changed = true;
+    return { ...a, value, updatedAt: now.toISOString() };
+  });
+  if (!changed) return s;
+  const next = { ...s, assets };
+  for (const a of assets) if (s.assets.find((x) => x.id === a.id)?.value !== a.value) recordValuation(next, a.id, a.value, now);
+  return next;
 }
 
 /** O item tem posições com operações lançadas: o valor dele vem delas. */

@@ -176,6 +176,17 @@ describe("modo nuvem", () => {
     });
   });
 
+  it("registro automático do patrimônio do mês usa a função do banco", async () => {
+    const { store } = await fresh();
+    db["assets"] = [{ id: "a1", name: "PGBL", category: "pgbl", value: 5000, for_retirement: true, updated_at: "2026-10-01T00:00:00Z" }];
+    const { reload } = await import("./cloud");
+    await reload();
+    calls.length = 0;
+    store.demo.refreshMonthlyWealth();
+    await settle();
+    expect(writes().map((c) => c.table)).toEqual(["log_wealth_from_assets"]);
+  });
+
   it("sair do modo nuvem volta ao modo demonstração", async () => {
     const { cloud, store } = await fresh();
     cloud.stopCloud();
