@@ -9,4 +9,5 @@ export const formatAge = (age: number) => `${Math.floor(age)} anos`;
 
 const brlExact = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // Livro-caixa: valor exato, a partir de centavos.
-export const formatMoney = (cents: number) => brlExact.format(cents / 100);
+// "+ 0" evita "-R$ 0,00" quando o valor é zero negativo.
+export const formatMoney = (cents: number) => brlExact.format(cents / 100 + 0);

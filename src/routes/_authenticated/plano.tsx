@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumberField, Segmented, LegalNote } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
+import { BudgetTab } from "@/components/budget/BudgetTab";
 import { ENGINE_VERSION, projectSeries, sensitivity, simulateAll, validateInputs, type PlanInputs, type ScenarioKey } from "@/lib/calc/retirement";
 import { summarizeAssets } from "@/lib/calc/assets";
 import { sinceLastReview } from "@/lib/data/selectors";
@@ -16,11 +17,14 @@ import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } fr
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
 
 export const Route = createFileRoute("/_authenticated/plano")({
-  validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s['criar'] ? { criar: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { criar?: boolean; aba?: "orcamento" } => ({
+    ...(s["criar"] ? { criar: true } : {}),
+    ...(s["aba"] === "orcamento" ? { aba: "orcamento" as const } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Plano — Previdência Intelligence" },
-      { name: "description", content: "Seu plano de aposentadoria em três cenários, com premissas visíveis e editáveis." },
+      { name: "description", content: "Seu plano de aposentadoria em três cenários e o orçamento do mês por envelopes." },
       { property: "og:title", content: "Plano — Previdência Intelligence" },
       { property: "og:description", content: "Seu plano de aposentadoria em três cenários, com premissas visíveis." },
     ],
@@ -35,18 +39,46 @@ const SCEN: { value: ScenarioKey; label: string }[] = [
 ];
 const LIFE_REASONS = ["Renda", "Família", "Trabalho", "Cidade", "Outro"];
 
+/** Abas do Plano: a aposentadoria e o orçamento do mês. */
+function PlanTabs({ value }: { value: "aposentadoria" | "orcamento" }) {
+  const tab = (active: boolean) =>
+    "flex min-h-10 flex-1 items-center justify-center rounded-full px-4 text-sm transition-colors " +
+    (active ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:text-foreground");
+  return (
+    <nav aria-label="Seções do plano" className="mt-4 flex max-w-md rounded-full bg-muted p-1">
+      <Link to="/plano" search={{}} className={tab(value === "aposentadoria")} aria-current={value === "aposentadoria" ? "page" : undefined}>
+        Aposentadoria
+      </Link>
+      <Link to="/plano" search={{ aba: "orcamento" }} className={tab(value === "orcamento")} aria-current={value === "orcamento" ? "page" : undefined}>
+        Orçamento
+      </Link>
+    </nav>
+  );
+}
+
 function PlanPage() {
   const s = useDemo();
-  const { criar } = Route.useSearch();
+  const { criar, aba } = Route.useSearch();
   const [creating, setCreating] = useState(false);
   useEffect(() => {
     if (criar && !s.plan) setCreating(true);
   }, [criar, s.plan]);
 
+  if (aba === "orcamento") {
+    return (
+      <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
+        <h1>Seu plano</h1>
+        <PlanTabs value="orcamento" />
+        <BudgetTab s={s} />
+      </main>
+    );
+  }
+
   if (!s.plan && !creating) {
     return (
       <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
         <h1>Seu plano</h1>
+        <PlanTabs value="aposentadoria" />
         <p className="mt-4">Seu plano fica pronto na Unidade 2 da jornada. Quer montar agora?</p>
         <Button className="mt-6 w-full" onClick={() => setCreating(true)}>
           Montar meu plano
@@ -106,6 +138,7 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
       <h1>Seu plano</h1>
+      <PlanTabs value="aposentadoria" />
 
       {/* No celular, uma coluna na ordem do código; no desktop, resumo à esquerda e gráfico à direita. */}
       <div className="mt-6 grid gap-4 lg:grid-cols-[5fr_7fr] lg:items-start lg:gap-x-6 lg:[grid-template-areas:'res_chart'_'seg_chart'_'pre_chart'_'calc_hist'_'rev_hist'_'sens_hist']">

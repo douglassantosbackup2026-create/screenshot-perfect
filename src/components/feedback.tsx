@@ -5,15 +5,20 @@ import {
   CalendarCheck,
   CalendarRange,
   CheckCircle2,
+  Compass,
+  FileUp,
   Flag,
+  LineChart,
   Map,
   Mountain,
+  PieChart,
   RefreshCw,
   Shield,
   Sprout,
   Share2,
   Target,
   TrendingUp,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -35,6 +40,11 @@ export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
   "check-circle": CheckCircle2,
   "calendar-range": CalendarRange,
   mountain: Mountain,
+  compass: Compass,
+  "file-up": FileUp,
+  wallet: Wallet,
+  "line-chart": LineChart,
+  "pie-chart": PieChart,
 };
 
 /** Toast discreto de XP. */

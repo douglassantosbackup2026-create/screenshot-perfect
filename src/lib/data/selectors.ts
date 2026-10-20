@@ -3,13 +3,36 @@ import { isoWeekKey, levelFromXp, monthOf, spDate, weekStartOf } from "@/lib/gam
 import { MISSIONS } from "@/content/missions";
 import { fiProgress, wealthTimeline } from "@/lib/calc/progress";
 import { challengeBySlug } from "@/content/challenges";
-import { summarizeAssets } from "@/lib/calc/assets";
+import { isIncomeSource, isLiability, summarizeAssets } from "@/lib/calc/assets";
 import { assetHistory, cumulativeReturn, fiMilestones, growthSummary, periodReturns, snapshotFromAssets } from "@/lib/calc/networth";
 import { accountBalances, accountGroup, groupByDay, monthSummary, spendingByCategory, type AccountGroup } from "@/lib/calc/ledger";
-import { addDays, nextOccurrence } from "@/lib/calc/recurring";
+import { addDays, nextOccurrence, occurrencesUntil } from "@/lib/calc/recurring";
+import { cashFlowSeries, cashFlowTotals, categoryTrend, OTHER_KEY, UNCATEGORIZED_KEY, WEALTH_GROUPS, wealthByGroup } from "@/lib/calc/reports";
+import {
+  DEBT_ENVELOPE,
+  monthsBetween,
+  RETIREMENT_ENVELOPE,
+  retirementImpact,
+  shiftMonth,
+  templateAmount,
+  templateProgress,
+  UNCATEGORIZED_ENVELOPE,
+} from "@/lib/calc/budget";
 import { journeyNodes } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import {
+  allocateContribution,
+  allocation,
+  classOfCategory,
+  positionFromTrades,
+  tradeFlows,
+  valuePosition,
+  returnSummary,
+  type AssetClass,
+} from "@/lib/calc/portfolio";
+import {
+  budgetMonths,
+  valuedByHoldings,
   completedDays,
   dailyMissionDone,
   todayMission,
@@ -193,6 +216,168 @@ export function upcomingRecurring(s: DemoState, now = new Date(), days = 31) {
       return next && next.date <= limit ? [{ rule: r, date: next.date, accountName: accounts.get(r.accountId)?.name ?? "Conta removida" }] : [];
     })
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ---------- Orçamento ----------
+const SPECIAL_ENVELOPES: Record<string, string> = {
+  [RETIREMENT_ENVELOPE]: "Aposentadoria",
+  [DEBT_ENVELOPE]: "Pagamento de dívidas",
+  [UNCATEGORIZED_ENVELOPE]: "Gastos sem categoria",
+};
+
+/**
+ * Tudo o que a aba Orçamento mostra para o mês: "a distribuir", cada envelope com o que o modelo pede,
+ * e o envelope Aposentadoria comparado com o plano.
+ */
+export function budgetView(s: DemoState, month: string) {
+  const months = budgetMonths(s, month);
+  const cur = months.at(-1)!;
+  const names = new Map(s.categories.map((c) => [c.id, c.name]));
+  const templates = new Map(s.budget.templates.map((t) => [t.envelopeId, t]));
+  const envelopes = Object.entries(cur.envelopes)
+    .filter(([id, e]) => id === RETIREMENT_ENVELOPE || names.has(id) || e.balance !== 0 || e.activity !== 0)
+    .map(([id, e]) => {
+      const template = templates.get(id) ?? null;
+      return {
+        id,
+        name: SPECIAL_ENVELOPES[id] ?? names.get(id) ?? "Categoria removida",
+        ...e,
+        template,
+        suggested: template ? templateAmount(template, cur.month, e.carry, cur.income) : null,
+        progress: template ? templateProgress(template, e.balance) : null,
+      };
+    });
+  const retirement = envelopes.find((e) => e.id === RETIREMENT_ENVELOPE)!;
+  const spending = envelopes.filter((e) => e.id !== RETIREMENT_ENVELOPE).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return {
+    month: cur,
+    retirement,
+    spending,
+    overspentNow: spending.filter((e) => e.balance < 0),
+    impact: s.plan ? retirementImpact(s.plan.inputs, retirement.assigned) : null,
+    hasTemplates: s.budget.templates.length > 0,
+  };
+}
+
+/** Contas fixas do mês (recorrências de saída): previsto, já lançado e a vencer. */
+export function billsOfMonth(s: DemoState, month: string, now = new Date()) {
+  const today = spDate(now);
+  const end = addDays(shiftMonth(month, 1), -1);
+  const launched = new Set(s.transactions.flatMap((t) => (t.recurringId && t.occurrenceDate ? [`${t.recurringId}|${t.occurrenceDate}`] : [])));
+  const items = s.recurring
+    .filter((r) => r.active && r.amount < 0)
+    .flatMap((r) =>
+      occurrencesUntil(r, end)
+        .filter((o) => o.date.slice(0, 7) === month.slice(0, 7))
+        .map((o) => ({
+          rule: r,
+          date: o.date,
+          status: launched.has(`${r.id}|${o.occurrenceDate}`) ? ("lancada" as const) : o.date > today ? ("a_vencer" as const) : ("pendente" as const),
+        })),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const total = items.reduce((t, i) => t - i.rule.amount, 0);
+  const done = items.filter((i) => i.status === "lancada").reduce((t, i) => t - i.rule.amount, 0);
+  return { items, total, done, remaining: total - done };
+}
+
+// ---------- Relatórios ----------
+/** Fluxo de caixa, gastos por categoria e patrimônio por grupo nos últimos `count` meses, terminando no atual. */
+export function reportsView(s: DemoState, count: number, now = new Date()) {
+  const end = monthOf(spDate(now));
+  const months = Array.from({ length: count }, (_, i) => shiftMonth(end, i - count + 1));
+  // As cores das categorias saem da classificação de todo o histórico, para não mudarem com o período.
+  const first = [...s.transactions.map((t) => t.date.slice(0, 8) + "01")].sort()[0] ?? end;
+  const history = first < months[0]! ? [...monthsBetween(first, shiftMonth(months[0]!, -1)), ...months] : months;
+  const flow = cashFlowSeries(s.transactions, months);
+  const names = new Map(s.categories.map((c) => [c.id, c.name]));
+  const trend = categoryTrend(s.transactions, months, history);
+  const wealth = wealthByGroup(s.assets, s.assetValuations, months);
+  const groups = WEALTH_GROUPS.filter((g) => wealth.some((r) => r[g.key] > 0));
+  return {
+    months,
+    flow,
+    flowTotals: cashFlowTotals(flow),
+    trend: {
+      ...trend,
+      labels: Object.fromEntries(
+        trend.keys.map((k) => [k, k === OTHER_KEY ? "Outros gastos" : k === UNCATEGORIZED_KEY ? "Sem categoria" : (names.get(k) ?? "Categoria removida")]),
+      ),
+    },
+    wealth,
+    wealthGroups: groups,
+    hasLedger: s.transactions.length > 0,
+    hasWealthHistory: s.assetValuations.length > 0,
+  };
+}
+
+// ---------- Investimentos ----------
+const STALE_PRICE_DAYS = 31;
+
+/**
+ * Carteira: cada posição pelo preço médio, os totais, a alocação dos itens para a aposentadoria por classe
+ * (itens sem posições entram pela categoria) e a rentabilidade anual (XIRR) das posições.
+ */
+export function portfolioView(s: DemoState, now = new Date()) {
+  const today = spDate(now);
+  const assets = new Map(s.assets.map((a) => [a.id, a]));
+  const positions = s.holdings.map((h) => {
+    const trades = s.trades.filter((t) => t.holdingId === h.id).sort((a, b) => b.date.localeCompare(a.date));
+    return {
+      holding: h,
+      assetName: assets.get(h.assetId)?.name ?? "Item removido",
+      trades,
+      ...valuePosition(positionFromTrades(trades), h.price),
+      stalePrice: (now.getTime() - new Date(h.priceUpdatedAt).getTime()) / DAY_MS > STALE_PRICE_DAYS,
+    };
+  });
+  const totals = positions.reduce(
+    (t, p) => ({
+      marketValue: t.marketValue + p.marketValue,
+      costBasis: t.costBasis + p.costBasis,
+      unrealized: t.unrealized + p.unrealized,
+      realized: t.realized + p.realized,
+      income: t.income + p.income,
+    }),
+    { marketValue: 0, costBasis: 0, unrealized: 0, realized: 0, income: 0 },
+  );
+  // Alocação do que é para a aposentadoria: posições onde houver; senão, o valor do item pela categoria.
+  const forRetirement = s.assets.filter((a) => a.forRetirement && !isLiability(a.category) && !isIncomeSource(a.category));
+  const items = forRetirement.flatMap((a) =>
+    valuedByHoldings(s, a.id)
+      ? positions.filter((p) => p.holding.assetId === a.id).map((p) => ({ assetClass: p.holding.assetClass, value: p.marketValue }))
+      : [{ assetClass: classOfCategory(a.category), value: Math.round(a.value * 100) }],
+  );
+  const current: Partial<Record<AssetClass, number>> = {};
+  for (const i of items) current[i.assetClass] = (current[i.assetClass] ?? 0) + i.value;
+  return {
+    positions,
+    totals,
+    allocation: allocation(items, s.allocationTargets),
+    current,
+    performance: returnSummary(tradeFlows(s.trades, totals.marketValue, today)),
+    hasTargets: Object.keys(s.allocationTargets).length > 0,
+    stalePrices: positions.filter((p) => p.stalePrice && p.quantity > 0).length,
+  };
+}
+
+/**
+ * "Onde aportar este mês": o que falta transferir no envelope Aposentadoria ou, sem orçamento, o aporte do plano,
+ * dividido entre as classes para chegar perto das metas, só comprando.
+ */
+export function contributionSuggestion(s: DemoState, now = new Date()) {
+  const month = monthOf(spDate(now));
+  const env = budgetMonths(s, month).at(-1)?.envelopes[RETIREMENT_ENVELOPE];
+  const fromBudget = env && env.balance > 0 ? env.balance : 0;
+  const amount = fromBudget || Math.round((s.plan?.inputs.monthlyContribution ?? 0) * 100);
+  const v = portfolioView(s, now);
+  if (!v.hasTargets || amount <= 0) return { amount, source: fromBudget ? ("orcamento" as const) : ("plano" as const), items: [], hasTargets: v.hasTargets };
+  return {
+    amount,
+    source: fromBudget ? ("orcamento" as const) : ("plano" as const),
+    items: allocateContribution(v.current, s.allocationTargets, amount),
+    hasTargets: true,
+  };
 }
 
 export type DataWarning = {

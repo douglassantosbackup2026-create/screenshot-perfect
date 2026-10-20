@@ -15,7 +15,10 @@ export type XpAction =
   | "goal_created"
   | "goal_completed"
   | "challenge_completed"
-  | "daily_mission";
+  | "daily_mission"
+  | "statement_imported"
+  | "budget_planned"
+  | "investment_logged";
 
 export const XP: Record<XpAction, number> = {
   lesson_completed: 10,
@@ -35,6 +38,11 @@ export const XP: Record<XpAction, number> = {
   challenge_completed: 40,
   // Missão do dia: uma vez por dia, qualquer que seja o tipo.
   daily_mission: 10,
+  // Uma vez por mês cada: importar extrato, planejar o orçamento do mês, registrar uma operação de investimento.
+  // Como no resto, o XP vem do hábito; quanto entrou, foi orçado ou foi investido não muda nada.
+  statement_imported: 20,
+  budget_planned: 20,
+  investment_logged: 20,
 };
 
 /** Metas criadas só dão XP até 3 vezes por mês (periodKey "G:YYYY-MM:<id>"). */
@@ -203,7 +211,11 @@ export type AchievementCode =
   | "meta_concluida"
   | "revisao_trimestral"
   | "primeiro_desafio"
-  | "diagnostico_inicial";
+  | "diagnostico_inicial"
+  | "primeiro_extrato"
+  | "primeiro_orcamento"
+  | "primeiro_investimento"
+  | "carteira_com_metas";
 
 export const ACHIEVEMENTS: { code: AchievementCode; title: string; description: string; icon: string }[] = [
   { code: "primeiro_plano", title: "Primeiro plano", description: "Você criou seu plano de aposentadoria.", icon: "map" },
@@ -219,6 +231,10 @@ export const ACHIEVEMENTS: { code: AchievementCode; title: string; description: 
   { code: "meta_concluida", title: "Meta concluída", description: "Você concluiu uma meta que definiu.", icon: "check-circle" },
   { code: "revisao_trimestral", title: "Revisão trimestral", description: "Patrimônio registrado nos três meses de um trimestre e plano revisado.", icon: "calendar-range" },
   { code: "primeiro_desafio", title: "Primeiro desafio", description: "Você concluiu um desafio pessoal.", icon: "mountain" },
+  { code: "primeiro_extrato", title: "Extrato importado", description: "Você importou um extrato do banco para o Diário.", icon: "file-up" },
+  { code: "primeiro_orcamento", title: "Mês planejado", description: "Você deu um destino ao dinheiro do mês no orçamento.", icon: "wallet" },
+  { code: "primeiro_investimento", title: "Primeiro investimento", description: "Você registrou uma operação de investimento.", icon: "line-chart" },
+  { code: "carteira_com_metas", title: "Carteira com metas", description: "Você definiu quanto quer em cada classe de investimento.", icon: "pie-chart" },
 ];
 
 export function hasThreeConsecutiveMonths(monthKeys: string[]): boolean {
@@ -258,6 +274,10 @@ export function eligibleAchievements(s: {
   hasFullQuarter?: boolean;
   hasCompletedChallenge?: boolean;
   hasCompletedFirstUnit?: boolean;
+  hasImportedStatement?: boolean;
+  hasPlannedBudget?: boolean;
+  hasInvestmentTrade?: boolean;
+  hasAllocationTargets?: boolean;
 }): AchievementCode[] {
   const out: AchievementCode[] = [];
   if (s.hasPlan) out.push("primeiro_plano");
@@ -273,6 +293,10 @@ export function eligibleAchievements(s: {
   if (s.hasFullQuarter) out.push("revisao_trimestral");
   if (s.hasCompletedChallenge) out.push("primeiro_desafio");
   if (s.hasCompletedFirstUnit) out.push("diagnostico_inicial");
+  if (s.hasImportedStatement) out.push("primeiro_extrato");
+  if (s.hasPlannedBudget) out.push("primeiro_orcamento");
+  if (s.hasInvestmentTrade) out.push("primeiro_investimento");
+  if (s.hasAllocationTargets) out.push("carteira_com_metas");
   return out;
 }
 

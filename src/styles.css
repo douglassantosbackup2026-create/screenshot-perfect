@@ -93,6 +93,14 @@
   --chart-3: oklch(0.918 0.011 95.2);
   --chart-4: oklch(0.718 0.012 95.2);
   --chart-5: oklch(0.573 0.009 91.5);
+  /* Cores de séries nos relatórios (identidade: uma por categoria, sempre na mesma ordem).
+     Validadas contra --card para daltonismo (ΔE ≥ 8 entre vizinhas), visão normal (ΔE ≥ 15) e contraste ≥ 3:1.
+     O amarelo da marca fica de fora para não competir com o destaque. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
   --sidebar: oklch(0.204 0.004 106.7);
   --sidebar-foreground: oklch(0.969 0.004 106.5);
   --sidebar-primary: oklch(0.848 0.174 92);

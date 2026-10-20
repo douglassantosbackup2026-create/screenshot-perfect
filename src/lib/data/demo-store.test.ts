@@ -86,7 +86,7 @@ describe("dados salvos pela versão 1", () => {
   it("carregam com os campos novos vazios", async () => {
     const { makeSeed } = await freshStore();
     const v1 = makeSeed() as unknown as Record<string, unknown>;
-    for (const k of ["wealthEntries", "goals", "challenges", "days", "assets", "assetValuations", "accounts", "categories", "transactions", "recurring", "categoryRules"]) delete v1[k];
+    for (const k of ["wealthEntries", "goals", "challenges", "days", "assets", "assetValuations", "accounts", "categories", "transactions", "recurring", "categoryRules", "budget", "holdings", "trades", "allocationTargets"]) delete v1[k];
     for (const k of ["objective", "reviewCadence", "missingFields"]) delete (v1["profile"] as Record<string, unknown>)[k];
     v1["version"] = 1;
     v1["xpEvents"] = (v1["xpEvents"] as { action: string }[]).filter((e) => !["wealth_logged", "goal_created"].includes(e.action));
@@ -98,7 +98,9 @@ describe("dados salvos pela versão 1", () => {
     const r = demo.logWealth({ month: monthOf(spDate(new Date())), total: 100 });
     expect(r.xpAwarded).toBe(30);
     const s = JSON.parse(window.localStorage.getItem(KEY)!);
-    expect(s.version).toBe(6);
+    expect(s.version).toBe(8);
+    expect(s.holdings).toEqual([]);
+    expect(s.budget).toEqual({ assigned: {}, templates: [] });
     expect(s.transactions).toEqual([]);
     expect(s.categories.length).toBeGreaterThan(0);
     expect(s.journey).toEqual({ testedOutUnits: [], dailyMissions: [] });
@@ -342,12 +344,12 @@ describe("livro-caixa", () => {
       { importedId: "F1", date: d, amount: -45090, payee: "COMPRA PAO DE ACUCAR", memo: null },
       { importedId: "F2", date: d, amount: 800000, payee: "PIX RECEBIDO", memo: "NF 1" },
     ];
-    expect(demo.importTransactions(cc, rows)).toEqual({ added: 1, matched: 1, duplicates: 0 });
+    expect(demo.importTransactions(cc, rows)).toMatchObject({ added: 1, matched: 1, duplicates: 0 });
     const s = state();
     expect(s.transactions).toHaveLength(2);
     expect(s.transactions[0]).toMatchObject({ payee: "Mercado", categoryId: "cat-mercado", importedId: "F1" });
     expect(s.transactions[1]).toMatchObject({ source: "importado", importedId: "F2", note: "NF 1" });
-    expect(demo.importTransactions(cc, rows)).toEqual({ added: 0, matched: 0, duplicates: 2 });
+    expect(demo.importTransactions(cc, rows)).toMatchObject({ added: 0, matched: 0, duplicates: 2 });
   });
 
   it("excluir conta leva os lançamentos e a outra perna das transferências", async () => {
@@ -370,5 +372,165 @@ describe("livro-caixa", () => {
     const s = state();
     expect(s.transactions[0].categoryId).toBeNull();
     expect(s.categoryRules).toEqual([]);
+  });
+});
+
+describe("orçamento por envelopes", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+  const month = () => monthOf(spDate(new Date()));
+
+  it("no exemplo da Ana, o aporte do mês passado zerou o envelope Aposentadoria e o deste mês ainda está para sair", async () => {
+    const { makeSeed, budgetMonths } = await freshStore();
+    const s = makeSeed();
+    const months = budgetMonths(s, month());
+    const prev = months.at(-2)!;
+    const cur = months.at(-1)!;
+    expect(prev.envelopes["env-aposentadoria"]).toMatchObject({ assigned: 100000, activity: -100000, balance: 0 });
+    expect(cur.envelopes["env-aposentadoria"]).toMatchObject({ assigned: 100000, activity: 0, balance: 100000 });
+    expect(cur.envelopes["cat-moradia"]!.activity).toBe(-200000);
+  });
+
+  it("distribuir, mover entre envelopes e aplicar os modelos", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    const m = month();
+    demo.setAssigned(m, "cat-mercado", 50000);
+    demo.moveBudget(m, "cat-mercado", "cat-lazer", 10000);
+    expect(state().budget.assigned[m]).toEqual({ "cat-mercado": 40000, "cat-lazer": 10000 });
+    demo.setAssigned(m, "cat-lazer", 0);
+    expect(state().budget.assigned[m]).toEqual({ "cat-mercado": 40000 });
+    expect(() => demo.setAssigned(addMonths(m, 3), "cat-lazer", 100)).toThrow();
+
+    demo.saveTemplate({ envelopeId: "cat-moradia", kind: "fixo", amount: 200000, target: null, deadline: null, percent: null });
+    demo.saveTemplate({ envelopeId: "cat-educacao", kind: "ate_data", amount: null, target: 300000, deadline: addMonths(m, 2), percent: null });
+    expect(() => demo.saveTemplate({ envelopeId: "cat-lazer", kind: "percentual", amount: null, target: null, deadline: null, percent: 0 })).toThrow();
+    expect(() => demo.saveTemplate({ envelopeId: "nao-existe", kind: "fixo", amount: 1, target: null, deadline: null, percent: null })).toThrow();
+    expect(demo.applyTemplates(m).total).toBe(200000 + 100000);
+    expect(state().budget.assigned[m]).toMatchObject({ "cat-moradia": 200000, "cat-educacao": 100000, "cat-mercado": 40000 });
+  });
+
+  it("excluir a categoria tira o envelope do orçamento", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.saveCategory({ name: "Pets", kind: "despesa" });
+    const pets = state().categories.find((c: { name: string }) => c.name === "Pets").id;
+    demo.setAssigned(month(), pets, 1000);
+    demo.saveTemplate({ envelopeId: pets, kind: "fixo", amount: 1000, target: null, deadline: null, percent: null });
+    demo.deleteCategory(pets);
+    expect(state().budget).toEqual({ assigned: { [month()]: {} }, templates: [] });
+  });
+});
+
+describe("investimentos", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+  const today = () => spDate(new Date());
+
+  async function withAsset(category: "investimentos" | "reserva" = "investimentos") {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.saveAsset({ name: "Corretora", category, value: 5000, forRetirement: true });
+    return { demo, assetId: state().assets[0].id as string };
+  }
+
+  it("no exemplo da Ana, as posições do Tesouro somam o mesmo valor do item", async () => {
+    const { makeSeed, holdingsValue } = await freshStore();
+    const s = makeSeed();
+    const tesouro = s.assets.find((a) => a.name.startsWith("Tesouro"))!;
+    expect(holdingsValue(s, tesouro.id)).toBe(tesouro.value * 100);
+  });
+
+  it("posição sem operação não mexe no valor do item; depois da compra, o item vale o que as posições valem", async () => {
+    const { demo, assetId } = await withAsset();
+    demo.saveHolding({ assetId, name: "BOVA11", assetClass: "acoes", price: 12000 });
+    expect(state().assets[0].value).toBe(5000);
+    const holdingId = state().holdings[0].id;
+    demo.addTrade({ holdingId, date: today(), type: "compra", quantity: 10, unitPrice: 11000, fees: 500 });
+    expect(state().assets[0].value).toBe(1200);
+    // Com posições, editar o item não muda o valor; mudar o preço, sim.
+    demo.saveAsset({ ...state().assets[0], value: 99999 });
+    expect(state().assets[0].value).toBe(1200);
+    demo.saveHolding({ id: holdingId, assetId, name: "BOVA11", assetClass: "acoes", price: 13000 });
+    expect(state().assets[0].value).toBe(1300);
+    expect(state().assetValuations.at(-1)).toMatchObject({ assetId, value: 1300 });
+  });
+
+  it("recusa venda acima da quantidade, data futura e posição em item que não é investimento", async () => {
+    const { demo, assetId } = await withAsset();
+    demo.saveHolding({ assetId, name: "IVVB11", assetClass: "exterior", price: 30000 });
+    const holdingId = state().holdings[0].id;
+    demo.addTrade({ holdingId, date: today(), type: "compra", quantity: 2, unitPrice: 30000 });
+    expect(() => demo.addTrade({ holdingId, date: today(), type: "venda", quantity: 3, unitPrice: 30000 })).toThrow();
+    expect(() => demo.addTrade({ holdingId, date: "2999-01-01", type: "compra", quantity: 1, unitPrice: 1 })).toThrow();
+    expect(() => demo.saveAsset({ ...state().assets[0], category: "imovel" })).toThrow();
+    const reserva = await withAsset("reserva");
+    expect(() => reserva.demo.saveHolding({ assetId: reserva.assetId, name: "CDB", assetClass: "renda_fixa", price: 100 })).toThrow();
+  });
+
+  it("não deixa excluir a compra que sustenta uma venda; excluir o item leva posições e operações", async () => {
+    const { demo, assetId } = await withAsset();
+    demo.saveHolding({ assetId, name: "HGLG11", assetClass: "fiis", price: 16000 });
+    const holdingId = state().holdings[0].id;
+    demo.addTrade({ holdingId, date: today(), type: "compra", quantity: 2, unitPrice: 15000 });
+    demo.addTrade({ holdingId, date: today(), type: "venda", quantity: 1, unitPrice: 16000 });
+    const buy = state().trades.find((t: { type: string }) => t.type === "compra").id;
+    expect(() => demo.deleteTrade(buy)).toThrow();
+    demo.deleteAsset(assetId);
+    expect(state().holdings).toEqual([]);
+    expect(state().trades).toEqual([]);
+  });
+
+  it("metas de alocação precisam somar 100%", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    expect(() => demo.setAllocationTargets({ previdencia: 70, acoes: 20 })).toThrow();
+    demo.setAllocationTargets({ previdencia: 70, acoes: 30, renda_fixa: 0 });
+    expect(state().allocationTargets).toEqual({ previdencia: 70, acoes: 30 });
+    demo.setAllocationTargets({});
+    expect(state().allocationTargets).toEqual({});
+  });
+});
+
+describe("XP e conquistas das novas funções", () => {
+  const today = () => spDate(new Date());
+  const month = () => monthOf(today());
+
+  it("importar extrato: XP uma vez por mês, só quando entra algo novo, e a conquista", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 0 });
+    const cc = JSON.parse(window.localStorage.getItem(KEY)!).accounts[0].id;
+    const row = (id: string) => ({ importedId: id, date: today(), amount: -100, payee: "x", memo: null });
+    const a = demo.importTransactions(cc, [row("A")]);
+    expect(a.xpAwarded).toBe(20);
+    expect(a.newAchievements).toContain("primeiro_extrato");
+    expect(demo.importTransactions(cc, [row("B")]).xpAwarded).toBe(0);
+  });
+
+  it("planejar o mês dá XP uma vez por mês planejado; mês passado e mover dinheiro não dão", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    const r = demo.setAssigned(month(), "cat-mercado", 10000);
+    expect(r.xpAwarded).toBe(20);
+    expect(r.newAchievements).toContain("primeiro_orcamento");
+    expect(demo.setAssigned(month(), "cat-lazer", 10000).xpAwarded).toBe(0);
+    expect(demo.setAssigned(addMonths(month(), 1), "cat-lazer", 10000).xpAwarded).toBe(20);
+    expect(demo.setAssigned(addMonths(month(), -1), "cat-lazer", 10000).xpAwarded).toBe(0);
+    expect(demo.moveBudget(addMonths(month(), 2), "cat-lazer", "cat-mercado", 100).xpAwarded).toBe(0);
+  });
+
+  it("operação de investimento e metas de alocação", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.saveAsset({ name: "Corretora", category: "investimentos", value: 0, forRetirement: true });
+    const s0 = JSON.parse(window.localStorage.getItem(KEY)!);
+    demo.saveHolding({ assetId: s0.assets[0].id, name: "BOVA11", assetClass: "acoes", price: 100 });
+    const holdingId = JSON.parse(window.localStorage.getItem(KEY)!).holdings[0].id;
+    const t = demo.addTrade({ holdingId, date: today(), type: "compra", quantity: 1, unitPrice: 100 });
+    expect(t.xpAwarded).toBe(20);
+    expect(t.newAchievements).toContain("primeiro_investimento");
+    expect(demo.addTrade({ holdingId, date: today(), type: "compra", quantity: 1, unitPrice: 100 }).xpAwarded).toBe(0);
+    const g = demo.setAllocationTargets({ acoes: 100 });
+    expect(g.xpAwarded).toBe(0);
+    expect(g.newAchievements).toContain("carteira_com_metas");
   });
 });

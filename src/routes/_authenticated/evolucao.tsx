@@ -12,6 +12,7 @@ import { NumberField, Segmented } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
 import { ActivityList, ChartCard, ContributionsChart, DeltaChip, DestinationDonut, Gauge, GoalCard, HIDDEN, StatCard } from "@/components/dashboard";
 import { ThreadStrip } from "@/components/ConstancyThread";
+import { ReportsSection } from "@/components/reports/ReportsSection";
 import { activeChallenges, completedDays, demo, MAX_ACTIVE_CHALLENGES, useDemo, type DemoState, type GoalKind } from "@/lib/data/demo-store";
 import { activeGoals, assetSnapshot, currentWealth, milestones, planSummary, recentActivity, wealthGrowth } from "@/lib/data/selectors";
 import { lastMonths } from "@/lib/data/thread";
@@ -271,6 +272,8 @@ function Evolution() {
             }
           />
         </ChartCard>
+
+        <ReportsSection s={s} showValues={showValues} />
       </div>
 
       <WealthSheet s={s} month={wealthMonth} onClose={() => setWealthMonth(null)} />

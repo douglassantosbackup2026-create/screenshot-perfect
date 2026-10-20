@@ -19,6 +19,8 @@ export const accountKindLabel = (k: AccountKind) => ACCOUNT_KINDS.find((x) => x.
 export const accountGroup = (k: AccountKind): AccountGroup => ACCOUNT_KINDS.find((x) => x.key === k)?.group ?? 'dia_a_dia';
 /** Contas para onde vai o dinheiro guardado para o futuro: uma transferência para elas pode virar aporte. */
 export const isSavingsAccount = (k: AccountKind) => accountGroup(k) === 'investimentos';
+/** Contas do orçamento: o dinheiro do dia a dia, inclusive o cartão. Previdência, investimentos e empréstimos ficam fora. */
+export const isOnBudget = (k: AccountKind) => k === 'corrente' || k === 'poupanca' || k === 'carteira' || k === 'cartao';
 
 export interface LedgerAccount {
   id: string;

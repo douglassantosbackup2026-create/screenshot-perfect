@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AccountSelect } from "@/components/ledger/fields";
+import { handleResult, xpToast } from "@/components/feedback";
 import { parseCSV, parseOFX, type ImportedTx } from "@/lib/calc/import";
 import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState } from "@/lib/data/demo-store";
@@ -48,7 +49,8 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
       const parts = [`${r.added} ${r.added === 1 ? "novo" : "novos"}`];
       if (r.matched) parts.push(`${r.matched} ${r.matched === 1 ? "ligado" : "ligados"} a lançamentos seus`);
       if (r.duplicates) parts.push(`${r.duplicates} já ${r.duplicates === 1 ? "estava" : "estavam"} importados`);
-      toast.success(`Extrato importado: ${parts.join(", ")}.`);
+      xpToast(`Extrato importado: ${parts.join(", ")}.`, r.xpAwarded);
+      handleResult(r);
       onClose();
     } catch (e) {
       toast.error((e as Error).message);

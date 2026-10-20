@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { JourneyMap } from "@/components/JourneyMap";
+import { SuggestionCard } from "@/components/portfolio/PortfolioSection";
 import { handleResult, xpToast } from "@/components/feedback";
 import { completedDays, demo, useDemo } from "@/lib/data/demo-store";
 import { dataWarnings, journeyHome, missionOfWeek } from "@/lib/data/selectors";
@@ -85,6 +86,8 @@ function JourneyPage() {
           </section>
 
           <DailyMissionCard mission={j.mission} done={j.missionDone} />
+
+          {s.plan && <SuggestionCard s={s} showValues={!s.profile.hideValues} compact />}
 
           {warnings.length > 0 && (
             <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Dados para completar">

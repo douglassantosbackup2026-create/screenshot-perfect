@@ -12,9 +12,10 @@ import { NumberField } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
 import { HIDDEN } from "@/components/dashboard";
 import { ASSET_CATEGORIES, categoryLabel, isIncomeSource, isLiability, summarizeAssets, type AssetCategory } from "@/lib/calc/assets";
-import { formatMonthly, formatWealth } from "@/lib/calc/format";
+import { formatMoney, formatMonthly, formatWealth } from "@/lib/calc/format";
 import type { HistoryPoint } from "@/lib/calc/networth";
-import { demo, useDemo, type Asset } from "@/lib/data/demo-store";
+import { demo, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
+import { PortfolioSection } from "@/components/portfolio/PortfolioSection";
 import { assetHistories, hasWealthRecord } from "@/lib/data/selectors";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,9 @@ function Wealth() {
   const money = (v: number, fmt = formatWealth) => (showValues ? fmt(v) : HIDDEN);
   const planWealth = s.plan?.inputs.initialWealth ?? null;
   const differs = planWealth != null && s.assets.length > 0 && Math.abs(sum.retirementTotal - planWealth) >= 1;
+  // Quando a diferença some no arredondamento para R$ 1.000, mostra os valores exatos para não dizer "10.000 é diferente de 10.000".
+  const exact = (v: number) => formatMoney(Math.round(v * 100));
+  const cmpFmt = differs && formatWealth(sum.retirementTotal) === formatWealth(planWealth ?? 0) ? exact : formatWealth;
 
   const groups: { title: string; hint: string; items: Asset[]; total: string }[] = [
     {
@@ -113,16 +117,16 @@ function Wealth() {
 
       <section className="mt-6 rounded-3xl bg-card p-6 shadow-card">
         <p className="text-sm text-muted-foreground">Para a aposentadoria</p>
-        <p className="money font-display text-4xl font-semibold text-primary">{money(sum.retirementTotal)}</p>
+        <p className="money font-display text-4xl font-semibold text-primary">{money(sum.retirementTotal, cmpFmt)}</p>
         {planWealth != null && (
           <p className="mt-2 text-sm text-muted-foreground">
-            O plano usa <span className="money">{money(planWealth)}</span>.{" "}
+            O plano usa <span className="money">{money(planWealth, cmpFmt)}</span>.{" "}
             {differs ? "Os valores estão diferentes." : s.assets.length ? "Está tudo alinhado." : ""}
           </p>
         )}
         {differs && (
           <Button variant="outline" className="mt-4 w-full" onClick={applyToPlan}>
-            Usar {money(sum.retirementTotal)} no plano
+            Usar {money(sum.retirementTotal, cmpFmt)} no plano
           </Button>
         )}
         {s.assets.length > 0 && !hasWealthRecord(s) && (
@@ -182,12 +186,19 @@ function Wealth() {
         </div>
       )}
 
+      <PortfolioSection s={s} showValues={showValues} />
+
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         Crescimento do patrimônio informado não é o mesmo que rendimento: aportes, retiradas, valorização e atualização dos dados mexem no total de
         jeitos diferentes. Os valores são os que você informou, sem conferência com instituições.
       </p>
 
-      <AssetSheet editing={editing} history={editing?.asset ? (histories.get(editing.asset.id) ?? []) : []} onClose={() => setEditing(null)} />
+      <AssetSheet
+        editing={editing}
+        history={editing?.asset ? (histories.get(editing.asset.id) ?? []) : []}
+        fromHoldings={!!editing?.asset && valuedByHoldings(s, editing.asset.id)}
+        onClose={() => setEditing(null)}
+      />
     </main>
   );
 }
@@ -210,7 +221,17 @@ function Sparkline({ points }: { points: HistoryPoint[] }) {
 // Variações costumam ser pequenas: arredonda para R$ 10, não para R$ 1.000 como o saldo.
 const signed = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + formatMonthly(Math.abs(v));
 
-function AssetSheet({ editing, history, onClose }: { editing: Editing; history: HistoryPoint[]; onClose: () => void }) {
+function AssetSheet({
+  editing,
+  history,
+  fromHoldings,
+  onClose,
+}: {
+  editing: Editing;
+  history: HistoryPoint[];
+  fromHoldings: boolean;
+  onClose: () => void;
+}) {
   const asset = editing?.asset ?? null;
   const [name, setName] = useState("");
   const [category, setCategory] = useState<AssetCategory>("pgbl");
@@ -270,13 +291,20 @@ function AssetSheet({ editing, history, onClose }: { editing: Editing; history: 
               </button>
             ))}
           </div>
-          <NumberField
-            label={monthly ? "Valor mensal estimado" : liability ? "Saldo devedor" : "Valor atual"}
-            value={value}
-            onChange={setValue}
-            prefix="R$"
-            min={0}
-          />
+          {fromHoldings ? (
+            <p className="rounded-xl bg-muted p-4 text-sm">
+              Valor atual: <span className="money font-semibold">{formatWealth(value ?? 0)}</span>. Vem das posições de investimento deste item; para
+              mudar, lance operações ou atualize os preços em Investimentos.
+            </p>
+          ) : (
+            <NumberField
+              label={monthly ? "Valor mensal estimado" : liability ? "Saldo devedor" : "Valor atual"}
+              value={value}
+              onChange={setValue}
+              prefix="R$"
+              min={0}
+            />
+          )}
           {!monthly && !liability && (
             <label className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-muted px-4">
               <span className="text-sm">Pretendo usar na aposentadoria</span>
