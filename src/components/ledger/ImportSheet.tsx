@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AccountSelect } from "@/components/ledger/fields";
 import { handleResult, xpToast } from "@/components/feedback";
-import { parseCSV, parseOFX, type ImportedTx } from "@/lib/calc/import";
+import { BANKS, parseCSV, parseOFX, type BankId, type ImportedTx } from "@/lib/calc/import";
 import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 
@@ -16,19 +16,22 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
   const [accountId, setAccountId] = useState<string | null>(null);
   const [text, setText] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
-  const [invert, setInvert] = useState(false);
+  // null = segue o banco reconhecido; escolher à mão vence.
+  const [invert, setInvert] = useState<boolean | null>(null);
   useEffect(() => {
     if (!open) return;
     setAccountId(s.accounts[0]?.id ?? null);
     setText(null);
     setFileName("");
-    setInvert(false);
+    setInvert(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   if (!open) return null;
 
   const isOfx = /\.(ofx|qfx)$/i.test(fileName) || (text ?? "").includes("<STMTTRN>");
-  const parsed: { rows: ImportedTx[]; skipped: number } = text === null ? { rows: [], skipped: 0 } : isOfx ? { rows: parseOFX(text), skipped: 0 } : parseCSV(text, invert);
+  const parsed: { rows: ImportedTx[]; skipped: number; bank: BankId | null } =
+    text === null ? { rows: [], skipped: 0, bank: null } : isOfx ? { rows: parseOFX(text), skipped: 0, bank: null } : parseCSV(text, invert ?? undefined);
+  const invertOn = invert ?? (parsed.bank ? BANKS[parsed.bank].invert : false);
 
   async function pick(file: File | undefined) {
     if (!file) return;
@@ -86,11 +89,14 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
             {text !== null && !isOfx && (
               <label className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-muted px-4">
                 <span className="text-sm">Fatura de cartão: compras vêm como valores positivos</span>
-                <Switch checked={invert} onCheckedChange={setInvert} />
+                <Switch checked={invertOn} onCheckedChange={setInvert} />
               </label>
             )}
             {text !== null && (
               <div className="rounded-2xl bg-muted p-4">
+                {(isOfx || parsed.bank) && (
+                  <p className="mb-1 text-xs text-primary">Formato reconhecido: {isOfx ? "OFX" : BANKS[parsed.bank!].label}</p>
+                )}
                 <p className="text-sm font-semibold">
                   {parsed.rows.length} {parsed.rows.length === 1 ? "lançamento encontrado" : "lançamentos encontrados"}
                   {parsed.skipped > 0 && <span className="font-normal text-muted-foreground"> · {parsed.skipped} linhas ignoradas</span>}

@@ -92,34 +92,61 @@ function splitCsvLine(line: string, sep: string): string[] {
   return out.map((v) => v.trim());
 }
 
+// Nomes de coluna em ordem de preferência: "Descrição" vence "Histórico" (Inter traz os dois), e "Saldo" nunca é o valor.
 const HEADERS = {
   date: ['data', 'date', 'dt'],
-  payee: ['descricao', 'historico', 'lancamento', 'estabelecimento', 'title', 'titulo', 'description', 'favorecido'],
+  payee: ['descricao', 'title', 'titulo', 'estabelecimento', 'lancamento', 'historico', 'description', 'favorecido'],
   amount: ['valor', 'amount', 'quantia', 'value'],
-  id: ['identificador', 'id', 'fitid'],
+  id: ['identificador', 'fitid', 'id'],
 };
-const findCol = (header: string[], names: string[]) => header.findIndex((h) => names.some((n) => normalize(h).startsWith(n)));
+const findCol = (header: string[], names: string[]) => {
+  const h = header.map(normalize);
+  for (const n of names) {
+    const i = h.findIndex((x) => x.startsWith(n));
+    if (i >= 0) return i;
+  }
+  return -1;
+};
+
+export type BankId = 'nubank_cartao' | 'nubank_conta' | 'inter' | 'itau';
+/** Bancos com modelo de CSV conhecido. Fatura de cartão traz compras como valores positivos: o sinal é invertido. */
+export const BANKS: Record<BankId, { label: string; invert: boolean; matches: (h: string[]) => boolean }> = {
+  nubank_cartao: { label: 'Nubank (cartão)', invert: true, matches: (h) => h.includes('date') && h.includes('title') && h.includes('amount') },
+  nubank_conta: { label: 'Nubank (conta)', invert: false, matches: (h) => h.includes('data') && h.includes('valor') && h.includes('identificador') },
+  inter: { label: 'Inter', invert: false, matches: (h) => h.includes('data lancamento') && h.some((x) => x.startsWith('historico')) },
+  itau: { label: 'Itaú', invert: false, matches: (h) => h.some((x) => x.startsWith('lancamento')) && h.some((x) => x.startsWith('ag./origem') || x.startsWith('valor (r$)')) },
+};
 
 export interface CsvResult {
   rows: ImportedTx[];
-  skipped: number; // linhas que não deu para ler
+  skipped: number;       // linhas que não deu para ler
+  bank: BankId | null;   // modelo reconhecido pelo cabeçalho
 }
+
+/** Separador mais provável da linha (ponto e vírgula, tabulação ou vírgula). */
+const separatorOf = (line: string) => [';', '\t', ','].sort((a, b) => line.split(b).length - line.split(a).length)[0]!;
 
 /**
  * Lê um CSV com cabeçalho (colunas de data, descrição e valor; identificador opcional).
- * `invert` troca o sinal: faturas de cartão costumam trazer as compras como valores positivos.
+ * O cabeçalho é a primeira linha que tem data e valor: extratos como o do Inter trazem um resumo antes.
+ * `invert` troca o sinal; sem informar, segue o banco reconhecido (fatura do Nubank inverte).
  */
-export function parseCSV(text: string, invert = false): CsvResult {
+export function parseCSV(text: string, invert?: boolean): CsvResult {
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) return { rows: [], skipped: 0 };
-  const first = lines[0]!;
-  const sep = [';', '\t', ','].sort((a, b) => first.split(b).length - first.split(a).length)[0]!;
-  const header = splitCsvLine(first, sep);
+  const at = lines.findIndex((l) => {
+    const h = splitCsvLine(l, separatorOf(l));
+    return findCol(h, HEADERS.date) >= 0 && findCol(h, HEADERS.amount) >= 0;
+  });
+  if (at < 0 || at === lines.length - 1) return { rows: [], skipped: Math.max(lines.length - 1, 0), bank: null };
+  const sep = separatorOf(lines[at]!);
+  const header = splitCsvLine(lines[at]!, sep);
+  const normalized = header.map(normalize);
+  const bank = (Object.keys(BANKS) as BankId[]).find((k) => BANKS[k].matches(normalized)) ?? null;
+  const flip = invert ?? (bank ? BANKS[bank].invert : false);
   const col = { date: findCol(header, HEADERS.date), payee: findCol(header, HEADERS.payee), amount: findCol(header, HEADERS.amount), id: findCol(header, HEADERS.id) };
-  if (col.date < 0 || col.amount < 0) return { rows: [], skipped: lines.length - 1 };
   const rows: ImportedTx[] = [];
   let skipped = 0;
-  for (const line of lines.slice(1)) {
+  for (const line of lines.slice(at + 1)) {
     const f = splitCsvLine(line, sep);
     const date = parseDate(f[col.date] ?? '');
     const amount = parseBRNumber(f[col.amount] ?? '');
@@ -130,12 +157,12 @@ export function parseCSV(text: string, invert = false): CsvResult {
     rows.push({
       importedId: col.id >= 0 ? f[col.id] || null : null,
       date,
-      amount: invert ? -amount : amount,
+      amount: flip ? -amount : amount,
       payee: (col.payee >= 0 ? f[col.payee] : '') || 'Sem descrição',
       memo: null,
     });
   }
-  return { rows, skipped };
+  return { rows, skipped, bank };
 }
 
 export interface ExistingTx {

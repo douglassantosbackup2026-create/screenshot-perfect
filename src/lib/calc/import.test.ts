@@ -67,7 +67,7 @@ describe('CSV', () => {
   });
 
   it('sem colunas de data e valor, não lê nada', () => {
-    expect(parseCSV('a,b\n1,2')).toEqual({ rows: [], skipped: 1 });
+    expect(parseCSV('a,b\n1,2')).toEqual({ rows: [], skipped: 1, bank: null });
   });
 });
 
@@ -96,5 +96,48 @@ describe('duplicados', () => {
     const r = dedupe([imp(-500, '2026-10-03', 'Café'), imp(-500, '2026-10-03', 'Café')], existing);
     expect(r.duplicates).toHaveLength(1);
     expect(r.fresh).toHaveLength(1);
+  });
+});
+
+describe('modelos de CSV dos bancos', () => {
+  it('Nubank cartão: reconhece e inverte o sinal sozinho', () => {
+    const r = parseCSV('date,title,amount\n2026-10-03,Uber *Trip,23.90\n2026-10-04,Pagamento recebido,-500.00');
+    expect(r.bank).toBe('nubank_cartao');
+    expect(r.rows.map((x) => x.amount)).toEqual([-2390, 50000]);
+  });
+
+  it('Nubank conta: identificador vira o id do banco', () => {
+    const r = parseCSV('Data,Valor,Identificador,Descrição\n03/10/2026,-45.90,6510-aa,Compra no débito - Padaria\n05/10/2026,8000.00,6511-bb,Transferência recebida');
+    expect(r.bank).toBe('nubank_conta');
+    expect(r.rows[0]).toEqual({ importedId: '6510-aa', date: '2026-10-03', amount: -4590, payee: 'Compra no débito - Padaria', memo: null });
+  });
+
+  it('Inter: pula o resumo do topo, usa a Descrição e nunca o Saldo', () => {
+    const csv = [
+      'Extrato Conta Corrente',
+      'Conta ;12345678',
+      'Período ;01/10/2026 a 20/10/2026',
+      'Saldo ;1.234,56',
+      '',
+      'Data Lançamento;Histórico;Descrição;Valor;Saldo',
+      '03/10/2026;Pix enviado;Maria Silva;-150,00;1.084,56',
+      '05/10/2026;Pix recebido;Cliente Alfa;8.000,00;9.084,56',
+    ].join('\n');
+    const r = parseCSV(csv);
+    expect(r.bank).toBe('inter');
+    expect(r.rows).toEqual([
+      { importedId: null, date: '2026-10-03', amount: -15000, payee: 'Maria Silva', memo: null },
+      { importedId: null, date: '2026-10-05', amount: 800000, payee: 'Cliente Alfa', memo: null },
+    ]);
+  });
+
+  it('Itaú: lançamento como descrição e valor (R$) como valor', () => {
+    const r = parseCSV('data;lançamento;ag./origem;valor (R$);saldos (R$)\n03/10/2026;PIX TRANSF MARIA;0001;-150,00;1.000,00');
+    expect(r.bank).toBe('itau');
+    expect(r.rows[0]).toMatchObject({ date: '2026-10-03', amount: -15000, payee: 'PIX TRANSF MARIA' });
+  });
+
+  it('inverter à mão vence o padrão do banco', () => {
+    expect(parseCSV('date,title,amount\n2026-10-03,Uber,23.90', false).rows[0]!.amount).toBe(2390);
   });
 });
