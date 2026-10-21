@@ -442,7 +442,7 @@ function MoveSheet({ s, v, month, from, onClose }: { s: DemoState; v: ReturnType
           <NumberField label="Valor" value={amount} onChange={setAmount} prefix="R$" min={0} step={0.01} />
           <div>
             <p className="text-sm font-semibold">{pulling ? "Tirar de" : "Levar para"}</p>
-            <Select value={other} onValueChange={setOther}>
+            <Select value={other ?? ""} onValueChange={setOther}>
               <SelectTrigger className="mt-1.5 h-11 rounded-xl bg-muted" aria-label={pulling ? "Tirar de" : "Levar para"}>
                 <SelectValue placeholder="Escolha o envelope" />
               </SelectTrigger>

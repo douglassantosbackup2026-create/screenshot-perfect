@@ -18,7 +18,7 @@ export function AccountSelect({
   return (
     <div>
       <p className="text-sm font-semibold">{label}</p>
-      <Select value={value ?? undefined} onValueChange={onChange}>
+      <Select value={value ?? ""} onValueChange={onChange}>
         <SelectTrigger className="mt-1.5 h-11 rounded-xl bg-muted" aria-label={label}>
           <SelectValue placeholder="Escolha a conta" />
         </SelectTrigger>
