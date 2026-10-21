@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { LESSONS } from "@/content/program";
 import { UNITS } from "@/content/journey";
 import { PLANS, PRICING_NOTE, type PlanTier } from "@/content/pricing";
+import { useServerFn } from "@tanstack/react-start";
+import { createCheckout } from "@/lib/billing/checkout.functions";
+import { PRICES_CENTS, type BillingPeriod, type PaidPlan } from "@/lib/billing/catalog";
 
 export function Problem() {
   const items = [
@@ -174,7 +177,9 @@ function PlanCard({ plan, onStart }: { plan: PlanTier; onStart: () => void }) {
           <li key={f}>· {f}</li>
         ))}
       </ul>
-      {plan.waitlistSource ? (
+      {plan.waitlistSource && BILLING_ENABLED && plan.slug !== "free" ? (
+        <BuyButtons plan={plan.slug as PaidPlan} />
+      ) : plan.waitlistSource ? (
         <Waitlist source={plan.waitlistSource} planName={plan.name} />
       ) : (
         <Button className="mt-5 w-full" variant={plan.highlight ? "default" : "outline"} onClick={onStart}>
@@ -184,6 +189,44 @@ function PlanCard({ plan, onStart }: { plan: PlanTier; onStart: () => void }) {
     </div>
   );
 }
+
+const BILLING_ENABLED = import.meta.env["VITE_BILLING_ENABLED"] === "true";
+
+function BuyButtons({ plan }: { plan: PaidPlan }) {
+  const checkout = useServerFn(createCheckout);
+  const [busy, setBusy] = useState<BillingPeriod | null>(null);
+  async function buy(period: BillingPeriod) {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      toast("Entre na sua conta para assinar.");
+      window.location.href = "/entrar";
+      return;
+    }
+    setBusy(period);
+    try {
+      const r = await checkout({ data: { plan, period } });
+      if (r.url) window.location.href = r.url;
+      else toast.error(r.error ?? "Não foi possível abrir o pagamento.");
+    } catch {
+      toast.error("Não foi possível abrir o pagamento. Tente de novo.");
+    } finally {
+      setBusy(null);
+    }
+  }
+  const periods = (Object.keys(PRICES_CENTS[plan]) as BillingPeriod[]);
+  return (
+    <div className="mt-5 space-y-2">
+      {periods.map((p) => (
+        <Button key={p} className="w-full" variant={p === "mensal" ? "default" : "outline"} disabled={busy !== null} onClick={() => buy(p)}>
+          {busy === p ? "Abrindo…" : `Assinar ${p} · ${formatCents(PRICES_CENTS[plan][p]!)}`}
+        </Button>
+      ))}
+      <p className="text-xs text-muted-foreground">Pagamento pelo Mercado Pago: cartão, Pix ou boleto.</p>
+    </div>
+  );
+}
+
+const formatCents = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function Waitlist({ source, planName }: { source: string; planName: string }) {
   const [email, setEmail] = useState("");
