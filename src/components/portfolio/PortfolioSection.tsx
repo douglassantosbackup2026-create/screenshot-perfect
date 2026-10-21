@@ -260,7 +260,7 @@ function HoldingSheet({
         <div className="mt-6 space-y-4 pb-4">
           <div>
             <p className="text-sm font-semibold">Item do Patrimônio</p>
-            <Select value={assetId} onValueChange={setAssetId}>
+            <Select value={assetId ?? ""} onValueChange={setAssetId}>
               <SelectTrigger className="mt-1.5 h-11 rounded-xl bg-muted" aria-label="Item do Patrimônio">
                 <SelectValue placeholder="Escolha o item" />
               </SelectTrigger>

@@ -230,7 +230,7 @@ function Rules({ s }: { s: DemoState }) {
           ]}
         />
         <Input aria-label="Texto da descrição" maxLength={80} value={value} onChange={(e) => setValue(e.target.value)} className="h-11" placeholder="Ex.: uber" />
-        <Select value={categoryId} onValueChange={setCategoryId}>
+        <Select value={categoryId ?? ""} onValueChange={setCategoryId}>
           <SelectTrigger className="h-11 rounded-xl bg-muted" aria-label="Categoria da regra">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
