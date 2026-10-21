@@ -1,22 +1,26 @@
-# Análise: "O que falta para ir ao ar"
+# Pagamento do Premium com Mercado Pago
 
-## Conclusão principal
-A lista descreve um trabalho que **não está neste projeto do Lovable**. Aqui ainda não existem:
-- página `/redefinir-senha` (login ainda é só visual, modo demonstração);
-- arquivo `.env.example`, lembretes por e-mail, PostHog, Mercado Pago, `VITE_BILLING_ENABLED`;
-- a branch `feature/supabase` (o Lovable só enxerga `main`).
+## Observação sobre a lista "O que falta para ir ao ar"
+A lista fala de um trabalho que não está neste projeto (branch `feature/supabase`, `.env.example`, `/redefinir-senha`, Mercado Pago). Se esse código existir no GitHub, junte a branch ao `main` antes; senão, construo aqui do zero, como abaixo.
 
-Ou seja, os 12 commits foram feitos fora do Lovable (localmente ou em outra ferramenta). Enquanto não forem juntados ao `main` no GitHub, nada da lista se aplica aqui.
+## O que a pessoa vai ver
+1. Na página de vendas e no Perfil, o botão "Assinar Premium" (mensal R$ 29,90 ou anual R$ 239,90) substitui o "Em breve".
+2. Ao clicar, ela vai para o checkout do Mercado Pago (cartão, Pix ou boleto).
+3. Ao voltar, vê "Pagamento confirmado" ou "Aguardando confirmação" (Pix/boleto).
+4. Quando o Mercado Pago confirma, o Premium é liberado até a data de validade, visível no Perfil.
+5. Um interruptor deixa a cobrança desligada até você decidir abrir as vendas.
 
-## Item a item
-1. **Juntar branch ao main** — correto e é o passo 1. Feito no GitHub (pull request `feature/supabase` → `main`). Depois disso o Lovable puxa o código sozinho. Atenção: o `main` recebeu mudanças pelo Lovable depois (página de vendas, etc.); pode haver conflitos.
-2. **Publicar lições/missões/desafios** — correto, mas antes de publicar o conteúdo precisa estar no banco (seed) e, pelas regras do app, ter revisor, data e fonte. Publicar tudo direto pula essa revisão profissional.
-3. **Chaves** — `VITE_POSTHOG_KEY` não precisa ser secreta; e-mails: recomendo o e-mail próprio do Lovable em vez de Resend (sem chave). `CRON_SECRET` deve ser gerado automaticamente.
-4. **Lembretes via GitHub** — funciona, mas é frágil; dá para fazer o agendamento direto no banco.
-5. **Endereços de retorno do login** — correto; precisa do endereço publicado (ainda não publicado).
-6. **Regenerar types.ts** — automático no Lovable após mudanças no banco.
-7. **Teste com conta real** — correto e indispensável.
-8. **Cobrança Mercado Pago** — o Lovable tem pagamentos próprios (Stripe/Paddle) sem chave; Mercado Pago só se você preferir (Pix).
+## Pré-requisitos
+- Login funcionando (o pagamento precisa estar ligado a uma conta). Faço essa etapa primeiro (roadmap passo 4).
+- Você cria uma conta de vendedor no Mercado Pago e me passa, pelo formulário seguro, o Access Token e a chave secreta do webhook.
 
-## Próximo passo sugerido
-Você junta a branch no GitHub e me avisa. Eu então: confiro conflitos e erros, rodo os testes, coloco o conteúdo no banco, configuro e-mails e chaves e faço o teste completo com uma conta real.
+## Decisão a confirmar
+- Começar com **pagamento único por período** (mensal ou anual, renovação manual, aceita Pix). Assinatura com cobrança automática no cartão fica para depois.
+
+## Detalhes técnicos
+- Servidor cria a preferência do Checkout Pro (`createServerFn` autenticado), com `external_reference` = id do usuário + plano + período.
+- Rota pública `src/routes/api/public/mercadopago/webhook.ts`: valida a assinatura `x-signature` com o segredo, busca o pagamento na API do Mercado Pago (nunca confia no corpo), e se `approved` chama a RPC existente `credit_payment` (idempotente pelo id do pagamento) que grava `payments` e estende `entitlements`.
+- Preços vêm de `src/content/pricing.ts`; cálculo da validade em função pura com teste.
+- Segredos: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`; `VITE_BILLING_ENABLED` liga os botões.
+- Testes: validade (30/365 dias, soma ao período vigente), assinatura do webhook, pagamento repetido não credita duas vezes.
+- Adiciono a tarefa ao roadmap ao começar.
