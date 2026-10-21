@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as PagamentoRouteImport } from './routes/pagamento'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
@@ -27,6 +28,7 @@ import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
+import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +47,11 @@ const CalculadoraRoute = CalculadoraRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagamentoRoute = PagamentoRouteImport.update({
+  id: '/pagamento',
+  path: '/pagamento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SobreRoute = SobreRouteImport.update({
@@ -119,11 +126,18 @@ const AuthenticatedProgramaDiaRoute =
     path: '/programa/$dia',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicMercadopagoWebhookRoute =
+  ApiPublicMercadopagoWebhookRouteImport.update({
+    id: '/api/public/mercadopago/webhook',
+    path: '/api/public/mercadopago/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/pagamento': typeof PagamentoRoute
   '/sobre': typeof SobreRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
@@ -138,11 +152,13 @@ export interface FileRoutesByFullPath {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/pagamento': typeof PagamentoRoute
   '/sobre': typeof SobreRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
@@ -157,6 +173,7 @@ export interface FileRoutesByTo {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -164,6 +181,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
+  '/pagamento': typeof PagamentoRoute
   '/sobre': typeof SobreRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
@@ -178,6 +196,7 @@ export interface FileRoutesById {
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -185,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/calculadora'
     | '/entrar'
+    | '/pagamento'
     | '/sobre'
     | '/contas'
     | '/diario'
@@ -199,11 +219,13 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
+    | '/api/public/mercadopago/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/calculadora'
     | '/entrar'
+    | '/pagamento'
     | '/sobre'
     | '/contas'
     | '/diario'
@@ -218,12 +240,14 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
+    | '/api/public/mercadopago/webhook'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/calculadora'
     | '/entrar'
+    | '/pagamento'
     | '/sobre'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
@@ -238,6 +262,7 @@ export interface FileRouteTypes {
     | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/programa/$dia'
+    | '/api/public/mercadopago/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -245,7 +270,9 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   CalculadoraRoute: typeof CalculadoraRoute
   EntrarRoute: typeof EntrarRoute
+  PagamentoRoute: typeof PagamentoRoute
   SobreRoute: typeof SobreRoute
+  ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -276,6 +303,13 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/entrar'
       preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagamento': {
+      id: '/pagamento'
+      path: '/pagamento'
+      fullPath: '/pagamento'
+      preLoaderRoute: typeof PagamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sobre': {
@@ -376,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProgramaDiaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/mercadopago/webhook': {
+      id: '/api/public/mercadopago/webhook'
+      path: '/api/public/mercadopago/webhook'
+      fullPath: '/api/public/mercadopago/webhook'
+      preLoaderRoute: typeof ApiPublicMercadopagoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -419,7 +460,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   CalculadoraRoute: CalculadoraRoute,
   EntrarRoute: EntrarRoute,
+  PagamentoRoute: PagamentoRoute,
   SobreRoute: SobreRoute,
+  ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

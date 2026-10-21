@@ -7,4 +7,5 @@
 - [ ] Seed 21 lessons, 63 questions and 8 missions into the database as 'rascunho' (generated SQL ready; runs with step 4)
 - [ ] 9 Account deletion server function (service role)
 - [ ] 11 E-mail reminders (needs Resend key)
+- [ ] Mercado Pago payments (built; needs keys + login to go live)
 - [ ] 12 Analytics and final review
