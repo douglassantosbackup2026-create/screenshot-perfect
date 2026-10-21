@@ -623,6 +623,48 @@ function migrate(raw: DemoState): DemoState {
 let state: DemoState | null = null;
 const listeners = new Set<() => void>();
 
+// Conta conectada: o estado é salvo por pessoa no banco (tabela user_state).
+let cloudUser: string | null = null;
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const FRESH_PENDING = "pi_fresh_pending";
+
+async function saveCloud() {
+  if (!cloudUser || !state) return;
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { error } = await supabase
+    .from("user_state")
+    .upsert({ user_id: cloudUser, data: state as never, updated_at: new Date().toISOString() });
+  if (error) console.error("Falha ao salvar no banco", error.message);
+}
+
+/** Carrega os dados da pessoa conectada. Sem dados ainda, aproveita o que ela começou antes de entrar. */
+export async function attachUser(userId: string): Promise<DemoState> {
+  if (cloudUser === userId && state) return state;
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { data, error } = await supabase.from("user_state").select("data").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error("Não foi possível carregar seus dados.");
+  cloudUser = userId;
+  if (data?.data) {
+    state = migrate(data.data as unknown as DemoState);
+  } else {
+    const startedHere = window.localStorage.getItem(FRESH_PENDING) === "1";
+    if (!startedHere) demo.startFresh();
+    else state = load();
+    await saveCloud();
+  }
+  window.localStorage.removeItem(FRESH_PENDING);
+  window.localStorage.removeItem(KEY);
+  listeners.forEach((l) => l());
+  return state!;
+}
+
+export function detachUser() {
+  cloudUser = null;
+  state = null;
+  if (typeof window !== "undefined") window.localStorage.removeItem(KEY);
+  listeners.forEach((l) => l());
+}
+
 function load(): DemoState {
   if (state) return state;
   try {
@@ -635,10 +677,15 @@ function load(): DemoState {
 }
 function commit(next: DemoState) {
   state = next;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* armazenamento indisponível */
+  if (cloudUser) {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => void saveCloud(), 400);
+  } else {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      /* armazenamento indisponível */
+    }
   }
   listeners.forEach((l) => l());
 }
