@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumberField } from "@/components/forms";
 import { ACH_ICONS, handleResult } from "@/components/feedback";
-import { demo, useDemo } from "@/lib/data/demo-store";
+import { demo, detachUser, useDemo } from "@/lib/data/demo-store";
+import { supabase } from "@/integrations/supabase/client";
 import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,12 @@ function Profile() {
   const navigate = useNavigate();
   const [delOpen, setDelOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
-  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  async function signOut() {
+    await supabase.auth.signOut();
+    detachUser();
+    navigate({ to: "/", replace: true });
+  }
   const earned = new Set(s.achievements.map((a) => a.code));
 
   function exportData() {
@@ -176,21 +182,9 @@ function Profile() {
         <Link to="/sobre" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>
-        {/* Restaurar apaga o que a pessoa registrou: pede um segundo toque antes. */}
-        <button
-          type="button"
-          className={cn("min-h-11 py-3 text-left", confirmRestore && "font-semibold text-destructive")}
-          onClick={() => {
-            if (!confirmRestore) return setConfirmRestore(true);
-            demo.reset();
-            setConfirmRestore(false);
-            toast("Dados de exemplo restaurados.");
-          }}
-          onBlur={() => setConfirmRestore(false)}
-        >
-          {confirmRestore ? "Toque de novo: isso substitui tudo o que você registrou" : "Restaurar dados de exemplo"}
+        <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
+          Sair
         </button>
-        <Link to="/" className="min-h-11 py-3 font-semibold text-primary">Sair</Link>
       </nav>
 
       <Dialog open={delOpen} onOpenChange={setDelOpen}>
@@ -206,11 +200,15 @@ function Profile() {
           <DialogFooter>
             <Button
               variant="destructive"
-              disabled={confirm !== "EXCLUIR"}
-              onClick={() => {
-                demo.startFresh();
+              disabled={confirm !== "EXCLUIR" || deleting}
+              onClick={async () => {
+                setDeleting(true);
+                const { error } = await supabase.rpc("delete_my_account");
+                setDeleting(false);
+                if (error) return void toast.error("Não foi possível excluir agora. Tente de novo.");
                 setDelOpen(false);
-                navigate({ to: "/" });
+                await signOut();
+                toast("Sua conta e seus dados foram apagados.");
               }}
             >
               Excluir definitivamente
