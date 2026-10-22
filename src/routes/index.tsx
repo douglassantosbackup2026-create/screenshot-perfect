@@ -5,6 +5,7 @@ import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly } from "@/lib/calc/format";
 import { demo, DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
+import { supabase } from "@/integrations/supabase/client";
 import { SIMULATION_FOOTER } from "@/lib/labels";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 
@@ -63,13 +64,10 @@ function Index() {
     navigate({ to: "/onboarding" });
   }
 
-  function seeExample() {
-    demo.reset();
-    navigate({ to: "/hoje" });
-  }
-
-  const [hasProgress, setHasProgress] = useState(false);
-  useEffect(() => setHasProgress(!!localStorage.getItem("pi_demo_state_v1")), []);
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+  }, []);
 
   return (
     <>
@@ -79,16 +77,9 @@ function Index() {
             <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
             Previdência Intelligence
           </span>
-          {hasProgress ? (
-            <Link to="/hoje" className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
-              Abrir o app
-            </Link>
-          ) : (
-            // Enquanto o login não existe, "Entrar" levaria a uma tela sem saída: o topo leva ao mesmo começo da página.
-            <button type="button" onClick={start} className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
-              Começar
-            </button>
-          )}
+          <Link to={signedIn ? "/hoje" : "/entrar"} className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
+            {signedIn ? "Abrir o app" : "Entrar"}
+          </Link>
         </div>
       </header>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-16 pt-10">
@@ -100,9 +91,6 @@ function Index() {
       <p className="mt-4 text-lg text-muted-foreground">Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você.</p>
       <div className="mt-6 flex flex-col gap-2">
         <Button onClick={start}>Começar grátis</Button>
-        <Button variant="ghost" onClick={seeExample}>
-          Ver um exemplo
-        </Button>
       </div>
 
       <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">

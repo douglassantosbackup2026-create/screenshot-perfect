@@ -3,9 +3,11 @@
 - [x] 2 Database
 - [x] 3 Calculation engine and tests
 - [x] All screens (§9) in demo mode — user asked to build pages before login
-- [ ] 4 Sign-in and onboarding wiring (re-enable gate, swap demo store for Supabase RPCs)
-- [ ] Seed 21 lessons, 63 questions and 8 missions into the database as 'rascunho' (generated SQL ready; runs with step 4)
-- [ ] 9 Account deletion server function (service role)
+- [x] 4 Sign-in (email link + Google) and per-user saving
+- [x] Content in database (kept as draft until professional review)
+- [x] 9 Account deletion (real)
 - [ ] 11 E-mail reminders (needs Resend key)
 - [ ] Mercado Pago payments (built; needs keys + login to go live)
 - [ ] 12 Analytics and final review
+- [ ] Publish + Supabase redirect URLs + Mercado Pago webhook (user action)
+- [ ] Move per-user saved data into the normalized tables/RPCs (gamification source of truth)
