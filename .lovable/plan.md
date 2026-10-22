@@ -7,20 +7,20 @@
 - **/esqueci-senha** (nova) — pede o e-mail e envia o link de redefinição.
 - **/redefinir-senha** (nova) — define a nova senha e entra no app.
 - **Perfil** — nova opção "Trocar senha" (pede a senha atual).
-- Mensagens de erro em português e claras: senha errada, e-mail não confirmado, e-mail já cadastrado, senha fraca.
+- Mensagens de erro em português e claras: senha errada, e-mail já cadastrado, senha fraca.
 - O link mágico deixa de existir.
 
 ## Fluxo
 ```text
-Home -> Começar grátis -> /cadastro -> confirmar e-mail -> /onboarding -> /hoje
+Home -> Começar grátis -> /cadastro -> (entra direto) -> /onboarding -> /hoje
 /entrar -> e-mail+senha -> /hoje (ou a página que tentou abrir)
 /entrar -> Esqueci minha senha -> e-mail -> /redefinir-senha -> /hoje
 ```
-O progresso feito antes do cadastro continua sendo levado para a conta.
+Sem confirmação de e-mail: o cadastro já entra na conta. O progresso feito antes do cadastro continua sendo levado para a conta.
 
 ## O que você precisa fazer no Supabase
-- Authentication -> Providers -> Email: ligar "Email" e "Confirm email".
-- URL Configuration: adicionar `/entrar` e `/redefinir-senha` (preview e publicado) como Redirect URLs.
+- Authentication -> Providers -> Email: ligar "Email" e **desligar** "Confirm email".
+- URL Configuration: adicionar `/redefinir-senha` (preview e publicado) como Redirect URL (o e-mail de redefinir senha continua existindo).
 
 ## Detalhes técnicos
 - `signUp({ email, password, options: { emailRedirectTo: origin + "/entrar", data: { display_name } } })`; tratar `session === null` como "confirme seu e-mail".
