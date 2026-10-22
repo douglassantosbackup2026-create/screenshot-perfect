@@ -766,6 +766,7 @@ export const demo = {
       days: [],
       stats: { ...EMPTY_STATS },
     });
+    if (!cloudUser && typeof window !== "undefined") window.localStorage.setItem(FRESH_PENDING, "1");
   },
   updateProfile(patch: Partial<Profile>) {
     const s = structuredClone(load());
