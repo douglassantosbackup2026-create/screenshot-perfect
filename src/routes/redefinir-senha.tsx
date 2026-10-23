@@ -38,12 +38,12 @@ function Reset() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const p = passwordProblems(password);
-    if (p.length) return toast.error(p[0]);
-    if (password !== confirm) return toast.error("As senhas não são iguais.");
+    if (p.length) { toast.error(p[0]); return; }
+    if (password !== confirm) { toast.error("As senhas não são iguais."); return; }
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) return toast.error(authErrorMessage(error.message));
+    if (error) { toast.error(authErrorMessage(error.message)); return; }
     toast.success("Senha alterada.");
     navigate({ to: "/hoje", replace: true });
   }

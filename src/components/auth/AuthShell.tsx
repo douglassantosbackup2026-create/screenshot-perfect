@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 
-export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string | undefined; children: ReactNode }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col px-5 pb-12 pt-8">
       <Link to="/" className="text-sm font-semibold text-primary">

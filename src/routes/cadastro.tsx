@@ -36,9 +36,9 @@ function SignUp() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (problems.length) return toast.error(problems[0]);
-    if (password !== confirm) return toast.error("As senhas não são iguais.");
-    if (!terms) return toast.error("Aceite os termos para continuar.");
+    if (problems.length) { toast.error(problems[0]); return; }
+    if (password !== confirm) { toast.error("As senhas não são iguais."); return; }
+    if (!terms) { toast.error("Aceite os termos para continuar."); return; }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -46,9 +46,9 @@ function SignUp() {
       options: { data: { display_name: name.trim() } },
     });
     setBusy(false);
-    if (error) return toast.error(authErrorMessage(error.message));
+    if (error) { toast.error(authErrorMessage(error.message)); return; }
     if (!data.session) {
-      return toast.error("Conta criada, mas a confirmação de e-mail está ligada. Desligue-a no Supabase ou confirme pelo e-mail.");
+      { toast.error("Conta criada, mas a confirmação de e-mail está ligada. Desligue-a no Supabase ou confirme pelo e-mail."); return; }
     }
     toast.success("Conta criada!");
     navigate({ to: safePath(target, "/onboarding"), replace: true });

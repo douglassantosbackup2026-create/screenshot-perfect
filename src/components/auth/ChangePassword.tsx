@@ -14,11 +14,11 @@ export function ChangePassword() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const p = passwordProblems(next);
-    if (p.length) return toast.error(p[0]);
+    if (p.length) { toast.error(p[0]); return; }
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password: next, current_password: current } as never);
     setBusy(false);
-    if (error) return toast.error(authErrorMessage(error.message));
+    if (error) { toast.error(authErrorMessage(error.message)); return; }
     toast.success("Senha alterada.");
     setOpen(false); setCurrent(""); setNext("");
   }
