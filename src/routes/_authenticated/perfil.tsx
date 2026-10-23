@@ -12,6 +12,7 @@ import { demo, detachUser, useDemo } from "@/lib/data/demo-store";
 import { supabase } from "@/integrations/supabase/client";
 import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
+import { ChangePassword } from "@/components/auth/ChangePassword";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
@@ -182,6 +183,7 @@ function Profile() {
         <Link to="/sobre" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>
+        <ChangePassword />
         <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
           Sair
         </button>
