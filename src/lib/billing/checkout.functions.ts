@@ -6,7 +6,7 @@ import { buildReference, PLAN_NAMES, priceCents, type BillingPeriod, type PaidPl
 
 export const createCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ plan: z.enum(["inteligencia", "pro"]), period: z.enum(["mensal", "anual"]) }).parse(d))
+  .validator((d) => z.object({ plan: z.enum(["inteligencia", "pro"]), period: z.enum(["mensal", "anual"]) }).parse(d))
   .handler(async ({ data, context }) => {
     const token = process.env["MERCADO_PAGO_ACCESS_TOKEN"];
     if (!token) return { error: "O pagamento ainda não está configurado." as const, url: null };
