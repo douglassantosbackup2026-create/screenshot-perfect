@@ -26,7 +26,9 @@ export const PLANS: PlanTier[] = [
     tag: "Para começar",
     highlight: false,
     waitlistSource: null,
-    summary: "Crie o hábito de cuidar do seu futuro, alguns minutos por dia.",
+    summary: JOURNEY_ENABLED
+      ? "Crie o hábito de cuidar do seu futuro, alguns minutos por dia."
+      : "Orçamento, patrimônio e aposentadoria num app só, de graça.",
     features: JOURNEY_ENABLED
       ? [
           "Jornada em 4 unidades, missão do dia e da semana",
@@ -37,7 +39,7 @@ export const PLANS: PlanTier[] = [
       : [
           "Plano de aposentadoria em três cenários",
           "Lançamentos, orçamento e fechamento do mês",
-          "Patrimônio e evolução mês a mês",
+          "Patrimônio e progresso mês a mês",
           "Um limite de gasto",
         ],
   },

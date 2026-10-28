@@ -235,7 +235,7 @@ export const ACHIEVEMENTS: { code: AchievementCode; title: string; description: 
   { code: "meta_concluida", title: "Meta concluída", description: "Você concluiu uma meta que definiu.", icon: "check-circle" },
   { code: "revisao_trimestral", title: "Revisão trimestral", description: "Patrimônio registrado nos três meses de um trimestre e plano revisado.", icon: "calendar-range" },
   { code: "primeiro_desafio", title: "Primeiro desafio", description: "Você concluiu um desafio pessoal.", icon: "mountain" },
-  { code: "primeiro_extrato", title: "Extrato importado", description: "Você importou um extrato do banco para o Diário.", icon: "file-up" },
+  { code: "primeiro_extrato", title: "Extrato importado", description: "Você importou um extrato do banco para os Lançamentos.", icon: "file-up" },
   { code: "primeiro_orcamento", title: "Mês planejado", description: "Você deu um destino ao dinheiro do mês no orçamento.", icon: "wallet" },
   { code: "primeiro_investimento", title: "Primeiro investimento", description: "Você registrou uma operação de investimento.", icon: "line-chart" },
   { code: "carteira_com_metas", title: "Carteira com metas", description: "Você definiu quanto quer em cada classe de investimento.", icon: "pie-chart" },

@@ -47,7 +47,7 @@ export const SIMULATION_FOOTER =
 export const INSS_HELP =
   "Use a estimativa que aparece no Meu INSS. O app não calcula benefícios do INSS; ele apenas usa o valor que você informar.";
 export const ABOUT_TEXT =
-  `O ${APP_NAME} é uma ferramenta de educação e planejamento. Não somos banco, corretora, seguradora nem consultoria de investimentos. Não vendemos produtos financeiros, não pedimos senhas e não movimentamos dinheiro.`;
+  `O ${APP_NAME} é uma ferramenta de educação e planejamento financeiro: orçamento do mês, patrimônio e aposentadoria num app só. Não somos banco, corretora, seguradora nem consultoria de investimentos. Não vendemos produtos financeiros, não pedimos senhas e não movimentamos dinheiro.`;
 export const lessonFooter = (date: string) =>
   `Conteúdo educativo revisado em ${date}. Não é recomendação individual de investimento. Regras e valores oficiais podem mudar; confira sempre a fonte.`;
 

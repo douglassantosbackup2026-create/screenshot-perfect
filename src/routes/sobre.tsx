@@ -6,9 +6,9 @@ export const Route = createFileRoute("/sobre")({
   head: () => ({
     meta: [
       { title: `Sobre — ${APP_NAME}` },
-      { name: "description", content: "Ferramenta de educação e planejamento de aposentadoria. Não somos banco, corretora nem consultoria." },
+      { name: "description", content: "Orçamento, patrimônio e aposentadoria num app só, para educação e planejamento. Não somos banco, corretora nem consultoria." },
       { property: "og:title", content: `Sobre o ${APP_NAME}` },
-      { property: "og:description", content: "Educação e planejamento de aposentadoria, sem vender produtos financeiros." },
+      { property: "og:description", content: "Orçamento, patrimônio e aposentadoria, sem vender produtos financeiros." },
     ],
   }),
   component: About,

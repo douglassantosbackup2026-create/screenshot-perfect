@@ -9,25 +9,22 @@ import { startOnboarding } from "@/lib/data/start-onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { SIMULATION_FOOTER } from "@/lib/labels";
 import { JOURNEY_ENABLED } from "@/lib/features";
-import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
-import { APP_NAME } from "@/lib/seo";
+import { ThreeInOne, Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
+import { APP_NAME, APP_TAGLINE } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: `${APP_NAME} — aposentadoria sem depender do INSS` },
+      { title: `${APP_NAME} — orçamento, patrimônio e aposentadoria num app só` },
       {
         name: "description",
         content:
           JOURNEY_ENABLED
-            ? "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano numa jornada de lições curtas e acompanhe sua evolução todo mês."
-            : "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano e acompanhe sua evolução todo mês.",
+            ? "Orçamento, patrimônio e aposentadoria num app só, com uma jornada de lições curtas. Controle o mês, acompanhe o que você tem e saiba quanto falta para se aposentar."
+            : "Orçamento, patrimônio e aposentadoria num app só. Controle os gastos do mês, acompanhe o que você tem e saiba quanto falta para se aposentar sem depender do INSS.",
       },
       { property: "og:title", content: APP_NAME },
-      {
-        property: "og:description",
-        content: "Um plano de aposentadoria que não depende do governo — e que você consegue seguir.",
-      },
+      { property: "og:description", content: APP_TAGLINE },
     ],
   }),
   component: Index,
@@ -88,20 +85,21 @@ function Index() {
       </header>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-16 pt-10">
 
-      <p className="eyebrow">Aposentadoria sem depender do governo</p>
+      <p className="eyebrow">Orçamento, patrimônio e aposentadoria</p>
       <h1 className="mt-3 text-[34px] leading-[40px]">
-        Quanto falta para você se aposentar <span className="text-primary">sem depender do INSS?</span>
+        Seu dinheiro de hoje e o seu futuro, <span className="text-primary">num app só.</span>
       </h1>
       <p className="mt-4 text-lg text-muted-foreground">
         {JOURNEY_ENABLED
           ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você."
-          : "Faça a conta, monte seu plano e acompanhe todo mês. Grátis e sem vender nada para você."}
+          : "Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Grátis e sem vender nada para você."}
       </p>
       <div className="mt-6 flex flex-col gap-2">
         <Button onClick={start}>{signedIn ? "Abrir o app" : "Começar grátis"}</Button>
       </div>
 
       <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">
+        <h2 className="mb-4 text-lg">Quanto falta para você se aposentar?</h2>
         <div className="grid grid-cols-2 gap-4">
           <NumberField label="Sua idade" value={age} onChange={edit(setAge)} suffix="anos" min={16} max={90} />
           <NumberField label="Aposentar aos" value={retire} onChange={edit(setRetire)} suffix="anos" min={30} max={90} />
@@ -129,6 +127,7 @@ function Index() {
         </Link>
       </section>
 
+      <ThreeInOne />
       <Problem />
       <HowItWorks />
       <ProductPreview />

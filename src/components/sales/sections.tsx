@@ -12,16 +12,32 @@ import { useServerFn } from "@tanstack/react-start";
 import { createCheckout } from "@/lib/billing/checkout.functions";
 import { PRICES_CENTS, type BillingPeriod, type PaidPlan } from "@/lib/billing/catalog";
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { APP_NAME } from "@/lib/seo";
+import { PillarCards } from "@/components/PillarCards";
+
+export function ThreeInOne() {
+  return (
+    <section className="mt-16" aria-label="Três apps em um">
+      <h2>Três apps em um</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        O {APP_NAME} junta o que hoje fica espalhado em apps e planilhas diferentes.
+      </p>
+      <div className="mt-5">
+        <PillarCards show="replaces" />
+      </div>
+    </section>
+  );
+}
 
 export function Problem() {
   const items = [
+    ["Três apps, nenhuma visão do todo.", "O gasto do mês fica num app, os investimentos em outro e a aposentadoria numa planilha. Ninguém liga uma coisa à outra."],
     ["O INSS sozinho costuma não bastar.", "O teto é limitado e as regras mudam. Contar só com ele é arriscado."],
-    ["A inflação come o dinheiro parado.", "Com 4% ao ano, os preços dobram em cerca de 18 anos."],
-    ["O difícil é manter.", "Começar é fácil. O que faz diferença é guardar todo mês, por anos."],
+    ["O difícil é manter.", "Começar é fácil. O que faz diferença é fechar o mês e guardar todo mês, por anos."],
   ];
   return (
     <section className="mt-16">
-      <h2>Por que pensar nisso agora</h2>
+      <h2>Por que num app só</h2>
       <div className="mt-5 space-y-4">
         {items.map(([t, d]) => (
           <div key={t} className="rounded-2xl bg-card shadow-card p-4">
@@ -39,12 +55,12 @@ export function HowItWorks() {
     ? [
         "Jornada: lições de 2 a 5 minutos em 4 unidades, com missão do dia, XP e sequência sem punição por pausas.",
         "Na Unidade 2, seu plano de aposentadoria fica pronto.",
-        "Evolução: todo mês, você registra aporte e patrimônio e vê seu progresso rumo à independência.",
+        "Progresso: todo mês, você registra aporte e patrimônio e vê seu avanço rumo à independência.",
       ]
     : [
-        "Faça a conta: quanto guardar por mês para se aposentar sem depender do INSS.",
-        "Monte seu plano com três cenários e premissas sempre visíveis.",
-        "Evolução: todo mês, você registra aporte e patrimônio e vê seu progresso rumo à independência.",
+        "Registre o mês: lançamentos, contas e orçamento, e feche o mês em poucos minutos.",
+        "Veja o patrimônio: tudo o que você tem e deve, e como isso muda mês a mês.",
+        "Siga o plano: quanto guardar por mês para se aposentar sem depender do INSS.",
       ];
   return (
     <section className="mt-16">
@@ -79,8 +95,25 @@ export function ProductPreview() {
           </div>
         )}
         <div className="rounded-2xl bg-card shadow-card p-4">
-          <p className="text-xs text-muted-foreground">Plano</p>
-          <p className="mt-1 font-semibold">Três cenários, premissas sempre visíveis</p>
+          <p className="text-xs text-muted-foreground">Dinheiro · Lançamentos e Orçamento</p>
+          <p className="mt-1 font-semibold">Cada gasto em segundos, cada real com destino</p>
+          <div className="mt-3 flex gap-1.5" aria-hidden>
+            {Array.from({ length: 10 }).map((_, i) => (
+              <span key={i} className={`h-3 w-3 rounded-full ${i < 6 ? "bg-accent" : "bg-muted"}`} />
+            ))}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-card shadow-card p-4">
+          <p className="text-xs text-muted-foreground">Futuro · Patrimônio</p>
+          <p className="mt-1 font-semibold">Tudo o que você tem e deve, num lugar só</p>
+          <div className="mt-3 h-2 rounded-full bg-muted">
+            <div className="h-2 w-[38%] rounded-full bg-accent" />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Investimentos, previdência, imóveis e dívidas, mês a mês.</p>
+        </div>
+        <div className="rounded-2xl bg-card shadow-card p-4">
+          <p className="text-xs text-muted-foreground">Futuro · Plano</p>
+          <p className="mt-1 font-semibold">Aposentadoria em três cenários, premissas sempre visíveis</p>
           <div className="mt-3 flex items-end gap-2" aria-hidden>
             {[30, 45, 60].map((h) => (
               <div key={h} className="w-8 rounded-t bg-primary/70" style={{ height: h }} />
@@ -88,21 +121,9 @@ export function ProductPreview() {
           </div>
         </div>
         <div className="rounded-2xl bg-card shadow-card p-4">
-          <p className="text-xs text-muted-foreground">Evolução</p>
-          <p className="mt-1 font-semibold">Seu progresso comparado só com você mesmo</p>
-          <div className="mt-3 h-2 rounded-full bg-muted">
-            <div className="h-2 w-[38%] rounded-full bg-accent" />
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">Metas, desafios pessoais e linha do tempo do patrimônio.</p>
-        </div>
-        <div className="rounded-2xl bg-card shadow-card p-4">
-          <p className="text-xs text-muted-foreground">Diário</p>
-          <p className="mt-1 font-semibold">Registre o aporte do mês em segundos</p>
-          <div className="mt-3 flex gap-1.5" aria-hidden>
-            {Array.from({ length: 10 }).map((_, i) => (
-              <span key={i} className={`h-3 w-3 rounded-full ${i < 6 ? "bg-accent" : "bg-muted"}`} />
-            ))}
-          </div>
+          <p className="text-xs text-muted-foreground">Progresso</p>
+          <p className="mt-1 font-semibold">Seu avanço comparado só com você mesmo</p>
+          <p className="mt-2 text-xs text-muted-foreground">Metas, aportes e a linha do tempo do patrimônio.</p>
         </div>
       </div>
     </section>
@@ -156,7 +177,7 @@ export function Pricing({ onStart }: { onStart: () => void }) {
     <section id="planos" className="mt-16 scroll-mt-6" aria-label="Planos">
       <h2>Planos</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        O aprendizado é gratuito. Os planos pagos vendem clareza, planejamento e acompanhamento, nunca produtos financeiros.
+        Orçamento, patrimônio e plano de aposentadoria são gratuitos. Os planos pagos vendem análises mais fundas, nunca produtos financeiros.
       </p>
       <div className="mt-5 space-y-4">
         {PLANS.map((plan) => (
@@ -286,8 +307,12 @@ export function Waitlist({ source, planName }: { source: string; planName: strin
 
 export function Faq() {
   const qs: [string, string][] = [
-    ["Isso é um investimento?", "Não. É um programa de educação e planejamento. Você escolhe onde e como investir."],
-    ["Preciso dar dados do meu banco?", "Não. Você só informa valores aproximados, se quiser."],
+    [
+      "Ainda vou precisar de outros apps de controle financeiro?",
+      `Não. O ${APP_NAME} cobre o orçamento do mês, o patrimônio e o plano de aposentadoria. Se você usa uma planilha de gastos, dá para importar o extrato.`,
+    ],
+    ["Vocês vendem investimentos?", "Não. É uma ferramenta de educação e planejamento. Você escolhe onde e como investir."],
+    ["Preciso dar dados do meu banco?", "Não. Você lança os valores ou importa o extrato, se quiser. Nunca pedimos senha."],
     ...(JOURNEY_ENABLED
       ? ([
           ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
