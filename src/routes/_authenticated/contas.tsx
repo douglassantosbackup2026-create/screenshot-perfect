@@ -58,7 +58,7 @@ function Accounts() {
           title="Nenhuma conta ainda"
           action={<Button onClick={() => setEditing({ account: null })}>Cadastrar a primeira conta</Button>}
         >
-          Comece pela conta corrente onde cai a sua renda.
+          Comece pela conta corrente onde cai a sua renda. Com as contas e o cartão aqui, o mês inteiro fica num lugar só.
         </EmptyState>
       ) : (
         <div className="mt-6 grid gap-4 lg:grid-cols-3">

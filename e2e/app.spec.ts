@@ -79,9 +79,21 @@ test("sem conta, 'Começar grátis' leva ao cadastro, não ao login", async ({ p
   await expect(page.getByRole("button", { name: "Continuar com Google" })).toBeVisible();
 });
 
-test("conta nova: onboarding de 4 etapas e Início com número do mês, próximo passo e checklist", async ({ page }) => {
+test("a landing apresenta o Mitikos como orçamento, patrimônio e aposentadoria num app só", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveTitle(/^Mitikos — /);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("num app só");
+  const threeInOne = page.getByRole("region", { name: "Três apps em um" });
+  for (const pillar of ["Orçamento", "Patrimônio", "Aposentadoria"]) await expect(threeInOne.getByText(pillar, { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Calculadora rápida" })).toContainText("Quanto falta para você se aposentar?");
+});
+
+test("conta nova: boas-vindas com os três pilares, onboarding de 4 etapas e Início com número do mês, próximo passo e checklist", async ({ page }) => {
   const db = await signIn(page, null);
   await page.goto("/onboarding");
+  await expect(page.getByRole("heading", { name: "Boas-vindas ao Mitikos" })).toBeVisible();
+  for (const pillar of ["Orçamento", "Patrimônio", "Aposentadoria"]) await expect(page.getByText(pillar, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Começar" }).click();
   await page.getByLabel("Como você quer ser chamado?").fill("Bia");
   await page.getByRole("spinbutton", { name: /Ano de nascimento/ }).fill("1994");
   await expect(page.getByText("1/4")).toBeVisible();
@@ -100,6 +112,32 @@ test("conta nova: onboarding de 4 etapas e Início com número do mês, próximo
   await expect(page.getByRole("region", { name: "Primeiros passos" })).toContainText("0 de 3");
   await expect(page.getByRole("heading", { name: "Seu mês: 0 de 2" })).toBeVisible();
   await expect.poll(() => (db.row?.data as { profile?: { displayName?: string } } | undefined)?.profile?.displayName).toBe("Bia");
+});
+
+test("as três frentes pelo menu: Dinheiro, Futuro e Progresso, com o nome do menu no título", async ({ page }) => {
+  await signIn(page, makeSeed());
+  await page.goto("/hoje");
+  const nav = page.locator('nav[aria-label="Navegação principal"]:visible');
+  const go = async (link: string, url: RegExp, title: string) => {
+    await page.getByRole("link", { name: link, exact: true }).first().click();
+    await expect(page).toHaveURL(url);
+    await expect(page).toHaveTitle(`${title} — Mitikos`);
+  };
+
+  await nav.getByRole("link", { name: "Dinheiro" }).click();
+  await expect(page).toHaveURL(/\/diario$/);
+  await expect(page).toHaveTitle("Lançamentos — Mitikos");
+  await go("Orçamento", /\/orcamento$/, "Orçamento");
+  await go("Contas", /\/contas$/, "Contas");
+
+  await nav.getByRole("link", { name: "Futuro" }).click();
+  await expect(page).toHaveURL(/\/plano$/);
+  await expect(page).toHaveTitle("Plano — Mitikos");
+  await go("Patrimônio", /\/patrimonio$/, "Patrimônio");
+
+  await nav.getByRole("link", { name: "Progresso" }).click();
+  await expect(page).toHaveURL(/\/evolucao$/);
+  await expect(page).toHaveTitle("Progresso — Mitikos");
 });
 
 test("/planos mostra o que é grátis para sempre e a lista de espera do Inteligência", async ({ page }) => {

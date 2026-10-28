@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { pageHead } from "@/lib/seo";
+import { pageHead, APP_NAME } from "@/lib/seo";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { gradePlacement, placementQuestions } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { spDate } from "@/lib/gamification/rules";
+import { PillarCards } from "@/components/PillarCards";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => pageHead("Começar", "Algumas perguntas rápidas para começar sua jornada."),
@@ -37,6 +38,8 @@ const MISSING_TEXT: Record<MissingField, string> = {
 
 function Onboarding() {
   const navigate = useNavigate();
+  // Boas-vindas com os três pilares, antes das perguntas; não conta no progresso.
+  const [intro, setIntro] = useState(true);
   const [step, setStep] = useState(1);
   // Teste de nivelamento opcional (só com a jornada ligada), logo depois da primeira etapa.
   const [placement, setPlacement] = useState<"intro" | number | null>(null);
@@ -133,7 +136,8 @@ function Onboarding() {
       setPassed({});
       return setPlacement(null);
     }
-    if (position === 0) return navigate({ to: "/" });
+    if (intro) return navigate({ to: "/" });
+    if (position === 0) return setIntro(true);
     setStep(flow[position - 1] ?? 1);
   }
   function finish() {
@@ -177,14 +181,27 @@ function Onboarding() {
         <Button variant="ghost" size="icon" onClick={back} aria-label="Voltar">
           <ArrowLeft strokeWidth={1.75} />
         </Button>
-        <Progress value={done ? 100 : ((position + 1) / questions) * 100} className="h-1.5 flex-1" aria-label={done ? "Plano pronto" : `Pergunta ${position + 1} de ${questions}`} />
-        <span className="w-12 text-right text-xs text-muted-foreground">
-          {done ? "Pronto" : `${position + 1}/${questions}`}
-        </span>
+        {!intro && (
+          <>
+            <Progress value={done ? 100 : ((position + 1) / questions) * 100} className="h-1.5 flex-1" aria-label={done ? "Plano pronto" : `Pergunta ${position + 1} de ${questions}`} />
+            <span className="w-12 text-right text-xs text-muted-foreground">
+              {done ? "Pronto" : `${position + 1}/${questions}`}
+            </span>
+          </>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col pt-10">
-        {placement !== null ? (
+        {intro ? (
+          <div>
+            <h1>Boas-vindas ao {APP_NAME}</h1>
+            <p className="mt-3 text-muted-foreground">Seu orçamento, seu patrimônio e sua aposentadoria, num app só.</p>
+            <div className="mt-6">
+              <PillarCards show="where" />
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">Vamos começar pelo plano de aposentadoria: são quatro perguntas rápidas.</p>
+          </div>
+        ) : placement !== null ? (
           <PlacementStep
             state={placement}
             passedCount={Object.keys(passed).length}
@@ -199,7 +216,13 @@ function Onboarding() {
           />
         )}
 
-        {placement === null && (
+        {intro ? (
+          <div className="mt-auto pt-10">
+            <Button className="w-full" onClick={() => setIntro(false)}>
+              Começar
+            </Button>
+          </div>
+        ) : placement === null && (
           <div className="mt-auto pt-10">
             {step !== RESULT ? (
               <div className="flex flex-col gap-2">

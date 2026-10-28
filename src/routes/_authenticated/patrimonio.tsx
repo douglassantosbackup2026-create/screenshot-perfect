@@ -144,7 +144,7 @@ function Wealth() {
           title="Nenhum item cadastrado"
           action={<Button onClick={() => setEditing({ asset: null })}>Adicionar o primeiro item</Button>}
         >
-          Comece pela previdência e pelos investimentos. Imóveis, reserva, benefícios e dívidas são opcionais.
+          Junte aqui o que você tem e o que deve, e acompanhe mês a mês. Comece pela previdência e pelos investimentos; imóveis, reserva, benefícios e dívidas são opcionais.
         </EmptyState>
       ) : (
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
