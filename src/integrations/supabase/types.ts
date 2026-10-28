@@ -1556,6 +1556,7 @@ export type Database = {
         Args: { p_account: string; p_fresh: Json; p_matched?: Json }
         Returns: Json
       }
+      is_admin: { Args: never; Returns: boolean }
       log_contribution: {
         Args: {
           p_amount?: number
