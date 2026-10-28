@@ -12,7 +12,7 @@ export const RETIREMENT_ENVELOPE = 'env-aposentadoria';
 export const DEBT_ENVELOPE = 'env-dividas';
 export const UNCATEGORIZED_ENVELOPE = 'env-sem-categoria';
 
-export interface BudgetTxInput {
+export type BudgetTxInput = {
   date: string;   // "YYYY-MM-DD"
   amount: number; // centavos, do ponto de vista da conta do lançamento
   categoryId: string | null;
@@ -22,7 +22,7 @@ export interface BudgetTxInput {
   transfer: { counterpartOnBudget: boolean; counterpartSavings: boolean } | null;
 }
 
-export interface MonthActivity {
+export type MonthActivity = {
   income: number;                   // renda do mês, centavos
   activity: Record<string, number>; // movimento por envelope: gastos negativos, estornos positivos
 }
@@ -46,14 +46,14 @@ export function budgetActivity(txs: BudgetTxInput[]): Record<string, MonthActivi
   return out;
 }
 
-export interface EnvelopeMonth {
+export type EnvelopeMonth = {
   carry: number;    // saldo positivo que veio do mês anterior
   assigned: number; // distribuído neste mês
   activity: number; // movimento do mês
   balance: number;  // carry + assigned + activity
 }
 
-export interface BudgetMonth {
+export type BudgetMonth = {
   month: string;
   income: number;
   assigned: number;           // total distribuído no mês
@@ -122,7 +122,7 @@ export function computeBudget(
 // ---------- Modelos de meta ----------
 export type TemplateKind = 'fixo' | 'ate_data' | 'percentual';
 
-export interface BudgetTemplate {
+export type BudgetTemplate = {
   envelopeId: string;
   kind: TemplateKind;
   amount: number | null;   // 'fixo': centavos por mês
@@ -159,7 +159,7 @@ export function templateProgress(t: BudgetTemplate, balance: number): number | n
 }
 
 // ---------- Envelope Aposentadoria x plano ----------
-export interface RetirementImpact {
+export type RetirementImpact = {
   budgetedMonthly: number;            // reais por mês, o que está no envelope
   requiredMonthly: number;            // reais por mês que o plano pede (central, sem INSS)
   coverageWithBudget: number;         // cobertura da renda desejada se aportar o orçado

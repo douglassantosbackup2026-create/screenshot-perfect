@@ -16,7 +16,7 @@ export function ChangePassword() {
     const p = passwordProblems(next);
     if (p.length) { toast.error(p[0]); return; }
     setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password: next, current_password: current } as never);
+    const { error } = await supabase.auth.updateUser({ password: next, current_password: current });
     setBusy(false);
     if (error) { toast.error(authErrorMessage(error.message)); return; }
     toast.success("Senha alterada.");

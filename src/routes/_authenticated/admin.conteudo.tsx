@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
+import { isAdmin } from "@/lib/auth/roles";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,14 +15,10 @@ import { publishBlockers, type ContentStatus } from "@/lib/content-rules";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/conteudo")({
-  head: () => ({
-    meta: [
-      { title: "Admin de conteúdo — Previdência Intelligence" },
-      { name: "description", content: "Cadastro e revisão de lições, perguntas e missões semanais." },
-      { property: "og:title", content: "Admin de conteúdo — Previdência Intelligence" },
-      { property: "og:description", content: "Cadastro e revisão de lições, perguntas e missões." },
-    ],
-  }),
+  beforeLoad: async () => {
+    if (!(await isAdmin())) throw redirect({ to: "/hoje", replace: true });
+  },
+  head: () => pageHead("Admin de conteúdo", "Cadastro e revisão de lições, perguntas e missões semanais.", "Cadastro e revisão de lições, perguntas e missões."),
   component: Admin,
 });
 
@@ -60,7 +58,7 @@ function Admin() {
   const [missions, setMissions] = useState<EditMission[]>(() => MISSIONS.map((m) => ({ ...m, status: "rascunho" })));
   const [sel, setSel] = useState<number | null>(null);
 
-  const lesson = sel != null ? lessons.find((l) => l.day === sel)! : null;
+  const lesson = sel != null ? (lessons.find((l) => l.day === sel) ?? null) : null;
   const update = (patch: Partial<EditLesson>) => setLessons((ls) => ls.map((l) => (l.day === sel ? { ...l, ...patch } : l)));
 
   return (

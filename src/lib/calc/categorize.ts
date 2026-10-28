@@ -3,7 +3,7 @@
 
 export type RuleOp = 'contem' | 'igual';
 
-export interface CategoryRule {
+export type CategoryRule = {
   id: string;
   op: RuleOp;
   value: string;          // texto procurado no favorecido

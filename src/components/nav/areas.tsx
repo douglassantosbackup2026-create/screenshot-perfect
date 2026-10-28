@@ -37,7 +37,7 @@ export const AREAS: Area[] = [
     icon: LineChart,
     match: ["/plano", "/patrimonio"],
     tabs: [
-      { to: "/plano", label: "Aposentadoria" },
+      { to: "/plano", label: "Plano" },
       { to: "/patrimonio", label: "Patrimônio" },
     ],
   },

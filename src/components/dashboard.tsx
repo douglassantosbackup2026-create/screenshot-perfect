@@ -16,17 +16,18 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AXIS_TICK, GRID, TOOLTIP_STYLE } from "@/components/chart-theme";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { DestinationShare, MonthlyAmount } from "@/lib/calc/progress";
 import { goalProgress } from "@/lib/calc/progress";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
-import { DESTINATIONS, formatDate, monthShort, monthYear } from "@/lib/labels";
+import { DESTINATIONS, formatDate, HIDDEN, monthShort, monthYear } from "@/lib/labels";
 import type { ActivityItem } from "@/lib/data/selectors";
 import type { Destination, Goal } from "@/lib/data/demo-store";
 
-export const HIDDEN = "R$ •••";
 type AppPath = "/hoje" | "/plano" | "/evolucao" | "/diario" | "/perfil" | "/patrimonio";
 
 const signedPercent = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + formatPercent(Math.abs(v));
@@ -76,7 +77,7 @@ export function StatCard({
       <Link
         to={to}
         aria-label={`Abrir ${label}`}
-        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
       >
         <ArrowUpRight size={16} strokeWidth={2} aria-hidden />
       </Link>
@@ -110,12 +111,12 @@ export function ContributionsChart({ series, target, showValues }: { series: Mon
       <div className="h-56 w-full" aria-hidden>
         <ResponsiveContainer>
           <BarChart data={data} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
             <YAxis
               domain={[0, top]}
               width={showValues ? 44 : 4}
-              tick={showValues ? { fontSize: 12, fill: "var(--muted-foreground)" } : false}
+              tick={showValues ? AXIS_TICK : false}
               tickLine={false}
               axisLine={false}
               tickFormatter={compact}
@@ -124,7 +125,7 @@ export function ContributionsChart({ series, target, showValues }: { series: Mon
               <Tooltip
                 cursor={{ fill: "rgb(255 255 255 / 0.04)" }}
                 formatter={(v: number) => [formatMonthly(v), "Aporte"]}
-                contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12 }}
+                contentStyle={TOOLTIP_STYLE}
               />
             )}
             <Bar dataKey="amount" radius={[8, 8, 8, 8]} maxBarSize={36} isAnimationActive={false}>
@@ -156,7 +157,7 @@ export function ContributionsChart({ series, target, showValues }: { series: Mon
 }
 
 const DEST_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
-export const destinationLabel = (d: string | null) => DESTINATIONS.find((x) => x.value === d)?.label ?? "Não informado";
+const destinationLabel = (d: string | null) => DESTINATIONS.find((x) => x.value === d)?.label ?? "Não informado";
 
 /** Rosca com a divisão dos aportes por destino. */
 export function DestinationDonut({ data, showValues }: { data: DestinationShare[]; showValues: boolean }) {
@@ -346,9 +347,9 @@ export function GoalCard({
         <Button size="sm" variant="outline" onClick={onComplete}>
           Concluí
         </Button>
-        <Button size="sm" variant="ghost" onClick={onDelete}>
+        <ConfirmButton size="sm" confirmLabel="Confirmar exclusão" onConfirm={onDelete}>
           Excluir
-        </Button>
+        </ConfirmButton>
       </div>
     </li>
   );

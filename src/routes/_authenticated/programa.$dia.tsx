@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect, useNavigate } from "@tanstack/react-router";
 import { Check, Flag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,12 @@ import { isLessonUnlocked, journeyNodes, nextLesson } from "@/lib/journey/journe
 import { XP } from "@/lib/gamification/rules";
 import { lessonFooter } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { JOURNEY_ENABLED } from "@/lib/features";
 
 export const Route = createFileRoute("/_authenticated/programa/$dia")({
+  beforeLoad: () => {
+    if (!JOURNEY_ENABLED) throw redirect({ to: "/hoje", replace: true });
+  },
   loader: ({ params }) => {
     const lesson = LESSONS.find((l) => String(l.day) === params.dia);
     if (!lesson) throw notFound();

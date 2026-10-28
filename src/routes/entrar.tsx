@@ -52,6 +52,17 @@ function SignIn() {
 
   return (
     <AuthShell title="Entrar" subtitle="Use seu e-mail e senha.">
+      {target === "/onboarding" && (
+        <div className="mt-6 rounded-2xl bg-card p-4 shadow-card">
+          <p className="font-semibold">Primeira vez por aqui?</p>
+          <p className="mt-1 text-sm text-muted-foreground">Crie sua conta grátis para montar e salvar o seu plano.</p>
+          <Button asChild className="mt-3 w-full">
+            <Link to="/cadastro" search={{ redirect: target }}>
+              Criar conta grátis
+            </Link>
+          </Button>
+        </div>
+      )}
       <form className="mt-6 space-y-4" onSubmit={submit}>
         <Field id="email" label="E-mail" type="email" required autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field id="password" label="Senha" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />

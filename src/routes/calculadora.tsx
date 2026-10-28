@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs, type ScenarioResult } from "@/lib/calc/retirement";
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
-import { DEFAULT_ASSUMPTIONS, demo, setCalcPrefill } from "@/lib/data/demo-store";
+import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
+import { startOnboarding } from "@/lib/data/start-onboarding";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -58,13 +59,11 @@ function Calculator() {
 
   // Leva tudo o que foi digitado para o onboarding, que já abre preenchido (antes ia para um login desativado).
   function start() {
-    setCalcPrefill(
+    const prefill =
       age && retire && income
         ? { currentAge: age, retirementAge: retire, desiredIncome: income, initialWealth: wealth, monthlyContribution: monthly, inssEstimate: inss && inss > 0 ? inss : null }
-        : null,
-    );
-    demo.startFresh();
-    navigate({ to: "/onboarding" });
+        : null;
+    void startOnboarding(prefill, (target) => navigate(target));
   }
 
   async function sendLead(e: React.FormEvent) {
@@ -73,7 +72,8 @@ function Calculator() {
     setSending(true);
     const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source: "calculadora" });
     setSending(false);
-    if (error) {
+    // 23505: o e-mail já estava salvo (um lead por e-mail).
+    if (error && error.code !== "23505") {
       toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
       return;
     }
@@ -126,11 +126,12 @@ function Calculator() {
       </section>
 
       <Button className="mt-8 w-full" onClick={start}>
-        Começar minha jornada
+        Salvar meu plano grátis
       </Button>
 
       <section className="mt-10">
-        <h2 className="text-lg">Quero receber meu resultado por e-mail</h2>
+        <h2 className="text-lg">Ainda não quer criar conta?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Deixe seu e-mail para receber dicas de aposentadoria e novidades do app. O resultado acima não é enviado.</p>
         {sent ? (
           <p className="mt-3 text-muted-foreground">E-mail salvo. Você pode cancelar quando quiser.</p>
         ) : (
@@ -152,7 +153,7 @@ function Calculator() {
               Aceito receber e-mails do Previdência Intelligence. Só o e-mail é guardado, sem os valores da simulação.
             </label>
             <Button type="submit" variant="outline" className="w-full" disabled={!consent || sending}>
-              {sending ? "Salvando…" : "Receber por e-mail"}
+              {sending ? "Salvando…" : "Quero receber as dicas"}
             </Button>
           </form>
         )}

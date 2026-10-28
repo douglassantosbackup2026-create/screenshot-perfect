@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
 import { AccountSelect, CategoryChips } from "@/components/ledger/fields";
-import { toCents } from "@/lib/calc/ledger";
+import { fromCents, toCents } from "@/lib/calc/ledger";
 import { FREQUENCIES, nextOccurrence, type Frequency, type WeekendRule } from "@/lib/calc/recurring";
 import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState, type RecurringRule } from "@/lib/data/demo-store";
@@ -29,7 +30,7 @@ export function RecurringSheet({ s, open, onClose }: { s: DemoState; open: boole
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">{editing ? (editing.rule ? "Editar recorrência" : "Nova recorrência") : "Recorrentes"}</SheetTitle>
           <SheetDescription>Aluguel, assinaturas, salário: o app lança sozinho na data, sem duplicar.</SheetDescription>
@@ -38,9 +39,9 @@ export function RecurringSheet({ s, open, onClose }: { s: DemoState; open: boole
           <RuleForm s={s} rule={editing.rule} onDone={() => setEditing(null)} />
         ) : (
           <div className="mt-6 space-y-3 pb-4">
-            {s.recurring.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma recorrência ainda.</p>}
+            {s.recurring.every((r) => r.installment) && <p className="text-sm text-muted-foreground">Nenhuma recorrência ainda.</p>}
             <ul className="divide-y divide-border">
-              {s.recurring.map((r) => {
+              {s.recurring.filter((r) => !r.installment).map((r) => {
                 const next = nextOccurrence(r, today);
                 return (
                   <li key={r.id}>
@@ -62,14 +63,14 @@ export function RecurringSheet({ s, open, onClose }: { s: DemoState; open: boole
             </Button>
           </div>
         )}
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }
 
 function RuleForm({ s, rule, onDone }: { s: DemoState; rule: RecurringRule | null; onDone: () => void }) {
   const [income, setIncome] = useState(rule ? rule.amount > 0 : false);
-  const [amount, setAmount] = useState<number | null>(rule ? Math.abs(rule.amount) / 100 : null);
+  const [amount, setAmount] = useState<number | null>(rule ? fromCents(Math.abs(rule.amount)) : null);
   const [payee, setPayee] = useState(rule?.payee ?? "");
   const [accountId, setAccountId] = useState<string | null>(rule?.accountId ?? s.accounts[0]?.id ?? null);
   const [categoryId, setCategoryId] = useState<string | null>(rule?.categoryId ?? null);

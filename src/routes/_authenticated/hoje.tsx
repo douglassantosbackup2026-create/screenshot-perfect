@@ -1,25 +1,35 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertCircle, Flame, Star } from "lucide-react";
+import { AlertCircle, Check, Flame, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CardBoundary } from "@/components/ErrorBoundary";
 import { Progress } from "@/components/ui/progress";
 import { JourneyMap } from "@/components/JourneyMap";
 import { SuggestionCard } from "@/components/portfolio/PortfolioSection";
 import { handleResult, xpToast } from "@/components/feedback";
 import { completedDays, demo, monthCloseSteps, useDemo, type DemoState } from "@/lib/data/demo-store";
-import { monthYear } from "@/lib/labels";
-import { dataWarnings, journeyHome, missionOfWeek } from "@/lib/data/selectors";
+import { maskMoney, monthYear } from "@/lib/labels";
+import { formatMonthly, formatPercent } from "@/lib/calc/format";
+import { cn } from "@/lib/utils";
+import { dataWarnings, firstSteps, journeyHome, missionOfWeek, monthHero, nextStep } from "@/lib/data/selectors";
+import { DailyAlertsCard } from "@/components/ledger/DayToDay";
 import { XP } from "@/lib/gamification/rules";
 import type { DailyKind } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
+import { JOURNEY_ENABLED } from "@/lib/features";
+
+const TITLE = JOURNEY_ENABLED ? "Jornada — Previdência Intelligence" : "Início — Previdência Intelligence";
+const DESCRIPTION = JOURNEY_ENABLED
+  ? "Sua trilha de aprendizado, a missão do dia e o seu próximo passo."
+  : "O fechamento do mês, a sugestão de aporte e o seu próximo passo.";
 
 export const Route = createFileRoute("/_authenticated/hoje")({
   head: () => ({
     meta: [
-      { title: "Jornada — Previdência Intelligence" },
-      { name: "description", content: "Sua trilha de aprendizado, a missão do dia e o seu próximo passo." },
-      { property: "og:title", content: "Jornada — Previdência Intelligence" },
-      { property: "og:description", content: "Sua trilha de aprendizado, a missão do dia e o seu próximo passo." },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
     ],
   }),
   component: JourneyPage,
@@ -43,15 +53,16 @@ function JourneyPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-5xl lg:px-8 lg:pb-12">
+    <main className={`mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:px-8 lg:pb-12 ${JOURNEY_ENABLED ? "lg:max-w-5xl" : "lg:max-w-2xl"}`}>
       <header>
-        <p className="eyebrow">Sua jornada</p>
+        <p className="eyebrow">{JOURNEY_ENABLED ? "Sua jornada" : "Início"}</p>
         <h1 className="mt-1">Olá, {s.profile.displayName || "você"}</h1>
         <p className="mt-1 text-muted-foreground">Pequenos passos, futuro mais preparado.</p>
       </header>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
-        <div className="space-y-4 lg:sticky lg:top-6">
+      <div className={`mt-6 grid gap-4 lg:items-start ${JOURNEY_ENABLED ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]" : ""}`}>
+        <div className={`space-y-4 ${JOURNEY_ENABLED ? "lg:sticky lg:top-6" : ""}`}>
+          {JOURNEY_ENABLED && (
           <section className="grid grid-cols-[auto_1fr] gap-4 rounded-3xl bg-card p-5 shadow-card" aria-label="Sequência e nível">
             <div className="flex flex-col items-center justify-center rounded-2xl bg-primary/15 px-4 py-3 text-primary">
               <Flame size={22} strokeWidth={2} aria-hidden />
@@ -85,12 +96,18 @@ function JourneyPage() {
               Um dia com atividade mantém a sequência. Até 2 dias por semana ficam protegidos: pausar não zera nada.
             </p>
           </section>
+          )}
 
-          <DailyMissionCard mission={j.mission} done={j.missionDone} />
+          {JOURNEY_ENABLED && <DailyMissionCard mission={j.mission} done={j.missionDone} />}
 
+          <CardBoundary><MonthHeroCard s={s} /></CardBoundary>
+          <CardBoundary><NextStepCard s={s} /></CardBoundary>
+          <FirstStepsCard s={s} />
           <MonthCloseCard s={s} />
 
-          {s.plan && <SuggestionCard s={s} showValues={!s.profile.hideValues} compact />}
+          {s.plan && <CardBoundary><SuggestionCard s={s} showValues={!s.profile.hideValues} compact /></CardBoundary>}
+
+          <CardBoundary><DailyAlertsCard s={s} showValues={!s.profile.hideValues} /></CardBoundary>
 
           {warnings.length > 0 && (
             <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Dados para completar">
@@ -113,6 +130,7 @@ function JourneyPage() {
             </section>
           )}
 
+          {JOURNEY_ENABLED && (
           <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Missão da semana">
             <p className="eyebrow">Missão da semana · +{XP.weekly_mission} XP</p>
             <h2 className="mt-1 text-lg">{weekly.title}</h2>
@@ -125,8 +143,10 @@ function JourneyPage() {
               </Button>
             )}
           </section>
+          )}
         </div>
 
+        {JOURNEY_ENABLED && (
         <section aria-label="Trilha">
           <div className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-[0_20px_48px_-20px_rgb(246_200_0/0.55)]">
             <p className="eyebrow !text-primary-foreground/70">Sua trilha de hoje</p>
@@ -157,25 +177,115 @@ function JourneyPage() {
             <JourneyMap nodes={j.nodes} completed={done} testedOut={s.journey.testedOutUnits} />
           </div>
         </section>
+        )}
       </div>
     </main>
   );
 }
 
-/** O ritual do mês: quantos dos cinco passos já foram feitos e o atalho para o fechamento. */
+/** O número que importa: quanto o plano pede neste mês, quanto já foi registrado e o caminho até a independência. */
+function MonthHeroCard({ s }: { s: DemoState }) {
+  const h = monthHero(s);
+  if (!h) return null;
+  const money = maskMoney(!s.profile.hideValues, formatMonthly);
+  const status =
+    h.contributed === null
+      ? "Você ainda não registrou o aporte deste mês."
+      : h.contributed >= h.required
+        ? "Você está no ritmo do plano neste mês."
+        : h.contributed > 0
+          ? `Você registrou ${money(h.contributed)}.`
+          : "Mês registrado sem aporte. Tudo bem: o plano segue.";
+  return (
+    <section className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-[0_20px_48px_-20px_rgb(246_200_0/0.55)]" aria-label="Seu mês">
+      <p className="eyebrow !text-primary-foreground/70">{monthYear(h.month)}</p>
+      <p className="mt-1 text-lg leading-7">
+        Seu plano pede guardar <strong className="money block font-display text-4xl font-semibold">{money(h.required)}</strong> por mês.
+      </p>
+      <p className="mt-2 text-sm text-primary-foreground/80">{status}</p>
+      <div className="mt-5">
+        <div className="flex justify-between text-xs font-semibold text-primary-foreground/70">
+          <span>Rumo à independência</span>
+          <span className="money">{formatPercent(h.fiRatio)}</span>
+        </div>
+        <Progress value={Math.min(h.fiRatio, 1) * 100} className="mt-1.5 h-2 bg-black/15 [&>div]:bg-primary-foreground" aria-label={`${formatPercent(h.fiRatio)} do caminho até a independência`} />
+      </div>
+    </section>
+  );
+}
+
+/** Um único próximo passo: o que mais move o plano agora. */
+function NextStepCard({ s }: { s: DemoState }) {
+  const n = nextStep(s);
+  if (!n)
+    return (
+      <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Próximo passo">
+        <p className="eyebrow">Próximo passo</p>
+        <h2 className="mt-1 text-lg">Tudo em dia por aqui</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Veja como o seu patrimônio evoluiu.</p>
+        <Button asChild variant="outline" className="mt-4 w-full">
+          <Link to="/evolucao">Ver meu progresso</Link>
+        </Button>
+      </section>
+    );
+  return (
+    <section className="rounded-2xl bg-card p-5 shadow-card ring-1 ring-primary/60" aria-label="Próximo passo">
+      <p className="eyebrow">Próximo passo</p>
+      <h2 className="mt-1 text-lg">{n.title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{n.why}</p>
+      <Button asChild className="mt-4 w-full">
+        <Link to={n.to} search={n.search ?? {}}>
+          {n.cta}
+        </Link>
+      </Button>
+    </section>
+  );
+}
+
+/** Para quem está começando: os três primeiros passos, riscados conforme são feitos. */
+function FirstStepsCard({ s }: { s: DemoState }) {
+  const items = firstSteps(s);
+  if (!items) return null;
+  const done = items.filter((i) => i.done).length;
+  return (
+    <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Primeiros passos">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-base">Primeiros passos</h2>
+        <span className="text-sm text-muted-foreground">
+          {done} de {items.length}
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {items.map((i) => (
+          <li key={i.key} className={cn("flex items-center gap-3 text-sm", i.done && "text-muted-foreground line-through")}>
+            <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full", i.done ? "bg-primary text-primary-foreground" : "bg-muted")} aria-hidden>
+              {i.done && <Check size={14} strokeWidth={3} />}
+            </span>
+            {i.label}
+            <span className="sr-only">{i.done ? "(feito)" : "(a fazer)"}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** O ritual do mês: quantos passos já foram feitos e o atalho para o fechamento. */
 function MonthCloseCard({ s }: { s: DemoState }) {
   const c = monthCloseSteps(s);
   return (
     <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Fechamento do mês">
-      <p className="eyebrow">Fechamento do mês · +{XP.month_closed} XP</p>
+      <p className="eyebrow">Fechamento do mês{JOURNEY_ENABLED ? ` · +${XP.month_closed} XP` : ""}</p>
       <h2 className="mt-1 text-lg">{c.closed ? `${monthYear(c.month)} fechado` : `Seu mês: ${c.doneCount} de ${c.steps.length}`}</h2>
       <Progress value={(c.doneCount / c.steps.length) * 100} className="mt-3 h-2" aria-label={`${c.doneCount} de ${c.steps.length} passos`} />
       <p className="mt-2 text-sm text-muted-foreground">
         {c.closed
           ? "Tudo em dia. O próximo fechamento abre no mês que vem."
           : c.complete
-            ? "Os cinco passos estão feitos. Falta só fechar."
-            : "Lançar, categorizar, orçar, aportar e atualizar o patrimônio: uns 10 minutos."}
+            ? "Todos os passos estão feitos. Falta só fechar."
+            : c.usesLedger
+              ? "Lançar, categorizar, orçar, aportar e atualizar o patrimônio: uns 10 minutos."
+              : "Registrar o aporte e atualizar o patrimônio: uns 2 minutos."}
       </p>
       {!c.closed && (
         <Button asChild variant={c.complete ? "default" : "outline"} className="mt-4 w-full">

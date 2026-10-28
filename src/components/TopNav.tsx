@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { QuickAdd } from "@/components/QuickAdd";
+import { SaveStatus } from "@/components/SaveStatus";
 import { AREAS, areaOf } from "@/components/nav/areas";
 import { useDemo } from "@/lib/data/demo-store";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export function TopNav() {
         </ul>
       </nav>
       <div className="flex items-center gap-3">
+        <SaveStatus />
         <QuickAdd className="h-11 w-11" />
         <ProfileButton />
       </div>
@@ -65,7 +67,10 @@ export function MobileHeader() {
         <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
         Previdência Intelligence
       </Link>
-      <ProfileButton className="h-10 w-10" />
+      <div className="flex items-center gap-3">
+        <SaveStatus />
+        <ProfileButton className="h-11 w-11" />
+      </div>
     </header>
   );
 }

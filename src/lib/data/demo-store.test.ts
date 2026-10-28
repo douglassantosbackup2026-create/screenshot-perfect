@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
+import { installmentSchedule } from "@/lib/calc/installments";
 
 const KEY = "pi_demo_state_v1";
 
@@ -551,17 +553,36 @@ describe("fechamento do mês", () => {
     expect(demo.closeMonth().xpAwarded).toBe(0);
   });
 
-  it("quem não usa contas tem os passos do livro-caixa dados como feitos; lançamento sem categoria trava o passo 2", async () => {
+  it("conta nova sem contas começa em 0 de 2: os passos do livro-caixa não se aplicam", async () => {
     const { demo, monthCloseSteps } = await freshStore();
     demo.startFresh();
     const s0 = JSON.parse(window.localStorage.getItem(KEY)!);
-    expect(monthCloseSteps(s0).steps.map((x) => [x.key, x.done])).toEqual([
-      ["lancamentos", true],
-      ["categorias", true],
-      ["orcamento", false],
+    const c0 = monthCloseSteps(s0);
+    expect(c0.steps.map((x) => [x.key, x.done])).toEqual([
       ["aporte", false],
       ["patrimonio", false],
     ]);
+    expect(c0.doneCount).toBe(0);
+  });
+
+  it("no modo Simples, um limite de gasto conclui o passo do orçamento e o mês pode fechar", async () => {
+    const { demo, monthCloseSteps } = await freshStore();
+    demo.startFresh();
+    demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 0 });
+    const cc = JSON.parse(window.localStorage.getItem(KEY)!).accounts[0].id;
+    demo.addTransaction({ accountId: cc, date: spDate(new Date()), amount: -100, payee: "Mercado", categoryId: "cat-mercado" });
+    const step = () => monthCloseSteps(JSON.parse(window.localStorage.getItem(KEY)!)).steps.find((x) => x.key === "orcamento")!;
+    expect(step().done).toBe(false);
+    demo.saveLimit({ categoryId: null, period: "mes", amount: 200000 });
+    expect(step().done).toBe(true);
+    demo.logContribution({ month: month(), made: true, amount: 500, destination: "previdencia" });
+    demo.logWealth({ month: month(), total: 1000 });
+    expect(() => demo.closeMonth()).not.toThrow();
+  });
+
+  it("com conta, lançamento sem categoria trava o passo 2", async () => {
+    const { demo, monthCloseSteps } = await freshStore();
+    demo.startFresh();
     demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 0 });
     const cc = JSON.parse(window.localStorage.getItem(KEY)!).accounts[0].id;
     demo.addTransaction({ accountId: cc, date: spDate(new Date()), amount: -100, payee: "Sem regra" });
@@ -569,5 +590,147 @@ describe("fechamento do mês", () => {
     const c = monthCloseSteps(s1);
     expect(c.steps.slice(0, 2).map((x) => x.done)).toEqual([true, false]);
     expect(c.uncategorized).toHaveLength(1);
+  });
+});
+
+describe("parcelas e desfazer", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+  const today = () => spDate(new Date());
+
+  async function withAccount() {
+    const { demo, ruleAmount } = await freshStore();
+    demo.startFresh();
+    demo.saveAccount({ name: "Cartão", kind: "cartao", openingBalance: 0 });
+    const cc = state().accounts[0].id as string;
+    return { demo, ruleAmount, cc };
+  }
+
+  it("compra parcelada vira recorrência com fim; a primeira parcela leva os centavos e já entra", async () => {
+    const { demo, ruleAmount, cc } = await withAccount();
+    const rule = demo.addInstallmentPurchase({ accountId: cc, firstDate: today(), total: 100000, count: 3, payee: "TV", categoryId: "cat-outros" });
+    const s = state();
+    expect(s.recurring).toHaveLength(1);
+    expect(s.transactions).toHaveLength(1);
+    expect(s.transactions[0]).toMatchObject({ amount: -33334, recurringId: rule.id, source: "recorrente" });
+    expect(ruleAmount(rule, installmentSchedule(100000, 3, today())[1]!.occurrenceDate)).toBe(-33333);
+    expect(() => demo.addInstallmentPurchase({ accountId: cc, firstDate: today(), total: 100000, count: 61, payee: "TV" })).toThrow();
+  });
+
+  it("desfazer remove o lançamento novo, volta a versão antes da edição e traz de volta o excluído", async () => {
+    const { demo, cc } = await withAccount();
+    const t = demo.addTransaction({ accountId: cc, date: today(), amount: -6200, payee: "Farmácia" });
+    expect(demo.undoLast()).toBe("Lançamento");
+    expect(state().transactions).toHaveLength(0);
+    expect(() => demo.undoLast()).toThrow();
+
+    const u = demo.addTransaction({ accountId: cc, date: today(), amount: -5400, payee: "Almoço" });
+    demo.updateTransaction(u.id, { amount: -4500 });
+    demo.undoLast();
+    expect(state().transactions[0]).toMatchObject({ id: u.id, amount: -5400 });
+
+    demo.deleteTransaction(u.id);
+    expect(state().transactions).toHaveLength(0);
+    demo.undoLast();
+    expect(state().transactions[0]).toMatchObject({ id: u.id, amount: -5400 });
+    expect(t.id).not.toBe(u.id);
+  });
+
+  it("desfazer a compra parcelada apaga a regra e as parcelas lançadas", async () => {
+    const { demo, cc } = await withAccount();
+    demo.addInstallmentPurchase({ accountId: cc, firstDate: today(), total: 30000, count: 3, payee: "Cadeira" });
+    demo.undoLast();
+    expect(state().recurring).toHaveLength(0);
+    expect(state().transactions).toHaveLength(0);
+  });
+
+  it("aviso ignorado fica guardado", async () => {
+    const { demo } = await withAccount();
+    demo.dismissAlert("duplicado:a:b");
+    demo.dismissAlert("duplicado:a:b");
+    expect(state().dismissedAlerts).toEqual(["duplicado:a:b"]);
+  });
+});
+
+describe("ocorrência excluída", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+  const today = () => spDate(new Date());
+
+  it("parcela excluída não volta quando as recorrências rodam de novo; Desfazer traz de volta", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.saveAccount({ name: "Cartão", kind: "cartao", openingBalance: 0 });
+    const cc = state().accounts[0].id as string;
+    const rule = demo.addInstallmentPurchase({ accountId: cc, firstDate: today(), total: 30000, count: 3, payee: "Cadeira" });
+    const first = state().transactions[0];
+    demo.deleteTransaction(first.id);
+    expect(demo.runRecurring()).toBe(0);
+    expect(state().transactions).toHaveLength(0);
+    expect(state().recurring[0].skipped).toEqual([first.occurrenceDate]);
+    demo.undoLast();
+    expect(state().transactions).toHaveLength(1);
+    expect(state().recurring[0].skipped).toEqual([]);
+    expect(demo.runRecurring()).toBe(0);
+    expect(rule.id).toBe(first.recurringId);
+  });
+});
+
+describe("limites de gasto", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+
+  it("salva o limite e avisa a partir de 75% do período", async () => {
+    const { demo } = await freshStore();
+    const { dailyAlerts } = await import("./selectors");
+    demo.startFresh();
+    demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 100000 });
+    const cc = state().accounts[0].id as string;
+    demo.saveLimit({ categoryId: "cat-restaurantes", period: "semana", amount: 30000 });
+    demo.addTransaction({ accountId: cc, date: spDate(new Date()), amount: -25000, payee: "Restaurante", categoryId: "cat-restaurantes" });
+    const s = state();
+    const alert = dailyAlerts(s).find((a) => a.kind === "limite");
+    expect(alert).toMatchObject({ kind: "limite", level: "atencao", spent: 25000, limit: 30000 });
+    expect(() => demo.saveLimit({ categoryId: null, period: "dia", amount: 0 })).toThrow();
+    demo.deleteLimit(s.limits[0].id);
+    expect(state().limits).toEqual([]);
+  });
+});
+
+describe("dívidas: quitar ou investir", () => {
+  const state = () => JSON.parse(window.localStorage.getItem(KEY)!);
+  it("guarda juros e parcela só em dívidas e compara com o plano", async () => {
+    const { demo } = await freshStore();
+    const { debtsView, xrayView } = await import("./selectors");
+    demo.saveAsset({ name: "Cartão rotativo", category: "divida", value: 10000, forRetirement: false, rateMonthly: 0.03, payment: 500 });
+    demo.saveAsset({ name: "PGBL extra", category: "pgbl", value: 100, forRetirement: true, rateMonthly: 0.03 });
+    const s = state();
+    expect(s.assets.find((a: { name: string }) => a.name === "PGBL extra").rateMonthly).toBeNull();
+    const d = debtsView(s).find((x) => x.asset.name === "Cartão rotativo")!;
+    expect(d.comparison?.verdict).toBe("quitar");
+    expect(d.months).toBeGreaterThan(20);
+    expect(xrayView(s).issues.some((i) => i.code === "divida_sem_juros")).toBe(false);
+    expect(() => demo.saveAsset({ name: "x", category: "divida", value: 1, forRetirement: false, rateMonthly: 0.5 })).toThrow();
+  });
+});
+
+describe("cache de leitura", () => {
+  it("nunca guarda o resultado de um rascunho (estado que ainda não foi gravado)", async () => {
+    const { memoOnState, makeSeed } = await freshStore();
+    const draft = makeSeed();
+    let runs = 0;
+    const read = () => memoOnState(draft, "k", () => ++runs);
+    expect(read()).toBe(1);
+    expect(read()).toBe(2);
+  });
+
+  it("o estado gravado é calculado uma vez e recalculado depois de cada mudança", async () => {
+    const { demo, memoOnState, useDemo } = await freshStore();
+    demo.startFresh();
+    const { result } = renderHook(() => useDemo());
+    let runs = 0;
+    const read = () => memoOnState(result.current, "k", () => ++runs);
+    expect(read()).toBe(1);
+    expect(read()).toBe(1);
+    act(() => demo.updateProfile({ displayName: "Bia" }));
+    expect(read()).toBe(2);
+    expect(read()).toBe(2);
   });
 });

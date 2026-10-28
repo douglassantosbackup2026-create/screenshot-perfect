@@ -18,14 +18,14 @@ export const categoryLabel = (c: AssetCategory) => ASSET_CATEGORIES.find((x) => 
 export const isIncomeSource = (c: AssetCategory) => c === 'beneficio';
 export const isLiability = (c: AssetCategory) => c === 'divida';
 
-export interface AssetItem {
+export type AssetItem = {
   category: AssetCategory;
   value: number;          // saldo em R$; para 'beneficio', valor mensal estimado
   forRetirement: boolean; // o usuário pretende usar este ativo na aposentadoria
   updatedAt: string;      // ISO
 }
 
-export interface AssetSummary {
+export type AssetSummary = {
   retirementTotal: number;      // ativos destinados à aposentadoria
   otherTotal: number;           // ativos que não serão usados para esse objetivo
   debtsTotal: number;

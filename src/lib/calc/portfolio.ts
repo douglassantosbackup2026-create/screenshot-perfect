@@ -23,7 +23,7 @@ export const classOfCategory = (c: AssetCategory): AssetClass => (c === 'pgbl' |
 
 export type TradeType = 'compra' | 'venda' | 'provento';
 
-export interface Trade {
+export type Trade = {
   id: string;
   date: string;      // "YYYY-MM-DD"
   type: TradeType;
@@ -32,7 +32,7 @@ export interface Trade {
   fees: number;      // centavos
 }
 
-export interface Position {
+export type Position = {
   quantity: number;
   costBasis: number;  // centavos ainda investidos (quantidade × preço médio)
   avgPrice: number;   // centavos por unidade
@@ -83,11 +83,11 @@ export function positionFromTrades(trades: Trade[]): Position {
   return p;
 }
 
-export interface Valued extends Position {
+export type Valued = {
   marketValue: number; // centavos
   unrealized: number;  // valor de mercado − custo
   unrealizedPct: number | null;
-}
+} & Position
 
 export function valuePosition(p: Position, price: number): Valued {
   const marketValue = Math.round(p.quantity * price);
@@ -95,7 +95,7 @@ export function valuePosition(p: Position, price: number): Valued {
   return { ...p, marketValue, unrealized, unrealizedPct: p.costBasis > 0 ? unrealized / p.costBasis : null };
 }
 
-export interface ClassShare {
+export type ClassShare = {
   assetClass: AssetClass;
   value: number;        // centavos
   share: number;        // fração da carteira
@@ -124,7 +124,7 @@ export function validateTargets(targets: Partial<Record<AssetClass, number>>): s
   return [];
 }
 
-export interface Suggestion {
+export type Suggestion = {
   assetClass: AssetClass;
   amount: number;      // centavos a aportar
   before: number;      // fração antes
@@ -172,7 +172,7 @@ export function allocateContribution(current: Partial<Record<AssetClass, number>
 }
 
 // ---------- XIRR ----------
-export interface CashFlow {
+export type CashFlow = {
   date: string;   // "YYYY-MM-DD"
   amount: number; // saída para comprar negativa; vendas, proventos e o valor de hoje positivos
 }
@@ -212,7 +212,7 @@ export function xirr(flows: CashFlow[]): number | null {
   return (lo + hi) / 2;
 }
 
-export interface ReturnSummary {
+export type ReturnSummary = {
   rate: number;    // anual se houver um ano ou mais de histórico; senão, acumulada no período
   annual: boolean;
   years: number;   // tamanho do histórico

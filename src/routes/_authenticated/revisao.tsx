@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,16 +9,13 @@ import { handleResult, xpToast } from "@/components/feedback";
 import { completedDays, dailyMissionDone, demo, todayMission, useDemo } from "@/lib/data/demo-store";
 import { missionAccepts, REVIEW_PASS, reviewQuestions } from "@/lib/journey/journey";
 import { spDate } from "@/lib/gamification/rules";
+import { JOURNEY_ENABLED } from "@/lib/features";
 
 export const Route = createFileRoute("/_authenticated/revisao")({
-  head: () => ({
-    meta: [
-      { title: "Revisão — Previdência Intelligence" },
-      { name: "description", content: "Três perguntas rápidas sobre o que você já estudou." },
-      { property: "og:title", content: "Revisão — Previdência Intelligence" },
-      { property: "og:description", content: "Três perguntas rápidas sobre o que você já estudou." },
-    ],
-  }),
+  beforeLoad: () => {
+    if (!JOURNEY_ENABLED) throw redirect({ to: "/hoje", replace: true });
+  },
+  head: () => pageHead("Revisão", "Três perguntas rápidas sobre o que você já estudou."),
   component: Review,
 });
 

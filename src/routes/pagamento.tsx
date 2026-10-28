@@ -7,9 +7,9 @@ export const Route = createFileRoute("/pagamento")({
   head: () => ({
     meta: [
       { title: "Pagamento — Previdência Intelligence" },
-      { name: "description", content: "Acompanhe a confirmação do seu pagamento do Premium." },
+      { name: "description", content: "Acompanhe a confirmação do pagamento do seu plano." },
       { property: "og:title", content: "Pagamento — Previdência Intelligence" },
-      { property: "og:description", content: "Confirmação do pagamento do Premium." },
+      { property: "og:description", content: "Confirmação do pagamento do seu plano." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -22,7 +22,7 @@ function Payment() {
   const status = s.collection_status ?? s.status;
   const [title, text] =
     status === "approved"
-      ? ["Pagamento confirmado", "Seu Premium já está liberado. A validade aparece no seu perfil."]
+      ? ["Pagamento confirmado", "Seu plano já está liberado. Os recursos pagos aparecem no app a partir de agora."]
       : status === "pending" || status === "in_process"
         ? ["Aguardando confirmação", "Pix e boleto podem levar alguns minutos ou até 3 dias úteis. Liberamos assim que o Mercado Pago confirmar."]
         : ["Pagamento não concluído", "Nada foi cobrado. Você pode tentar de novo quando quiser."];

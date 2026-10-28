@@ -9,9 +9,21 @@ export function passwordProblems(p: string): string[] {
 
 export const isStrongPassword = (p: string) => passwordProblems(p).length === 0;
 
-/** Só aceita caminhos do próprio app. */
-export const safePath = (p?: string, fallback = "/hoje") =>
-  p && p.startsWith("/") && !p.startsWith("//") ? p : fallback;
+/**
+ * Só aceita caminhos do próprio app. O navegador trata "\" como "/", então "/\mal.com" viraria
+ * "//mal.com" (outro site); por isso a barra invertida e caracteres de controle ficam de fora.
+ */
+export function safePath(p?: string, fallback = "/hoje"): string {
+  if (!p || !p.startsWith("/") || p.startsWith("//")) return fallback;
+  // eslint-disable-next-line no-control-regex -- barrar caracteres de controle é o objetivo
+  if (/[\\\u0000-\u001f]/.test(p)) return fallback;
+  try {
+    const base = "https://app.local";
+    return new URL(p, base).origin === base ? p : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 /** Traduz erros comuns do login para português. */
 export function authErrorMessage(msg?: string): string {

@@ -3,13 +3,13 @@ import { HelpCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-export function Help({ text, label }: { text: string; label: string }) {
+function Help({ text, label }: { text: string; label: string }) {
   return (
     <Popover>
       <PopoverTrigger
         type="button"
         aria-label={`O que é ${label}?`}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+        className="-my-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
       >
         <HelpCircle size={16} strokeWidth={1.75} aria-hidden />
       </PopoverTrigger>

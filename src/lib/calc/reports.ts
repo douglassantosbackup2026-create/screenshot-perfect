@@ -5,7 +5,7 @@ import type { AssetCategory } from './assets';
 import { monthSummary, spendingByCategory, type LedgerTx } from './ledger';
 import type { Valuation } from './networth';
 
-export interface CashFlowPoint {
+export type CashFlowPoint = {
   month: string;
   income: number;
   expense: number;
@@ -42,7 +42,7 @@ export function cashFlowTotals(points: CashFlowPoint[]) {
 export const OTHER_KEY = 'outros';
 export const UNCATEGORIZED_KEY = 'sem-categoria';
 
-export interface CategoryTrend {
+export type CategoryTrend = {
   keys: string[]; // categorias que ganham cor própria, da maior para a menor, e por último "outros" se houver
   rows: ({ month: string } & Record<string, number | string>)[]; // centavos por chave, em cada mês
   totals: Record<string, number>;

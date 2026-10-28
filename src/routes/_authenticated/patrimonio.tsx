@@ -1,36 +1,42 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Plus } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
+import { HideValuesToggle } from "@/components/HideValuesToggle";
+import { useShowValues } from "@/hooks/use-show-values";
+import { CardBoundary } from "@/components/ErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
-import { HIDDEN } from "@/components/dashboard";
+import { JOURNEY_ENABLED } from "@/lib/features";
+import { HIDDEN } from "@/lib/labels";
 import { ASSET_CATEGORIES, categoryLabel, isIncomeSource, isLiability, summarizeAssets, type AssetCategory } from "@/lib/calc/assets";
-import { formatMoney, formatMonthly, formatWealth } from "@/lib/calc/format";
+import { formatMoney, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import type { HistoryPoint } from "@/lib/calc/networth";
 import { demo, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
 import { PortfolioSection } from "@/components/portfolio/PortfolioSection";
+import { XrayCard } from "@/components/portfolio/Xray";
 import { AreaTabs } from "@/components/nav/areas";
-import { assetHistories, hasWealthRecord } from "@/lib/data/selectors";
+import { assetHistories, debtsView } from "@/lib/data/selectors";
+import { WealthSheet } from "@/components/wealth/WealthSheet";
+import { monthOf, spDate } from "@/lib/gamification/rules";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/patrimonio")({
-  validateSearch: (s: Record<string, unknown>): { novo?: boolean } => (s["novo"] ? { novo: true } : {}),
-  head: () => ({
-    meta: [
-      { title: "Patrimônio — Previdência Intelligence" },
-      { name: "description", content: "Seus ativos, dívidas e fontes de renda, separando o que é para a aposentadoria." },
-      { property: "og:title", content: "Patrimônio — Previdência Intelligence" },
-      { property: "og:description", content: "Seus ativos, dívidas e fontes de renda, separando o que é para a aposentadoria." },
-    ],
+  validateSearch: (s: Record<string, unknown>): { novo?: boolean; registrar?: boolean } => ({
+    ...(s["novo"] ? { novo: true } : {}),
+    ...(s["registrar"] ? { registrar: true } : {}),
   }),
+  head: () => pageHead("Patrimônio", "Seus ativos, dívidas e fontes de renda, separando o que é para a aposentadoria."),
   component: Wealth,
 });
 
@@ -38,20 +44,24 @@ type Editing = { asset: Asset | null } | null;
 
 function Wealth() {
   const s = useDemo();
-  const { novo } = Route.useSearch();
+  const { novo, registrar } = Route.useSearch();
   const navigate = useNavigate();
-  const [showValues, setShowValues] = useState(!s.profile.hideValues);
+  const current = monthOf(spDate(new Date()));
+  const { showValues, toggle: toggleValues } = useShowValues();
   const [editing, setEditing] = useState<Editing>(null);
+  const [wealthMonth, setWealthMonth] = useState<string | null>(null);
 
   useEffect(() => {
-    if (novo) {
-      setEditing({ asset: null });
+    if (novo || registrar) {
+      if (novo) setEditing({ asset: null });
+      if (registrar) setWealthMonth(current);
       navigate({ to: "/patrimonio", search: {}, replace: true });
     }
-  }, [novo, navigate]);
+  }, [novo, registrar, current, navigate]);
 
   const sum = summarizeAssets(s.assets);
   const histories = assetHistories(s);
+  const debts = new Map(debtsView(s).map((d) => [d.asset.id, d]));
   const money = (v: number, fmt = formatWealth) => (showValues ? fmt(v) : HIDDEN);
   const planWealth = s.plan?.inputs.initialWealth ?? null;
   const differs = planWealth != null && s.assets.length > 0 && Math.abs(sum.retirementTotal - planWealth) >= 1;
@@ -102,15 +112,7 @@ function Wealth() {
           <p className="mt-1 text-sm text-muted-foreground">O que você informou, item a item. Só você vê estes números.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setShowValues((v) => !v)}
-            className="flex min-h-11 items-center gap-2 rounded-full bg-card px-4 text-sm text-muted-foreground shadow-card hover:text-foreground"
-            aria-pressed={showValues}
-          >
-            {showValues ? <EyeOff size={16} strokeWidth={1.75} aria-hidden /> : <Eye size={16} strokeWidth={1.75} aria-hidden />}
-            {showValues ? "Ocultar valores" : "Mostrar valores"}
-          </button>
+          <HideValuesToggle showValues={showValues} onToggle={toggleValues} />
           <Button onClick={() => setEditing({ asset: null })}>
             <Plus size={16} strokeWidth={2} aria-hidden /> Adicionar item
           </Button>
@@ -131,25 +133,19 @@ function Wealth() {
             Usar {money(sum.retirementTotal, cmpFmt)} no plano
           </Button>
         )}
-        {s.assets.length > 0 && !hasWealthRecord(s) && (
-          <Button asChild variant="outline" className="mt-3 w-full">
-            <Link to="/evolucao" search={{ registrar: true }}>
-              Registrar o patrimônio deste mês
-            </Link>
-          </Button>
-        )}
+        <Button variant="outline" className="mt-3 w-full" onClick={() => setWealthMonth(current)}>
+          {s.wealthEntries.some((w) => w.month === current) ? "Atualizar o registro deste mês" : "Registrar o patrimônio deste mês"}
+        </Button>
       </section>
 
       {s.assets.length === 0 ? (
-        <section className="mt-4 rounded-2xl bg-card p-6 text-center shadow-card">
-          <p className="font-semibold">Nenhum item cadastrado</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Comece pela previdência e pelos investimentos. Imóveis, reserva, benefícios e dívidas são opcionais.
-          </p>
-          <Button className="mt-4" onClick={() => setEditing({ asset: null })}>
-            Adicionar o primeiro item
-          </Button>
-        </section>
+        <EmptyState
+          className="mt-4"
+          title="Nenhum item cadastrado"
+          action={<Button onClick={() => setEditing({ asset: null })}>Adicionar o primeiro item</Button>}
+        >
+          Comece pela previdência e pelos investimentos. Imóveis, reserva, benefícios e dívidas são opcionais.
+        </EmptyState>
       ) : (
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {groups
@@ -174,6 +170,7 @@ function Wealth() {
                           <span className="block text-xs text-muted-foreground">
                             {categoryLabel(a.category)} · atualizado em {formatDate(a.updatedAt)}
                           </span>
+                          {debts.has(a.id) && <DebtLine d={debts.get(a.id)!} />}
                         </span>
                         <span className="flex shrink-0 items-center gap-3">
                           <Sparkline points={histories.get(a.id) ?? []} />
@@ -188,13 +185,16 @@ function Wealth() {
         </div>
       )}
 
-      <PortfolioSection s={s} showValues={showValues} />
+      <CardBoundary><XrayCard s={s} /></CardBoundary>
+
+      <CardBoundary><PortfolioSection s={s} showValues={showValues} /></CardBoundary>
 
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         Crescimento do patrimônio informado não é o mesmo que rendimento: aportes, retiradas, valorização e atualização dos dados mexem no total de
         jeitos diferentes. Os valores são os que você informou, sem conferência com instituições.
       </p>
 
+      <WealthSheet s={s} month={wealthMonth} onClose={() => setWealthMonth(null)} />
       <AssetSheet
         editing={editing}
         history={editing?.asset ? (histories.get(editing.asset.id) ?? []) : []}
@@ -203,6 +203,27 @@ function Wealth() {
       />
     </main>
   );
+}
+
+/** Quitar ou investir: o custo real da dívida contra o retorno real do plano (conta em src/lib/calc/debt.ts). */
+function DebtLine({ d }: { d: ReturnType<typeof debtsView>[number] }) {
+  if (d.missingRate) return <span className="mt-1 block text-xs text-primary">Informe os juros para saber se vale quitar primeiro.</span>;
+  const c = d.comparison;
+  const payoff =
+    d.asset.payment && d.months === null
+      ? " A parcela não cobre os juros: a dívida cresce."
+      : d.months
+        ? ` No ritmo da parcela, quita em ${d.months} ${d.months === 1 ? "mês" : "meses"}.`
+        : "";
+  if (!c) return <span className="mt-1 block text-xs text-muted-foreground">Monte o plano para comparar com o retorno esperado.{payoff}</span>;
+  const cost = `Custo real de ${formatPercent(c.realCost)} ao ano contra ${formatPercent(c.realReturn)} do plano`;
+  const text =
+    c.verdict === "quitar"
+      ? `${cost}: quitar antes de aumentar o aporte, sem usar a reserva de emergência.`
+      : c.verdict === "investir"
+        ? `${cost}: manter as parcelas e investir a diferença rende mais.`
+        : `${cost}: tanto faz; quitar dá tranquilidade.`;
+  return <span className={cn("mt-1 block text-xs", c.verdict === "quitar" ? "font-semibold text-destructive" : "text-muted-foreground")}>{text + payoff}</span>;
 }
 
 /** Tendência do item nos meses registrados; só aparece com dois valores ou mais. */
@@ -240,7 +261,11 @@ function AssetSheet({
   const [value, setValue] = useState<number | null>(null);
   const [forRetirement, setForRetirement] = useState(true);
   const [note, setNote] = useState("");
+  const [ratePct, setRatePct] = useState<number | null>(null);
+  const [payment, setPayment] = useState<number | null>(null);
   useEffect(() => {
+    setRatePct(asset?.rateMonthly != null ? Math.round(asset.rateMonthly * 10000) / 100 : null);
+    setPayment(asset?.payment ?? null);
     setName(asset?.name ?? "");
     setCategory(asset?.category ?? "pgbl");
     setValue(asset?.value ?? null);
@@ -254,7 +279,16 @@ function AssetSheet({
 
   function save() {
     try {
-      demo.saveAsset({ id: asset?.id, name, category, value: value ?? NaN, forRetirement, note: note.trim() || null });
+      demo.saveAsset({
+        id: asset?.id,
+        name,
+        category,
+        value: value ?? NaN,
+        forRetirement,
+        note: note.trim() || null,
+        rateMonthly: ratePct === null ? null : ratePct / 100,
+        payment,
+      });
       toast.success(asset ? "Item atualizado." : "Item adicionado.");
       onClose();
     } catch (e) {
@@ -264,10 +298,10 @@ function AssetSheet({
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">{asset ? "Editar item" : "Novo item"}</SheetTitle>
-          <SheetDescription>Informe o valor de hoje. Cadastrar itens não dá XP.</SheetDescription>
+          <SheetDescription>Informe o valor de hoje.{JOURNEY_ENABLED && " Cadastrar itens não dá XP."}</SheetDescription>
         </SheetHeader>
         <div className="mt-6 space-y-4 pb-4">
           <div>
@@ -306,6 +340,13 @@ function AssetSheet({
               prefix="R$"
               min={0}
             />
+          )}
+          {liability && (
+            <>
+              <NumberField label="Juros ao mês" value={ratePct} onChange={setRatePct} suffix="%" min={0} max={20} step={0.1} optional />
+              <NumberField label="Parcela mensal" value={payment} onChange={setPayment} prefix="R$" min={0} optional />
+              <p className="text-xs text-muted-foreground">Com os juros, comparamos o custo real da dívida com o retorno do seu plano.</p>
+            </>
           )}
           {!monthly && !liability && (
             <label className="flex min-h-12 items-center justify-between gap-4 rounded-xl bg-muted px-4">
@@ -355,7 +396,7 @@ function AssetSheet({
             </Button>
           )}
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly } from "@/lib/calc/format";
-import { demo, DEFAULT_ASSUMPTIONS, setCalcPrefill } from "@/lib/data/demo-store";
+import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
+import { startOnboarding } from "@/lib/data/start-onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { SIMULATION_FOOTER } from "@/lib/labels";
+import { JOURNEY_ENABLED } from "@/lib/features";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 
 export const Route = createFileRoute("/")({
@@ -16,7 +18,9 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano numa jornada de lições curtas e acompanhe sua evolução todo mês.",
+          JOURNEY_ENABLED
+            ? "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano numa jornada de lições curtas e acompanhe sua evolução todo mês."
+            : "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano e acompanhe sua evolução todo mês.",
       },
       { property: "og:title", content: "Previdência Intelligence" },
       {
@@ -59,9 +63,8 @@ function Index() {
 
   /** A única ação de começar da página: todos os botões levam ao onboarding pelo mesmo caminho. */
   function start() {
-    setCalcPrefill(touched && age && retire && income ? { currentAge: age, retirementAge: retire, desiredIncome: income } : null);
-    demo.startFresh();
-    navigate({ to: "/onboarding" });
+    const prefill = touched && age && retire && income ? { currentAge: age, retirementAge: retire, desiredIncome: income } : null;
+    void startOnboarding(prefill, (target) => navigate(target));
   }
 
   const [signedIn, setSignedIn] = useState(false);
@@ -88,9 +91,13 @@ function Index() {
       <h1 className="mt-3 text-[34px] leading-[40px]">
         Quanto falta para você se aposentar <span className="text-primary">sem depender do INSS?</span>
       </h1>
-      <p className="mt-4 text-lg text-muted-foreground">Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você.</p>
+      <p className="mt-4 text-lg text-muted-foreground">
+        {JOURNEY_ENABLED
+          ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você."
+          : "Faça a conta, monte seu plano e acompanhe todo mês. Grátis e sem vender nada para você."}
+      </p>
       <div className="mt-6 flex flex-col gap-2">
-        <Button onClick={start}>Começar grátis</Button>
+        <Button onClick={start}>{signedIn ? "Abrir o app" : "Começar grátis"}</Button>
       </div>
 
       <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">
@@ -114,7 +121,7 @@ function Index() {
           ) : null}
         </div>
         <Button className="mt-5 w-full" onClick={start}>
-          Começar minha jornada
+          {signedIn ? "Abrir o app" : "Montar meu plano"}
         </Button>
         <Link to="/calculadora" className="mt-3 block text-center text-sm font-semibold text-primary">
           Ver a conta completa
@@ -132,7 +139,7 @@ function Index() {
       <section className="mt-16 rounded-2xl bg-card shadow-card p-6 text-center">
         <h2>Comece hoje. Leva 5 minutos.</h2>
         <Button className="mt-5 w-full" onClick={start}>
-          Começar grátis
+          {signedIn ? "Abrir o app" : "Começar grátis"}
         </Button>
       </section>
 

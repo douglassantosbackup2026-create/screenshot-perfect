@@ -11,4 +11,13 @@ describe("regra de senha", () => {
 describe("safePath", () => {
   it("bloqueia outro site", () => expect(safePath("//mal.com")).toBe("/hoje"));
   it("mantém caminho interno", () => expect(safePath("/plano")).toBe("/plano"));
+  it("bloqueia barra invertida, que o navegador lê como barra", () => {
+    expect(safePath("/\\mal.com")).toBe("/hoje");
+    expect(safePath("/\\/mal.com")).toBe("/hoje");
+  });
+  it("bloqueia caracteres de controle e esquemas", () => {
+    expect(safePath("/\tmal.com")).toBe("/hoje");
+    expect(safePath("javascript:alert(1)")).toBe("/hoje");
+  });
+  it("mantém busca e âncora do próprio app", () => expect(safePath("/diario?lancar=true#x")).toBe("/diario?lancar=true#x"));
 });

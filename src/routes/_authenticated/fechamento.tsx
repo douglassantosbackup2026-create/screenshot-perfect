@@ -1,30 +1,28 @@
 import { useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, FileUp, PartyPopper } from "lucide-react";
+import { pageHead } from "@/lib/seo";
+import { Check, FileUp, PartyPopper, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CardBoundary } from "@/components/ErrorBoundary";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { handleResult, xpToast } from "@/components/feedback";
+import { handleResult, runAction, xpToast } from "@/components/feedback";
 import { ImportSheet } from "@/components/ledger/ImportSheet";
 import { TransactionSheet, type TxEditing } from "@/components/ledger/TransactionSheet";
-import { formatMoney, formatMonthly, formatWealth } from "@/lib/calc/format";
-import { demo, monthCloseSteps, useDemo, type DemoState, type MonthStepKey } from "@/lib/data/demo-store";
-import { assetSnapshot, budgetView } from "@/lib/data/selectors";
+import { DailyAlertsCard } from "@/components/ledger/DayToDay";
+import { LimitsSheet } from "@/components/ledger/LimitsSheet";
+import { formatMoney, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
+import { budgetModeOf, demo, monthCloseSteps, useDemo, type DemoState, type MonthStepKey } from "@/lib/data/demo-store";
+import { assetSnapshot, budgetView, monthCloseShare, uncategorizedGroups } from "@/lib/data/selectors";
 import { XP } from "@/lib/gamification/rules";
+import { JOURNEY_ENABLED } from "@/lib/features";
 import { formatDate, monthName, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/fechamento")({
-  head: () => ({
-    meta: [
-      { title: "Fechamento do mês — Previdência Intelligence" },
-      { name: "description", content: "Cinco passos, uns 10 minutos: o mês lançado, categorizado, orçado, com o aporte e o patrimônio em dia." },
-      { property: "og:title", content: "Fechamento do mês — Previdência Intelligence" },
-      { property: "og:description", content: "Cinco passos, uns 10 minutos, uma vez por mês." },
-    ],
-  }),
+  head: () => pageHead("Fechamento do mês", "Uns 10 minutos por mês: o mês lançado, categorizado, orçado, com o aporte e o patrimônio em dia.", "Uns 10 minutos, uma vez por mês."),
   component: MonthClose,
 });
 
@@ -57,7 +55,7 @@ function MonthClose() {
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-6 lg:max-w-3xl lg:px-8 lg:pb-12 lg:pt-8">
       <p className="eyebrow">Fechamento do mês</p>
       <h1 className="mt-1">{monthYear(c.month)}</h1>
-      <p className="mt-1 text-muted-foreground">Cinco passos, uns 10 minutos. Faça na ordem ou como preferir.</p>
+      <p className="mt-1 text-muted-foreground">{c.steps.length} passos, uns 10 minutos. Faça na ordem ou como preferir.</p>
       <div className="mt-4 flex items-center gap-3">
         <Progress value={(c.doneCount / c.steps.length) * 100} className="h-2 flex-1" aria-label={`${c.doneCount} de ${c.steps.length} passos`} />
         <span className="text-sm font-semibold">
@@ -77,17 +75,22 @@ function MonthClose() {
         ))}
       </ol>
 
+      <CardBoundary><DailyAlertsCard s={s} showValues={!s.profile.hideValues} className="mt-6" title="Antes de fechar, confira os avisos" /></CardBoundary>
+
       <section className="mt-6">
         {c.closed ? (
           <div className="rounded-3xl bg-primary p-6 text-center text-primary-foreground">
             <PartyPopper size={28} className="mx-auto" aria-hidden />
             <p className="mt-2 text-lg font-semibold">{monthYear(c.month)} está fechado.</p>
             <p className="mt-1 text-sm text-primary-foreground/80">Até o mês que vem. Seu progresso está em Progresso.</p>
+            <Button variant="secondary" className="mt-4" onClick={() => void shareClose(s, c.month)}>
+              <Share2 size={16} aria-hidden /> Compartilhar conquista
+            </Button>
           </div>
         ) : (
           <Button className="w-full" disabled={!c.complete} onClick={close}>
             {c.complete
-              ? `Fechar ${monthName(c.month)} (+${XP.month_closed} XP)`
+              ? `Fechar ${monthName(c.month)}${JOURNEY_ENABLED ? ` (+${XP.month_closed} XP)` : ""}`
               : c.steps.length - c.doneCount === 1
                 ? "Falta 1 passo para fechar o mês"
                 : `Faltam ${c.steps.length - c.doneCount} passos para fechar o mês`}
@@ -99,6 +102,24 @@ function MonthClose() {
       <TransactionSheet s={s} editing={txEditing} onClose={() => setTxEditing(null)} />
     </main>
   );
+}
+
+/** Texto sem valores em reais: só o mês fechado e proporções. */
+async function shareClose(s: DemoState, month: string) {
+  const r = monthCloseShare(s, month);
+  const parts = [`Fechei ${monthYear(month).toLowerCase()} no Previdência Intelligence.`];
+  if (r.ratio != null) parts.push(`Guardei ${formatPercent(r.ratio)} do que meu plano de aposentadoria pede por mês.`);
+  else if (r.contributed) parts.push("Fiz o aporte do mês para a aposentadoria.");
+  if (r.fi != null) parts.push(`Já estou em ${formatPercent(r.fi)} do caminho para não depender do INSS.`);
+  const text = parts.join(" ");
+  const url = window.location.origin;
+  try {
+    if (navigator.share) return void (await navigator.share({ text, url }));
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast.success("Texto copiado. É só colar onde quiser.");
+  } catch (e) {
+    if ((e as Error).name !== "AbortError") toast.error("Não foi possível compartilhar agora.");
+  }
 }
 
 function Step({ n, title, done, current, children }: { n: number; title: string; done: boolean; current: boolean; children: ReactNode }) {
@@ -155,34 +176,46 @@ function LedgerStep({ s, usesLedger, onImport, onAdd }: { s: DemoState; usesLedg
 
 function CategorizeStep({ s, rows, usesLedger }: { s: DemoState; rows: DemoState["transactions"]; usesLedger: boolean }) {
   const [remember, setRemember] = useState(true);
+  const groups = uncategorizedGroups(rows);
   if (!usesLedger) return <p className="text-muted-foreground">Sem livro-caixa, nada para categorizar.</p>;
   if (rows.length === 0) return <p className="text-muted-foreground">Tudo do mês tem categoria.</p>;
   return (
     <>
       <p className="text-muted-foreground">
-        {rows.length === 1 ? "1 lançamento está" : `${rows.length} lançamentos estão`} sem categoria. Escolha e pronto.
+        {rows.length === 1 ? "1 lançamento está" : `${rows.length} lançamentos estão`} sem categoria. Lançamentos com a mesma descrição vão juntos.
       </p>
       <ul className="mt-3 divide-y divide-border">
-        {rows.slice(0, 10).map((t) => (
-          <li key={t.id} className="flex items-center justify-between gap-3 py-2">
+        {groups.slice(0, 10).map((g) => (
+          <li key={g.key} className="flex items-center justify-between gap-3 py-2">
             <span className="min-w-0">
-              <span className="block truncate font-semibold">{t.payee}</span>
+              <span className="block truncate font-semibold">{g.payee}</span>
               <span className="money block text-xs text-muted-foreground">
-                {formatDate(`${t.date}T12:00:00Z`)} · {formatMoney(t.amount)}
+                {g.items.length === 1
+                  ? `${formatDate(`${g.items[0]!.date}T12:00:00Z`)} · ${formatMoney(g.total)}`
+                  : `${g.items.length} lançamentos · ${formatMoney(g.total)}`}
               </span>
             </span>
             <Select
               onValueChange={(categoryId) => {
-                demo.updateTransaction(t.id, { categoryId, remember });
-                toast.success(remember ? `Categorizado. “${t.payee}” vai para essa categoria nas próximas vezes.` : "Categorizado.");
+                // A regra é gravada uma vez; os demais só recebem a categoria. Se um falhar, conta quantos foram.
+                let done = 0;
+                const ok = runAction(() => {
+                  g.items.forEach((t, i) => {
+                    demo.updateTransaction(t.id, { categoryId, remember: remember && i === 0 });
+                    done++;
+                  });
+                });
+                const n = done === 1 ? "Categorizado" : `${done} lançamentos categorizados`;
+                if (ok) toast.success(remember ? `${n}. “${g.payee}” vai para essa categoria nas próximas vezes.` : `${n}.`);
+                else if (done) toast(`${n} antes do erro.`);
               }}
             >
-              <SelectTrigger className="h-10 w-40 shrink-0 rounded-xl bg-muted" aria-label={`Categoria de ${t.payee}`}>
+              <SelectTrigger className="h-10 w-40 shrink-0 rounded-xl bg-muted" aria-label={`Categoria de ${g.payee}`}>
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
                 {s.categories
-                  .filter((c) => c.kind === (t.amount >= 0 ? "receita" : "despesa"))
+                  .filter((c) => c.kind === (g.income ? "receita" : "despesa"))
                   .map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
@@ -193,7 +226,9 @@ function CategorizeStep({ s, rows, usesLedger }: { s: DemoState; rows: DemoState
           </li>
         ))}
       </ul>
-      {rows.length > 10 && <p className="mt-2 text-xs text-muted-foreground">Mostrando 10 de {rows.length}. Os próximos aparecem conforme você categoriza.</p>}
+      {groups.length > 10 && (
+        <p className="mt-2 text-xs text-muted-foreground">Mostrando 10 de {groups.length} descrições. As próximas aparecem conforme você categoriza.</p>
+      )}
       <label className="mt-3 flex min-h-11 items-center justify-between gap-4 rounded-xl bg-muted px-4">
         <span className="text-sm">Lembrar a categoria para a mesma descrição</span>
         <Switch checked={remember} onCheckedChange={setRemember} />
@@ -203,6 +238,32 @@ function CategorizeStep({ s, rows, usesLedger }: { s: DemoState; rows: DemoState
 }
 
 function BudgetStep({ s, month }: { s: DemoState; month: string }) {
+  if (budgetModeOf(s) === "simples") return <LimitStep s={s} />;
+  return <EnvelopeStep s={s} month={month} />;
+}
+
+/** Modo Simples: o passo é ter ao menos um limite de gasto para acompanhar o mês. */
+function LimitStep({ s }: { s: DemoState }) {
+  const [open, setOpen] = useState(false);
+  const active = (s.limits ?? []).filter((l) => l.active).length;
+  return (
+    <>
+      <p className="text-muted-foreground">
+        {active
+          ? `${active === 1 ? "1 limite de gasto acompanha" : `${active} limites de gasto acompanham`} o seu mês.`
+          : "Defina quanto quer gastar no mês (no total ou numa categoria). O app avisa quando chegar perto."}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" variant={active ? "outline" : "default"} onClick={() => setOpen(true)}>
+          {active ? "Ajustar limites" : "Definir um limite"}
+        </Button>
+      </div>
+      <LimitsSheet s={s} open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
+function EnvelopeStep({ s, month }: { s: DemoState; month: string }) {
   const v = budgetView(s, month);
   const toBudget = v.month.toBudget;
   function apply() {
@@ -298,7 +359,7 @@ function WealthStep({ s, done }: { s: DemoState; done: boolean }) {
           </Button>
         )}
         <Button asChild size="sm" variant="outline">
-          <Link to={snap ? "/patrimonio" : "/evolucao"} search={snap ? {} : { registrar: true }}>
+          <Link to="/patrimonio" search={snap ? {} : { registrar: true }}>
             {snap ? "Revisar os itens" : "Registrar patrimônio"}
           </Link>
         </Button>

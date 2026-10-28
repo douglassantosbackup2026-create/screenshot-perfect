@@ -38,6 +38,7 @@ export const REASON_LABEL: Record<string, string> = {
   quick_review: "Revisão rápida",
   life_event: "Mudança de vida",
   annual_review: "Revisão anual",
+  what_if: "Simulação “E se…?”",
 };
 
 export const SIMULATION_FOOTER =
@@ -48,3 +49,12 @@ export const ABOUT_TEXT =
   "O Previdência Intelligence é uma ferramenta de educação e planejamento. Não somos banco, corretora, seguradora nem consultoria de investimentos. Não vendemos produtos financeiros, não pedimos senhas e não movimentamos dinheiro.";
 export const lessonFooter = (date: string) =>
   `Conteúdo educativo revisado em ${date}. Não é recomendação individual de investimento. Regras e valores oficiais podem mudar; confira sempre a fonte.`;
+
+/** Valor em dinheiro escondido (privacidade por padrão). */
+export const HIDDEN = "R$ •••";
+
+/** Formata um valor ou o esconde, conforme a preferência de mostrar valores. */
+export const maskMoney =
+  (show: boolean, fmt: (v: number) => string) =>
+  (v: number): string =>
+    show ? fmt(v) : HIDDEN;

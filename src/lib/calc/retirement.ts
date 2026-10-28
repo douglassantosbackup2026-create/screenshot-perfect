@@ -7,7 +7,7 @@ export const ENGINE_VERSION = 'calc-1.1.0';
 export type ScenarioKey = 'conservador' | 'central' | 'otimista';
 export const SCENARIOS: ScenarioKey[] = ['conservador', 'central', 'otimista'];
 
-export interface PlanInputs {
+export type PlanInputs = {
   currentAge: number;            // idade atual em anos completos
   retirementAge: number;         // idade desejada para se aposentar
   horizonAge: number;            // idade até a qual o dinheiro deve durar (padrão 95)
@@ -20,7 +20,7 @@ export interface PlanInputs {
   costsAA: number;               // custo anual informado (ex.: 0.01 = 1%)
 }
 
-export interface ScenarioResult {
+export type ScenarioResult = {
   engineVersion: string;
   scenario: ScenarioKey;
   includeInss: boolean;
@@ -148,7 +148,7 @@ export function simulateAll(i: PlanInputs) {
   return { engineVersion: ENGINE_VERSION, semInss, comInss };
 }
 
-export interface SensitivityItem {
+export type SensitivityItem = {
   key: string;
   label: string;
   deltaSustainableIncome: number; // variação da renda sustentável, R$ de hoje por mês
@@ -197,4 +197,45 @@ export function projectSeries(i: PlanInputs, scenario: ScenarioKey, includeInss:
     if (k % 12 === 0) points.push({ age: i.currentAge + k / 12, wealth: w });
   }
   return points;
+}
+
+export type EarliestRetirement = {
+  age: number;              // idade, com fração de mês (ex.: 58.25 = 58 anos e 3 meses)
+  monthsFromNow: number;
+  result: ScenarioResult;   // simulação nessa idade
+}
+
+// Menor idade em que o patrimônio projetado já paga a renda desejada até o horizonte,
+// mantendo o aporte de hoje. Busca mês a mês: o patrimônio projetado cresce e o alvo
+// diminui com a idade, então a primeira idade que fecha é a resposta.
+// Retorna null se nenhuma idade antes do horizonte fecha a conta.
+export function earliestRetirementAge(i: PlanInputs, scenario: ScenarioKey, includeInss: boolean): EarliestRetirement | null {
+  const last = Math.round((i.horizonAge - i.currentAge) * 12) - 1;
+  for (let k = 1; k <= last; k++) {
+    const age = i.currentAge + k / 12;
+    const result = simulate({ ...i, retirementAge: age }, scenario, includeInss);
+    if (result.gap <= 0) return { age, monthsFromNow: k, result };
+  }
+  return null;
+}
+
+export type ScenarioDelta = {
+  requiredMonthlyContribution: number;
+  projectedWealthAtRetirement: number;
+  targetWealth: number;
+  sustainableMonthlyIncome: number;
+  gap: number;
+  coverageRatio: number;
+}
+
+// Diferença entre um cenário "E se…?" e o plano base (cenário − base), na mesma régua do simulate().
+export function scenarioDelta(base: ScenarioResult, variant: ScenarioResult): ScenarioDelta {
+  return {
+    requiredMonthlyContribution: variant.requiredMonthlyContribution - base.requiredMonthlyContribution,
+    projectedWealthAtRetirement: variant.projectedWealthAtRetirement - base.projectedWealthAtRetirement,
+    targetWealth: variant.targetWealth - base.targetWealth,
+    sustainableMonthlyIncome: variant.sustainableMonthlyIncome - base.sustainableMonthlyIncome,
+    gap: variant.gap - base.gap,
+    coverageRatio: variant.coverageRatio - base.coverageRatio,
+  };
 }

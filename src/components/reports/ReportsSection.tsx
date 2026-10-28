@@ -1,11 +1,14 @@
 // Relatórios do Progresso: fluxo de caixa, gastos por categoria e patrimônio por grupo.
 // Só exibe; as contas vêm de src/lib/calc/reports.ts por src/lib/data/selectors.ts.
 // Cores de série em --series-1..5 (src/styles.css), fixas por entidade; um só eixo por gráfico.
+import { fromCents } from "@/lib/calc/ledger";
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AXIS_TICK, GRID, TOOLTIP_STYLE } from "@/components/chart-theme";
 import { Segmented } from "@/components/forms";
-import { ChartCard, HIDDEN } from "@/components/dashboard";
+import { ChartCard } from "@/components/dashboard";
+import { HIDDEN } from "@/lib/labels";
 import { formatMoney, formatPercent, formatWealth } from "@/lib/calc/format";
 import type { DemoState } from "@/lib/data/demo-store";
 import { reportsView } from "@/lib/data/selectors";
@@ -26,8 +29,6 @@ const compact = (v: number) =>
     : Math.abs(v) >= 1e3
       ? `${(v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: Math.abs(v) < 1e4 ? 1 : 0 })} mil`
       : String(Math.round(v));
-const tooltipStyle = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12 };
-const axis = { fontSize: 12, fill: "var(--muted-foreground)" };
 
 function Legend({ items }: { items: { label: string; color: string }[] }) {
   return (
@@ -80,11 +81,11 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
   const v = reportsView(s, Number(period));
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
   const yAxis = (fmt: (n: number) => string) => (
-    <YAxis width={showValues ? 52 : 4} tick={showValues ? axis : false} tickLine={false} axisLine={false} tickFormatter={fmt} />
+    <YAxis width={showValues ? 52 : 4} tick={showValues ? AXIS_TICK : false} tickLine={false} axisLine={false} tickFormatter={fmt} />
   );
 
-  const flowData = v.flow.map((p) => ({ label: label(p.month), entradas: p.income / 100, saidas: p.expense / 100 }));
-  const trendData = v.trend.rows.map((r) => ({ ...Object.fromEntries(v.trend.keys.map((k) => [k, ((r[k] as number) ?? 0) / 100])), label: label(r.month) }));
+  const flowData = v.flow.map((p) => ({ label: label(p.month), entradas: fromCents(p.income), saidas: fromCents(p.expense) }));
+  const trendData = v.trend.rows.map((r) => ({ ...Object.fromEntries(v.trend.keys.map((k) => [k, fromCents((r[k] as number) ?? 0)])), label: label(r.month) }));
   const wealthData = v.wealth.map((r) => ({ ...r, label: label(r.month) }));
   const groupColor = (key: string) => SERIES[["previdencia", "investimentos", "reserva", "imovel", "outros"].indexOf(key)]!;
   const t = v.flowTotals;
@@ -102,9 +103,9 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
         <ChartCard title="Fluxo de caixa" className="lg:col-span-7">
           {!v.hasLedger ? (
             <p className="text-sm text-muted-foreground">
-              Lance gastos e receitas no{" "}
+              Lance gastos e receitas em{" "}
               <Link to="/diario" className="font-semibold text-primary hover:underline">
-                Diário
+                Lançamentos
               </Link>{" "}
               (ou importe o extrato) para ver o que entra e o que sai.
             </p>
@@ -139,13 +140,13 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
               <div className="h-56 w-full" aria-hidden>
                 <ResponsiveContainer>
                   <BarChart data={flowData} barGap={2} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="label" tick={axis} tickLine={false} axisLine={false} />
+                    <CartesianGrid {...GRID} />
+                    <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                     {yAxis(compact)}
                     {showValues && (
                       <Tooltip
                         cursor={{ fill: "rgb(255 255 255 / 0.04)" }}
-                        contentStyle={tooltipStyle}
+                        contentStyle={TOOLTIP_STYLE}
                         formatter={(val: number, name: string) => [formatMoney(Math.round(val * 100)), name === "entradas" ? "Entradas" : "Saídas"]}
                       />
                     )}
@@ -171,13 +172,13 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
               <div className="h-56 w-full" aria-hidden>
                 <ResponsiveContainer>
                   <BarChart data={trendData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="label" tick={axis} tickLine={false} axisLine={false} />
+                    <CartesianGrid {...GRID} />
+                    <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                     {yAxis(compact)}
                     {showValues && (
                       <Tooltip
                         cursor={{ fill: "rgb(255 255 255 / 0.04)" }}
-                        contentStyle={tooltipStyle}
+                        contentStyle={TOOLTIP_STYLE}
                         formatter={(val: number, key: string) => [formatMoney(Math.round(val * 100)), v.trend.labels[key] ?? key]}
                       />
                     )}
@@ -220,12 +221,12 @@ export function ReportsSection({ s, showValues }: { s: DemoState; showValues: bo
               <div className="h-60 w-full" aria-hidden>
                 <ResponsiveContainer>
                   <AreaChart data={wealthData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="label" tick={axis} tickLine={false} axisLine={false} />
+                    <CartesianGrid {...GRID} />
+                    <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                     {yAxis(compact)}
                     {showValues && (
                       <Tooltip
-                        contentStyle={tooltipStyle}
+                        contentStyle={TOOLTIP_STYLE}
                         formatter={(val: number, key: string) => [formatWealth(val), v.wealthGroups.find((g) => g.key === key)?.label ?? key]}
                       />
                     )}

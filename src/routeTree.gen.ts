@@ -16,6 +16,7 @@ import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
 import { Route as PagamentoRouteImport } from './routes/pagamento'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
@@ -28,6 +29,7 @@ import { Route as AuthenticatedOrcamentoRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPatrimonioRouteImport } from './routes/_authenticated/patrimonio'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/plano'
+import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
@@ -65,6 +67,11 @@ const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
 const PagamentoRoute = PagamentoRouteImport.update({
   id: '/pagamento',
   path: '/pagamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
@@ -127,6 +134,11 @@ const AuthenticatedPlanoRoute = AuthenticatedPlanoRouteImport.update({
   path: '/plano',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlanosRoute = AuthenticatedPlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
   id: '/revisao',
   path: '/revisao',
@@ -158,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/pagamento': typeof PagamentoRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/contas': typeof AuthenticatedContasRoute
@@ -170,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/plano': typeof AuthenticatedPlanoRoute
+  '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
@@ -182,6 +196,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/pagamento': typeof PagamentoRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/contas': typeof AuthenticatedContasRoute
@@ -194,6 +209,7 @@ export interface FileRoutesByTo {
   '/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/plano': typeof AuthenticatedPlanoRoute
+  '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
@@ -208,6 +224,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/pagamento': typeof PagamentoRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
@@ -220,6 +237,7 @@ export interface FileRoutesById {
   '/_authenticated/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/plano': typeof AuthenticatedPlanoRoute
+  '/_authenticated/planos': typeof AuthenticatedPlanosRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
@@ -234,6 +252,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/esqueci-senha'
     | '/pagamento'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
     | '/contas'
@@ -246,6 +265,7 @@ export interface FileRouteTypes {
     | '/patrimonio'
     | '/perfil'
     | '/plano'
+    | '/planos'
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
@@ -258,6 +278,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/esqueci-senha'
     | '/pagamento'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
     | '/contas'
@@ -270,6 +291,7 @@ export interface FileRouteTypes {
     | '/patrimonio'
     | '/perfil'
     | '/plano'
+    | '/planos'
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
@@ -283,6 +305,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/esqueci-senha'
     | '/pagamento'
+    | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
     | '/_authenticated/contas'
@@ -295,6 +318,7 @@ export interface FileRouteTypes {
     | '/_authenticated/patrimonio'
     | '/_authenticated/perfil'
     | '/_authenticated/plano'
+    | '/_authenticated/planos'
     | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/programa/$dia'
@@ -309,6 +333,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   EsqueciSenhaRoute: typeof EsqueciSenhaRoute
   PagamentoRoute: typeof PagamentoRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SobreRoute: typeof SobreRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
@@ -363,6 +388,13 @@ declare module '@tanstack/react-router' {
       path: '/pagamento'
       fullPath: '/pagamento'
       preLoaderRoute: typeof PagamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/redefinir-senha': {
@@ -449,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlanoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/planos': {
+      id: '/_authenticated/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof AuthenticatedPlanosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/revisao': {
       id: '/_authenticated/revisao'
       path: '/revisao'
@@ -491,6 +530,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPatrimonioRoute: typeof AuthenticatedPatrimonioRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPlanoRoute: typeof AuthenticatedPlanoRoute
+  AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
   AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
   AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
@@ -507,6 +547,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPatrimonioRoute: AuthenticatedPatrimonioRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPlanoRoute: AuthenticatedPlanoRoute,
+  AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
   AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
@@ -523,6 +564,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   EsqueciSenhaRoute: EsqueciSenhaRoute,
   PagamentoRoute: PagamentoRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SobreRoute: SobreRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,

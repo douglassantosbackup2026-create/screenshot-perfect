@@ -6,6 +6,13 @@ export const formatWealth = (v: number) => brl.format(Math.round(v / 1000) * 100
 export const formatPercent = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
 export const formatAge = (age: number) => `${Math.floor(age)} anos`;
+/** Idade com meses: 58.25 → "58 anos e 3 meses". */
+export const formatAgeMonths = (age: number) => {
+  const total = Math.round(age * 12);
+  const y = Math.floor(total / 12);
+  const m = total - y * 12;
+  return m === 0 ? `${y} anos` : `${y} anos e ${m} ${m === 1 ? "mês" : "meses"}`;
+};
 
 const brlExact = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // Livro-caixa: valor exato, a partir de centavos.

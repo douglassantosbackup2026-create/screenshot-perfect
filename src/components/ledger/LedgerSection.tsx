@@ -2,13 +2,18 @@
 // Só exibe; as contas vêm de src/lib/calc e src/lib/data/selectors.
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, ChevronLeft, ChevronRight, FileUp, Repeat } from "lucide-react";
+import { ArrowLeftRight, ChevronLeft, ChevronRight, FileUp, Gauge, MoreHorizontal, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
+import { CardBoundary } from "@/components/ErrorBoundary";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HIDDEN } from "@/components/dashboard";
+import { HIDDEN } from "@/lib/labels";
 import { ImportSheet } from "@/components/ledger/ImportSheet";
 import { RecurringSheet } from "@/components/ledger/RecurringSheet";
 import { TransactionSheet, type TxEditing } from "@/components/ledger/TransactionSheet";
+import { DailyAlertsCard, InstallmentsCard, MonthEndCard, UndoBar } from "@/components/ledger/DayToDay";
+import { LimitsSheet } from "@/components/ledger/LimitsSheet";
 import { formatMoney } from "@/lib/calc/format";
 import type { DemoState } from "@/lib/data/demo-store";
 import { ledgerMonth, upcomingRecurring } from "@/lib/data/selectors";
@@ -35,39 +40,59 @@ export function LedgerSection({
   const [accountId, setAccountId] = useState<string>(ALL);
   const [importOpen, setImportOpen] = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
+  const [limitsOpen, setLimitsOpen] = useState(false);
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
   const m = ledgerMonth(s, month, accountId === ALL ? null : accountId);
   const upcoming = upcomingRecurring(s).slice(0, 4);
   const topSpending = m.byCategory.slice(0, 5);
 
   return (
-    <section className="mt-10" aria-label="Lançamentos">
+    <section className="mt-6" aria-label="Entradas e saídas">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl">Lançamentos</h2>
+        <h2 className="text-xl">Entradas e saídas</h2>
         <Link to="/contas" className="text-sm font-semibold text-primary hover:underline">
           Contas e categorias
         </Link>
       </div>
 
       {s.accounts.length === 0 ? (
-        <div className="mt-4 rounded-2xl bg-card p-6 text-center shadow-card">
-          <p className="font-semibold">Nenhuma conta cadastrada</p>
-          <p className="mt-1 text-sm text-muted-foreground">Cadastre sua conta corrente e seu cartão para lançar gastos, receitas e importar extratos.</p>
-          <Button asChild className="mt-4">
-            <Link to="/contas">Cadastrar conta</Link>
-          </Button>
-        </div>
+        <EmptyState
+          className="mt-4"
+          title="Nenhuma conta cadastrada"
+          action={
+            <Button asChild>
+              <Link to="/contas">Cadastrar conta</Link>
+            </Button>
+          }
+        >
+          Cadastre sua conta corrente e seu cartão para lançar gastos, receitas e importar extratos.
+        </EmptyState>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <Button onClick={() => setEditing({ tx: null })}>Lançar</Button>
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
-              <FileUp size={16} strokeWidth={1.75} aria-hidden /> Importar
+          <div className="mt-4 flex gap-2">
+            <Button className="flex-1" onClick={() => setEditing({ tx: null })}>
+              Lançar
             </Button>
-            <Button variant="outline" onClick={() => setRecurringOpen(true)}>
-              <Repeat size={16} strokeWidth={1.75} aria-hidden /> Recorrentes
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="Mais opções de lançamento">
+                  <MoreHorizontal size={16} strokeWidth={1.75} aria-hidden /> Mais
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setImportOpen(true)}>
+                  <FileUp size={16} strokeWidth={1.75} aria-hidden /> Importar extrato
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setRecurringOpen(true)}>
+                  <Repeat size={16} strokeWidth={1.75} aria-hidden /> Recorrentes
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setLimitsOpen(true)}>
+                  <Gauge size={16} strokeWidth={1.75} aria-hidden /> Limites de gasto
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+          <UndoBar s={s} />
 
           <div className="mt-6 flex items-center justify-between gap-2">
             <button
@@ -161,6 +186,14 @@ export function LedgerSection({
             </div>
           )}
 
+          {month === current && (
+            <>
+              <CardBoundary><MonthEndCard s={s} showValues={showValues} /></CardBoundary>
+              <CardBoundary><InstallmentsCard s={s} showValues={showValues} /></CardBoundary>
+              <CardBoundary><DailyAlertsCard s={s} showValues={showValues} className="mt-4" /></CardBoundary>
+            </>
+          )}
+
           <div className="mt-4 space-y-4">
             {m.days.length === 0 && <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-card">Nenhum lançamento neste mês.</p>}
             {m.days.map((d) => (
@@ -182,6 +215,11 @@ export function LedgerSection({
                             {t.transferId && <ArrowLeftRight size={14} className="shrink-0 text-muted-foreground" aria-label="Transferência" />}
                             {t.recurringId && <Repeat size={14} className="shrink-0 text-muted-foreground" aria-label="Recorrente" />}
                             <span className="truncate">{t.payee}</span>
+                            {t.installment && (
+                              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                                {t.installment.number}/{t.installment.count}
+                              </span>
+                            )}
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">
                             {t.transferId ? "Transferência" : (t.categoryName ?? "Sem categoria")} · {t.accountName}
@@ -202,6 +240,7 @@ export function LedgerSection({
       <TransactionSheet s={s} editing={editing} onClose={() => setEditing(null)} />
       <ImportSheet s={s} open={importOpen} onClose={() => setImportOpen(false)} />
       <RecurringSheet s={s} open={recurringOpen} onClose={() => setRecurringOpen(false)} />
+      <LimitsSheet s={s} open={limitsOpen} onClose={() => setLimitsOpen(false)} />
     </section>
   );
 }

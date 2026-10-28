@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simulate, projectSeries, validateInputs, type PlanInputs } from './retirement';
+import { earliestRetirementAge, scenarioDelta, simulate, projectSeries, validateInputs, type PlanInputs } from './retirement';
 
 const base: PlanInputs = {
   currentAge: 30, retirementAge: 60, horizonAge: 95, initialWealth: 10000, monthlyContribution: 1000,
@@ -65,5 +65,45 @@ describe('motor de aposentadoria calc-1.0.0', () => {
   it('validação', () => {
     expect(validateInputs({ ...base, retirementAge: 25 })).toHaveLength(1);
     expect(validateInputs(base)).toHaveLength(0);
+  });
+});
+
+describe('idade mínima de aposentadoria', () => {
+  const flat: PlanInputs = {
+    ...base, initialWealth: 0, monthlyContribution: 1000, desiredMonthlyIncome: 1000, inssEstimate: null,
+    returns: { conservador: 0, central: 0, otimista: 0 },
+  };
+  it('retorno zero: conta à mão (1000·k ≥ 1000·(780 − k) → k = 390)', () => {
+    const r = earliestRetirementAge(flat, 'central', false)!;
+    expect(r.monthsFromNow).toBe(390);
+    expect(r.age).toBe(62.5);
+  });
+  it('é a primeira idade que fecha: um mês antes ainda falta', () => {
+    const r = earliestRetirementAge(base, 'central', false)!;
+    expect(r.result.gap).toBeLessThanOrEqual(0);
+    expect(simulate({ ...base, retirementAge: r.age - 1 / 12 }, 'central', false).gap).toBeGreaterThan(0);
+  });
+  it('INSS cobre a renda: já no primeiro mês', () => {
+    expect(earliestRetirementAge({ ...base, inssEstimate: 9000 }, 'central', true)!.monthsFromNow).toBe(1);
+  });
+  it('sem patrimônio nem aporte: nenhuma idade fecha', () => {
+    expect(earliestRetirementAge({ ...flat, monthlyContribution: 0 }, 'central', false)).toBeNull();
+  });
+  it('cenário otimista permite parar antes', () => {
+    expect(earliestRetirementAge(base, 'otimista', false)!.age).toBeLessThan(earliestRetirementAge(base, 'conservador', false)!.age);
+  });
+});
+
+describe('diferença do "E se…?"', () => {
+  it('mesmo plano: tudo zero', () => {
+    const r = simulate(base, 'central', false);
+    expect(Object.values(scenarioDelta(r, r)).every(v => v === 0)).toBe(true);
+  });
+  it('aporte maior: patrimônio projetado sobe, alvo e aporte necessário não mudam', () => {
+    const d = scenarioDelta(simulate(base, 'central', false), simulate({ ...base, monthlyContribution: 2000 }, 'central', false));
+    expect(d.projectedWealthAtRetirement).toBeGreaterThan(0);
+    expect(d.gap).toBeLessThan(0);
+    expect(d.targetWealth).toBe(0);
+    expect(d.requiredMonthlyContribution).toBe(0);
   });
 });

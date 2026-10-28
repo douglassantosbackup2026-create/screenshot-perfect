@@ -1,47 +1,33 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { NumberField } from "@/components/forms";
-import { demo, inputsFromProfile, CALC_PREFILL_KEY, type CalcPrefill, type MissingField, type Objective, type ReviewCadence, type WorkType } from "@/lib/data/demo-store";
-import { ENGINE_VERSION, simulate, type PlanInputs } from "@/lib/calc/retirement";
+import { runAction } from "@/components/feedback";
+import { demo, inputsFromProfile, CALC_PREFILL_KEY, type CalcPrefill, type MissingField } from "@/lib/data/demo-store";
+import { ENGINE_VERSION, simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { Quiz, type QuizResult } from "@/components/Quiz";
 import { gradePlacement, placementQuestions } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
-import { WORK_TYPES } from "@/lib/labels";
+import { JOURNEY_ENABLED } from "@/lib/features";
 import { spDate } from "@/lib/gamification/rules";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
-  head: () => ({
-    meta: [
-      { title: "Começar — Previdência Intelligence" },
-      { name: "description", content: "Algumas perguntas rápidas para começar sua jornada." },
-      { property: "og:title", content: "Começar — Previdência Intelligence" },
-      { property: "og:description", content: "Algumas perguntas rápidas para começar sua jornada." },
-    ],
-  }),
+  head: () => pageHead("Começar", "Algumas perguntas rápidas para começar sua jornada."),
   component: Onboarding,
 });
 
-type Debt = "sim" | "nao" | "prefiro_nao";
-const TOTAL = 10;
+/** Etapas, na ordem. 10 é o resultado. As que vierem preenchidas da calculadora são puladas. */
+const BASE_FLOW = [1, 5, 6, 7, 10] as const;
+const RESULT = 10;
 /** Etapas que aceitam "pular por enquanto"; o dado fica marcado como ausente, nunca inventado. */
-const SKIPPABLE: Record<number, MissingField[]> = { 3: ["idade"], 6: ["renda"], 7: ["patrimonio", "aporte"] };
-const OBJECTIVES: { value: Objective; label: string }[] = [
-  { value: "entender", label: "Entender quanto preciso para me aposentar" },
-  { value: "organizar", label: "Organizar meu patrimônio" },
-  { value: "previdencia", label: "Avaliar previdência privada (PGBL e VGBL)" },
-];
-const CADENCES: { value: ReviewCadence; label: string }[] = [
-  { value: "mensal", label: "Todo mês" },
-  { value: "trimestral", label: "A cada 3 meses" },
-  { value: "semestral", label: "A cada 6 meses" },
-];
+const SKIPPABLE: Record<number, MissingField[]> = { 6: ["renda"], 7: ["patrimonio", "aporte"] };
 const MISSING_TEXT: Record<MissingField, string> = {
   idade: "idade (usamos 30 anos provisoriamente)",
   renda: "renda desejada (usamos R$ 5.000 provisoriamente)",
@@ -52,25 +38,18 @@ const MISSING_TEXT: Record<MissingField, string> = {
 function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [debtScreen, setDebtScreen] = useState(false);
-  // Teste de nivelamento opcional, como uma tela extra da etapa do objetivo.
+  // Teste de nivelamento opcional (só com a jornada ligada), logo depois da primeira etapa.
   const [placement, setPlacement] = useState<"intro" | number | null>(null);
   const [passed, setPassed] = useState<Record<number, Record<string, string>>>({});
-  const [showTips, setShowTips] = useState(false);
   const [name, setName] = useState("");
-  const [objective, setObjective] = useState<Objective | null>(null);
   const [wealth, setWealth] = useState<number | null>(null);
   const [contribution, setContribution] = useState<number | null>(null);
-  const [cadence, setCadence] = useState<ReviewCadence>("trimestral");
   const [missing, setMissing] = useState<MissingField[]>([]);
   const [birthYear, setBirthYear] = useState<number | null>(null);
-  const [work, setWork] = useState<WorkType | null>(null);
   const [retire, setRetire] = useState(60);
   const [income, setIncome] = useState<number | null>(null);
-  const [debt, setDebt] = useState<Debt | null>(null);
-  const [day, setDay] = useState<number | null>(5);
-  const [weekly, setWeekly] = useState(true);
   const [inss, setInss] = useState<number | null>(null);
+  const [prefilled, setPrefilled] = useState({ retire: false, income: false, money: false });
   const year = Number(spDate(new Date()).slice(0, 4));
 
   // O que veio da calculadora já preenche as etapas; a pessoa só confirma.
@@ -86,6 +65,11 @@ function Onboarding() {
       if (p.initialWealth != null) setWealth(p.initialWealth);
       if (p.monthlyContribution != null) setContribution(p.monthlyContribution);
       if (p.inssEstimate) setInss(p.inssEstimate);
+      setPrefilled({
+        retire: !!p.retirementAge,
+        income: !!p.desiredIncome,
+        money: p.initialWealth != null && p.monthlyContribution != null,
+      });
     } catch {
       /* ignora */
     }
@@ -93,17 +77,18 @@ function Onboarding() {
 
   const age = birthYear ? year - birthYear : null;
   const valid: Record<number, boolean> = {
-    1: name.trim().length > 0 && name.trim().length <= 60,
-    2: objective != null,
-    3: birthYear != null && birthYear >= 1930 && birthYear <= 2015,
-    4: work != null,
+    // O ano de nascimento é opcional: em branco, a idade fica como dado faltante.
+    1: name.trim().length > 0 && name.trim().length <= 60 && (birthYear == null || (birthYear >= 1930 && birthYear <= 2015)),
     5: retire >= 45 && retire <= 75 && (age == null || retire > age),
     6: income != null && income > 0,
     7: wealth != null && wealth >= 0 && contribution != null && contribution >= 0,
-    8: debt != null,
-    9: day != null && day >= 1 && day <= 28,
     10: true,
   };
+  const flow = BASE_FLOW.filter((n) => !(n === 5 && prefilled.retire) && !(n === 6 && prefilled.income) && !(n === 7 && prefilled.money));
+  const position = Math.max(flow.indexOf(step as (typeof BASE_FLOW)[number]), 0);
+  const goNext = () => setStep(flow[position + 1] ?? RESULT);
+  const questions = flow.length - 1;
+  const done = step === RESULT;
 
   const birthYearKnown = missing.includes("idade") ? null : birthYear;
   const incomeKnown = missing.includes("renda") ? null : income;
@@ -120,25 +105,21 @@ function Onboarding() {
   function skip() {
     const fields = SKIPPABLE[step] ?? [];
     setMissing((m) => [...new Set([...m, ...fields])]);
-    setStep((s) => Math.min(TOTAL, s + 1));
+    goNext();
   }
   function next() {
-    const fields = SKIPPABLE[step];
-    if (fields) setMissing((m) => m.filter((f) => !fields.includes(f)));
-    if (step === 2 && placement === null) {
+    const fields = step === 1 ? (["idade"] as MissingField[]) : SKIPPABLE[step];
+    if (step === 1 && birthYear == null) setMissing((m) => [...new Set([...m, "idade" as const])]);
+    else if (fields) setMissing((m) => m.filter((f) => !fields.includes(f)));
+    if (JOURNEY_ENABLED && step === 1 && placement === null) {
       setPlacement("intro");
       return;
     }
-    if (step === 8 && debt === "sim" && !debtScreen) {
-      setDebtScreen(true);
-      return;
-    }
-    setDebtScreen(false);
-    setStep((s) => Math.min(TOTAL, s + 1));
+    goNext();
   }
   function endPlacement() {
     setPlacement(null);
-    setStep(3);
+    goNext();
   }
   function placementDone(unit: number, r: QuizResult) {
     if (!gradePlacement(unit, r.answers).passed) return setPlacement(-unit);
@@ -148,34 +129,44 @@ function Onboarding() {
     else endPlacement();
   }
   function back() {
-    if (debtScreen) return setDebtScreen(false);
     if (placement !== null) {
       setPassed({});
       return setPlacement(null);
     }
-    if (step === 1) return navigate({ to: "/" });
-    setStep((s) => s - 1);
+    if (position === 0) return navigate({ to: "/" });
+    setStep(flow[position - 1] ?? 1);
   }
   function finish() {
+    // Confere o plano antes de apagar qualquer coisa: um erro aqui não pode deixar a conta pela metade.
+    const invalid = validateInputs(inputs);
+    if (invalid.length) return void toast.error(invalid[0]);
     demo.startFresh();
     demo.updateProfile({
       displayName: name.trim(),
       birthYear: birthYearKnown,
-      workType: work,
-      hasOverdueDebt: debt === "sim" ? true : debt === "nao" ? false : null,
-      reminderDay: day ?? 5,
-      monthlyReminder: true,
-      weeklyReminder: weekly,
-      onboardingCompletedAt: new Date().toISOString(),
+      // Tipo de trabalho, dívidas, objetivo e dia do pagamento ficam em aberto: o app pede depois,
+      // quando fizer diferença. Lembretes ficam desligados até existir envio de verdade.
+      workType: null,
+      hasOverdueDebt: null,
+      monthlyReminder: false,
+      weeklyReminder: false,
       goalRetirementAge: retire,
       goalIncome: incomeKnown,
-      objective,
-      reviewCadence: cadence,
+      objective: null,
       missingFields: missing,
     });
-    demo.savePlan(inputs, "created");
+    if (!runAction(() => demo.savePlan(inputs, "created"))) return;
     // Reenvia, em ordem, as unidades em que a pessoa passou no teste (mesma regra do banco).
-    for (const u of Object.keys(passed).map(Number).sort((a, b) => a - b)) demo.submitPlacement(u, passed[u]!);
+    // Um teste recusado não impede de terminar: a pessoa só refaz aquela unidade.
+    for (const u of Object.keys(passed).map(Number).sort((a, b) => a - b)) {
+      try {
+        demo.submitPlacement(u, passed[u]!);
+      } catch {
+        /* unidade fica para fazer na jornada */
+      }
+    }
+    // Só marca como concluído no fim, com perfil e plano gravados.
+    demo.updateProfile({ onboardingCompletedAt: new Date().toISOString() });
     sessionStorage.removeItem(CALC_PREFILL_KEY);
     navigate({ to: "/hoje" });
   }
@@ -186,9 +177,9 @@ function Onboarding() {
         <Button variant="ghost" size="icon" onClick={back} aria-label="Voltar">
           <ArrowLeft strokeWidth={1.75} />
         </Button>
-        <Progress value={(step / TOTAL) * 100} className="h-1.5 flex-1" aria-label={`Etapa ${step} de ${TOTAL}`} />
-        <span className="w-10 text-right text-xs text-muted-foreground">
-          {step}/{TOTAL}
+        <Progress value={done ? 100 : ((position + 1) / questions) * 100} className="h-1.5 flex-1" aria-label={done ? "Plano pronto" : `Pergunta ${position + 1} de ${questions}`} />
+        <span className="w-12 text-right text-xs text-muted-foreground">
+          {done ? "Pronto" : `${position + 1}/${questions}`}
         </span>
       </div>
 
@@ -201,43 +192,16 @@ function Onboarding() {
             onDone={placementDone}
             onSkip={endPlacement}
           />
-        ) : debtScreen ? (
-          <div>
-            <h1>Antes de tudo, vale cuidar disso</h1>
-            <ol className="mt-6 list-decimal space-y-3 pl-5">
-              <li>Liste todas as dívidas, com valor e juros de cada uma.</li>
-              <li>Priorize quitar as de juros mais altos, como cartão e cheque especial.</li>
-              <li>Renegocie direto com o credor ou em canais oficiais, como o Desenrola e o consumidor.gov.br.</li>
-            </ol>
-            {showTips && (
-              <div className="mt-6 rounded-2xl bg-muted p-4 text-sm leading-6">
-                <p className="font-semibold">Dicas para organizar dívidas</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  <li>Evite pegar um empréstimo novo para pagar outro, a não ser que os juros sejam bem menores.</li>
-                  <li>Peça o valor total para quitar à vista: costuma haver desconto.</li>
-                  <li>Desconfie de quem cobra para "limpar seu nome".</li>
-                </ul>
-              </div>
-            )}
-            <div className="mt-8 flex flex-col gap-2">
-              <Button onClick={next}>Continuar</Button>
-              {!showTips && (
-                <Button variant="outline" onClick={() => setShowTips(true)}>
-                  Ver dicas para organizar dívidas
-                </Button>
-              )}
-            </div>
-          </div>
         ) : (
           <Step
             step={step}
-            {...{ name, setName, objective, setObjective, birthYear, setBirthYear, age, work, setWork, retire, setRetire, income, setIncome, wealth, setWealth, contribution, setContribution, debt, setDebt, day, setDay, weekly, setWeekly, cadence, setCadence, inputs, missing }}
+            {...{ name, setName, birthYear, setBirthYear, age, retire, setRetire, income, setIncome, wealth, setWealth, contribution, setContribution, inputs, missing }}
           />
         )}
 
-        {!debtScreen && placement === null && (
+        {placement === null && (
           <div className="mt-auto pt-10">
-            {step < TOTAL ? (
+            {step !== RESULT ? (
               <div className="flex flex-col gap-2">
                 <Button className="w-full" onClick={next} disabled={!valid[step]}>
                   Continuar
@@ -250,7 +214,7 @@ function Onboarding() {
               </div>
             ) : (
               <Button className="w-full" onClick={finish}>
-                Salvar plano e começar a jornada
+                {JOURNEY_ENABLED ? "Salvar plano e começar a jornada" : "Salvar meu plano"}
               </Button>
             )}
           </div>
@@ -260,62 +224,44 @@ function Onboarding() {
   );
 }
 
-function Choice<T extends string>({ value, options, onChange, label }: { value: T | null; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="mt-6 grid gap-2">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={
-            "min-h-12 rounded-xl border px-4 text-left transition-colors " +
-            (value === o.value ? "border-primary bg-card font-semibold text-primary" : "border-border bg-card hover:bg-muted")
-          }
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+type Setter<T> = (v: T) => void;
+/** O estado do onboarding, repassado a cada etapa. */
+type StepProps = {
+  step: number;
+  name: string;
+  setName: Setter<string>;
+  birthYear: number | null;
+  setBirthYear: Setter<number | null>;
+  age: number | null;
+  retire: number;
+  setRetire: Setter<number>;
+  income: number | null;
+  setIncome: Setter<number | null>;
+  wealth: number | null;
+  setWealth: Setter<number | null>;
+  contribution: number | null;
+  setContribution: Setter<number | null>;
+  inputs: PlanInputs;
+  missing: MissingField[];
+};
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Step(p: any) {
-  switch (p.step as number) {
+function Step(p: StepProps) {
+  switch (p.step) {
     case 1:
       return (
         <div>
-          <h1>
-            <label htmlFor="name">Como você quer ser chamado?</label>
-          </h1>
-          <Input id="name" autoFocus maxLength={60} value={p.name} onChange={(e) => p.setName(e.target.value)} className="mt-6 h-12 text-lg" />
-        </div>
-      );
-    case 2:
-      return (
-        <div>
-          <h1>Por onde você quer começar?</h1>
-          <Choice label="Objetivo inicial" value={p.objective} onChange={p.setObjective} options={OBJECTIVES} />
-        </div>
-      );
-    case 3:
-      return (
-        <div>
-          <h1>Em que ano você nasceu?</h1>
-          <div className="mt-6">
-            <NumberField label="Ano de nascimento" value={p.birthYear} onChange={p.setBirthYear} min={1930} max={2015} step={1} />
+          <h1>Vamos montar o seu plano</h1>
+          <p className="mt-3 text-muted-foreground">Quatro perguntas rápidas. Dá para mudar tudo depois.</p>
+          <div className="mt-6 grid gap-4">
+            <div>
+              <label htmlFor="name" className="text-sm font-semibold">
+                Como você quer ser chamado?
+              </label>
+              <Input id="name" autoFocus maxLength={60} value={p.name} onChange={(e) => p.setName(e.target.value)} className="mt-1.5 h-12 text-lg" />
+            </div>
+            <NumberField label="Ano de nascimento" value={p.birthYear} onChange={p.setBirthYear} min={1930} max={2015} step={1} optional />
           </div>
-          {p.age != null && p.birthYear >= 1930 && p.birthYear <= 2015 && <p className="mt-3 text-muted-foreground">Você tem {p.age} anos.</p>}
-        </div>
-      );
-    case 4:
-      return (
-        <div>
-          <h1>Como você trabalha hoje?</h1>
-          <Choice label="Tipo de trabalho" value={p.work} onChange={p.setWork} options={WORK_TYPES.map((w) => ({ value: w.value, label: w.label }))} />
+          {p.age != null && p.birthYear != null && p.birthYear >= 1930 && p.birthYear <= 2015 && <p className="mt-3 text-muted-foreground">Você tem {p.age} anos.</p>}
         </div>
       );
     case 5:
@@ -330,7 +276,7 @@ function Step(p: any) {
             max={75}
             step={1}
             value={[p.retire]}
-            onValueChange={(v) => p.setRetire(v[0])}
+            onValueChange={(v) => v[0] != null && p.setRetire(v[0])}
             aria-label="Idade para se aposentar"
           />
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
@@ -358,37 +304,6 @@ function Step(p: any) {
             <NumberField label="Patrimônio atual para a aposentadoria" value={p.wealth} onChange={p.setWealth} prefix="R$" step={1000} min={0} />
             <NumberField label="Aporte mensal previsto" value={p.contribution} onChange={p.setContribution} prefix="R$" step={100} min={0} hint="Pode ser R$ 0." />
           </div>
-        </div>
-      );
-    case 8:
-      return (
-        <div>
-          <h1>Hoje você tem contas ou dívidas em atraso?</h1>
-          <Choice
-            label="Dívidas em atraso"
-            value={p.debt}
-            onChange={p.setDebt}
-            options={[
-              { value: "sim", label: "Sim" },
-              { value: "nao", label: "Não" },
-              { value: "prefiro_nao", label: "Prefiro não dizer" },
-            ]}
-          />
-        </div>
-      );
-    case 9:
-      return (
-        <div>
-          <h1>Em que dia do mês seu dinheiro costuma entrar?</h1>
-          <div className="mt-6">
-            <NumberField label="Dia do mês (1 a 28)" value={p.day} onChange={p.setDay} min={1} max={28} step={1} hint="Nesse dia, lembramos você de registrar o aporte." />
-          </div>
-          <label className="mt-6 flex min-h-12 items-center justify-between gap-4 rounded-xl bg-card shadow-card px-4">
-            <span>Lembrete semanal da missão</span>
-            <Switch checked={p.weekly} onCheckedChange={p.setWeekly} />
-          </label>
-          <h2 className="mt-8 text-base font-semibold">De quanto em quanto tempo quer revisar o plano?</h2>
-          <Choice label="Frequência de revisão" value={p.cadence} onChange={p.setCadence} options={CADENCES} />
         </div>
       );
     default:

@@ -22,12 +22,12 @@ export const isSavingsAccount = (k: AccountKind) => accountGroup(k) === 'investi
 /** Contas do orçamento: o dinheiro do dia a dia, inclusive o cartão. Previdência, investimentos e empréstimos ficam fora. */
 export const isOnBudget = (k: AccountKind) => k === 'corrente' || k === 'poupanca' || k === 'carteira' || k === 'cartao';
 
-export interface LedgerAccount {
+export type LedgerAccount = {
   id: string;
   openingBalance: number; // centavos
 }
 
-export interface LedgerTx {
+export type LedgerTx = {
   id: string;
   accountId: string;
   date: string; // "YYYY-MM-DD"
@@ -38,6 +38,7 @@ export interface LedgerTx {
 
 /** Reais para centavos, sem erro de ponto flutuante. */
 export const toCents = (reais: number) => Math.round(reais * 100);
+export const fromCents = (cents: number) => cents / 100;
 
 /** Saldo de cada conta: saldo inicial + lançamentos até `until` (inclusive). Sem `until`, todos. */
 export function accountBalances(accounts: LedgerAccount[], txs: LedgerTx[], until?: string): Record<string, number> {
@@ -53,7 +54,7 @@ export function accountBalances(accounts: LedgerAccount[], txs: LedgerTx[], unti
 
 const inMonth = (date: string, month: string) => date.slice(0, 7) === month.slice(0, 7);
 
-export interface MonthSummary {
+export type MonthSummary = {
   income: number;  // entradas, centavos positivos
   expense: number; // saídas, centavos positivos
   net: number;     // entradas − saídas
@@ -73,7 +74,7 @@ export function monthSummary(txs: LedgerTx[], month: string): MonthSummary {
   return s;
 }
 
-export interface CategoryShare {
+export type CategoryShare = {
   categoryId: string | null; // null = sem categoria
   amount: number;            // centavos positivos
   share: number;             // fração do total, soma 1
@@ -93,7 +94,7 @@ export function spendingByCategory(txs: LedgerTx[], month: string): CategoryShar
   return positive.map(([categoryId, amount]) => ({ categoryId, amount, share: amount / total })).sort((a, b) => b.amount - a.amount);
 }
 
-export interface DayGroup<T extends LedgerTx> {
+export type DayGroup<T extends LedgerTx> = {
   date: string;
   items: T[];
   net: number; // soma do dia, sem transferências

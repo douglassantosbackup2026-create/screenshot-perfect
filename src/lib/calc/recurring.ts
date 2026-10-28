@@ -12,7 +12,7 @@ export const FREQUENCIES: { value: Frequency; label: string }[] = [
   { value: 'anual', label: 'Todo ano' },
 ];
 
-export interface RecurrenceRule {
+export type RecurrenceRule = {
   startDate: string; // "YYYY-MM-DD"
   frequency: Frequency;
   interval: number;  // a cada N semanas, meses ou anos (>= 1)
@@ -20,7 +20,7 @@ export interface RecurrenceRule {
   weekend: WeekendRule;
 }
 
-export interface Occurrence {
+export type Occurrence = {
   occurrenceDate: string; // data nominal
   date: string;           // data efetiva, depois do ajuste de fim de semana
 }

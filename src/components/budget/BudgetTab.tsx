@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
-import { toCents } from "@/lib/calc/ledger";
+import { fromCents, toCents } from "@/lib/calc/ledger";
 import { RETIREMENT_ENVELOPE, type BudgetTemplate, type TemplateKind } from "@/lib/calc/budget";
 import { formatMoney, formatMonthly, formatPercent } from "@/lib/calc/format";
 import { BUDGET_MONTHS_AHEAD, demo, type DemoState } from "@/lib/data/demo-store";
 import { billsOfMonth, budgetView } from "@/lib/data/selectors";
+import { ReserveCard } from "@/components/ledger/DayToDay";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -145,9 +147,9 @@ export function BudgetTab({ s }: { s: DemoState }) {
           </h2>
           {bills.items.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
-              Cadastre aluguel, assinaturas e outras contas como recorrentes no{" "}
+              Cadastre aluguel, assinaturas e outras contas como recorrentes em{" "}
               <Link to="/diario" className="font-semibold text-primary hover:underline">
-                Diário
+                Lançamentos
               </Link>
               .
             </p>
@@ -173,6 +175,8 @@ export function BudgetTab({ s }: { s: DemoState }) {
             </>
           )}
         </section>
+
+        {month === current && <ReserveCard s={s} showValues={!s.profile.hideValues} className="lg:col-span-12" />}
       </div>
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         Entram no orçamento as contas do dia a dia e o cartão. O que vai para previdência e investimentos sai pelo envelope Aposentadoria;
@@ -187,11 +191,11 @@ export function BudgetTab({ s }: { s: DemoState }) {
 
 /** Campo de valor que grava ao sair do campo; volta ao valor salvo se o mês ou o valor mudarem. */
 function AssignInput({ month, envelopeId, value, label }: { month: string; envelopeId: string; value: number; label: string }) {
-  const [text, setText] = useState(value ? String(value / 100) : "");
-  useEffect(() => setText(value ? String(value / 100) : ""), [month, value]);
+  const [text, setText] = useState(value ? String(fromCents(value)) : "");
+  useEffect(() => setText(value ? String(fromCents(value)) : ""), [month, value]);
   function commitValue() {
     const reais = text.trim() === "" ? 0 : Number(text.replace(",", "."));
-    if (!Number.isFinite(reais)) return setText(value ? String(value / 100) : "");
+    if (!Number.isFinite(reais)) return setText(value ? String(fromCents(value)) : "");
     const cents = toCents(reais);
     if (cents === value) return;
     try {
@@ -200,7 +204,7 @@ function AssignInput({ month, envelopeId, value, label }: { month: string; envel
       handleResult(r);
     } catch (e) {
       toast.error((e as Error).message);
-      setText(value ? String(value / 100) : "");
+      setText(value ? String(fromCents(value)) : "");
     }
   }
   return (
@@ -238,6 +242,19 @@ function EnvelopeRow({ e, month, onEdit, onMove }: { e: Envelope; month: string;
           )}
         </p>
         {e.progress !== null && <Progress value={e.progress * 100} className="mt-1.5 h-1.5" aria-label={`Progresso de ${e.name}`} />}
+        {e.progress === null && e.used !== null && e.used > 0 && (
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="h-1.5 flex-1 rounded-full bg-muted" aria-hidden>
+              <div
+                className={cn("h-1.5 rounded-full", e.alert === "limite" ? "bg-destructive" : e.alert === "atencao" ? "bg-foreground/70" : "bg-primary")}
+                style={{ width: `${Math.min(e.used, 1) * 100}%` }}
+              />
+            </div>
+            <span className={cn("shrink-0 text-xs", e.alert === "limite" ? "text-destructive" : e.alert ? "text-foreground" : "text-muted-foreground")}>
+              {formatPercent(e.used)} usado
+            </span>
+          </div>
+        )}
       </div>
       <AssignInput month={month} envelopeId={e.id} value={e.assigned} label={e.name} />
       <span className="money hidden text-right text-sm text-muted-foreground sm:block">{formatMoney(-e.activity)}</span>
@@ -308,9 +325,9 @@ function RetirementCard({ s, v, month, onTemplate }: { s: DemoState; v: ReturnTy
       )}
       {e.balance > 0 && (
         <p className="mt-3 text-sm">
-          Transfira para a previdência no{" "}
+          Transfira para a previdência em{" "}
           <Link to="/diario" search={{ lancar: true }} className="font-semibold text-primary hover:underline">
-            Diário
+            Lançamentos
           </Link>{" "}
           e marque como aporte do mês.
         </p>
@@ -328,8 +345,8 @@ function TemplateSheet({ envelope, onClose }: { envelope: Envelope | null; onClo
   const [percent, setPercent] = useState<number | null>(null);
   useEffect(() => {
     setKind(t?.kind ?? "fixo");
-    setAmount(t?.amount ? t.amount / 100 : null);
-    setTarget(t?.target ? t.target / 100 : null);
+    setAmount(t?.amount ? fromCents(t.amount) : null);
+    setTarget(t?.target ? fromCents(t.target) : null);
     setDeadline(t?.deadline ? t.deadline.slice(0, 7) : "");
     setPercent(t?.percent ?? null);
   }, [envelope, t]);
@@ -354,7 +371,7 @@ function TemplateSheet({ envelope, onClose }: { envelope: Envelope | null; onClo
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Meta de {envelope.name}</SheetTitle>
           <SheetDescription>O botão “Aplicar minhas metas” preenche o mês com o que cada meta pede. Você sempre pode mudar à mão.</SheetDescription>
@@ -399,7 +416,7 @@ function TemplateSheet({ envelope, onClose }: { envelope: Envelope | null; onClo
             </Button>
           )}
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }
@@ -409,7 +426,7 @@ function MoveSheet({ s, v, month, from, onClose }: { s: DemoState; v: ReturnType
   const [amount, setAmount] = useState<number | null>(null);
   useEffect(() => {
     setOther(undefined);
-    setAmount(from ? Math.abs(from.balance) / 100 || null : null);
+    setAmount(from ? fromCents(Math.abs(from.balance)) || null : null);
   }, [from]);
   if (!from) return null;
   // Estourado: traz dinheiro de outro envelope. Com saldo: leva para outro.
@@ -431,7 +448,7 @@ function MoveSheet({ s, v, month, from, onClose }: { s: DemoState; v: ReturnType
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">{pulling ? `Cobrir ${from.name}` : `Mover de ${from.name}`}</SheetTitle>
           <SheetDescription>
@@ -459,7 +476,7 @@ function MoveSheet({ s, v, month, from, onClose }: { s: DemoState; v: ReturnType
             Mover
           </Button>
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

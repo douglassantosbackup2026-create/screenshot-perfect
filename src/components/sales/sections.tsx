@@ -11,6 +11,7 @@ import { PLANS, PRICING_NOTE, type PlanTier } from "@/content/pricing";
 import { useServerFn } from "@tanstack/react-start";
 import { createCheckout } from "@/lib/billing/checkout.functions";
 import { PRICES_CENTS, type BillingPeriod, type PaidPlan } from "@/lib/billing/catalog";
+import { JOURNEY_ENABLED } from "@/lib/features";
 
 export function Problem() {
   const items = [
@@ -34,11 +35,17 @@ export function Problem() {
 }
 
 export function HowItWorks() {
-  const steps = [
-    "Jornada: lições de 2 a 5 minutos em 4 unidades, com missão do dia, XP e sequência sem punição por pausas.",
-    "Na Unidade 2, seu plano de aposentadoria fica pronto.",
-    "Evolução: todo mês, você registra aporte e patrimônio e vê seu progresso rumo à independência.",
-  ];
+  const steps = JOURNEY_ENABLED
+    ? [
+        "Jornada: lições de 2 a 5 minutos em 4 unidades, com missão do dia, XP e sequência sem punição por pausas.",
+        "Na Unidade 2, seu plano de aposentadoria fica pronto.",
+        "Evolução: todo mês, você registra aporte e patrimônio e vê seu progresso rumo à independência.",
+      ]
+    : [
+        "Faça a conta: quanto guardar por mês para se aposentar sem depender do INSS.",
+        "Monte seu plano com três cenários e premissas sempre visíveis.",
+        "Evolução: todo mês, você registra aporte e patrimônio e vê seu progresso rumo à independência.",
+      ];
   return (
     <section className="mt-16">
       <h2>Como funciona</h2>
@@ -62,13 +69,15 @@ export function ProductPreview() {
       <h2>O que você vai usar</h2>
       <p className="mt-2 text-sm text-muted-foreground">Telas de exemplo.</p>
       <div className="mt-5 space-y-3">
-        <div className="rounded-2xl bg-card shadow-card p-4">
-          <p className="text-xs text-muted-foreground">Jornada · Unidade 1 · Lição 2 de 5</p>
-          <p className="mt-1 font-semibold">{LESSONS[1]?.title}</p>
-          <div className="mt-3 h-2 rounded-full bg-muted">
-            <div className="h-2 w-[14%] rounded-full bg-accent" />
+        {JOURNEY_ENABLED && (
+          <div className="rounded-2xl bg-card shadow-card p-4">
+            <p className="text-xs text-muted-foreground">Jornada · Unidade 1 · Lição 2 de 5</p>
+            <p className="mt-1 font-semibold">{LESSONS[1]?.title}</p>
+            <div className="mt-3 h-2 rounded-full bg-muted">
+              <div className="h-2 w-[14%] rounded-full bg-accent" />
+            </div>
           </div>
-        </div>
+        )}
         <div className="rounded-2xl bg-card shadow-card p-4">
           <p className="text-xs text-muted-foreground">Plano</p>
           <p className="mt-1 font-semibold">Três cenários, premissas sempre visíveis</p>
@@ -101,6 +110,7 @@ export function ProductPreview() {
 }
 
 export function Curriculum() {
+  if (!JOURNEY_ENABLED) return null;
   return (
     <section className="mt-16">
       <h2>As 4 unidades</h2>
@@ -143,7 +153,7 @@ export function WhatWeDont() {
 
 export function Pricing({ onStart }: { onStart: () => void }) {
   return (
-    <section className="mt-16" aria-label="Planos">
+    <section id="planos" className="mt-16 scroll-mt-6" aria-label="Planos">
       <h2>Planos</h2>
       <p className="mt-2 text-sm text-muted-foreground">
         O aprendizado é gratuito. Os planos pagos vendem clareza, planejamento e acompanhamento, nunca produtos financeiros.
@@ -171,6 +181,7 @@ function PlanCard({ plan, onStart }: { plan: PlanTier; onStart: () => void }) {
         {plan.price}
         {plan.period && <span className="text-sm font-normal text-muted-foreground">{plan.period}</span>}
       </p>
+      {plan.annualNote && <p className="text-sm text-muted-foreground">{plan.annualNote}</p>}
       <p className="mt-1 text-sm text-muted-foreground">{plan.summary}</p>
       <ul className="mt-4 space-y-2 text-sm">
         {plan.features.map((f) => (
@@ -228,7 +239,7 @@ function BuyButtons({ plan }: { plan: PaidPlan }) {
 
 const formatCents = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-function Waitlist({ source, planName }: { source: string; planName: string }) {
+export function Waitlist({ source, planName }: { source: string; planName: string }) {
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -241,7 +252,8 @@ function Waitlist({ source, planName }: { source: string; planName: string }) {
     setSending(true);
     const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source });
     setSending(false);
-    if (error) {
+    // 23505: o e-mail já está na lista (um lead por e-mail). Para quem preenche, deu certo.
+    if (error && error.code !== "23505") {
       toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
       return;
     }
@@ -276,8 +288,12 @@ export function Faq() {
   const qs: [string, string][] = [
     ["Isso é um investimento?", "Não. É um programa de educação e planejamento. Você escolhe onde e como investir."],
     ["Preciso dar dados do meu banco?", "Não. Você só informa valores aproximados, se quiser."],
-    ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
-    ["E se eu perder um dia?", "Tudo bem. Até dois dias por semana ficam protegidos e sua sequência continua."],
+    ...(JOURNEY_ENABLED
+      ? ([
+          ["Quanto tempo por dia?", "Cerca de 5 minutos por lição."],
+          ["E se eu perder um dia?", "Tudo bem. Até dois dias por semana ficam protegidos e sua sequência continua."],
+        ] as [string, string][])
+      : []),
     ["Tem ranking de patrimônio?", "Não. Você só se compara com você mesmo. O app reconhece hábitos e progresso, nunca quanto dinheiro alguém tem."],
     ["Os valores são garantidos?", "Não. São simulações com premissas que você vê e pode mudar."],
   ];

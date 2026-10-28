@@ -10,7 +10,7 @@ export type ThreadMonth = {
 };
 
 /** Ponto do fio: preenchido em ipê (aporte), vazado (sem aporte) ou nada (mês sem registro). */
-export function ThreadDot({ state, highlight, size = 18 }: { state: ThreadMonth["state"]; highlight?: boolean | undefined; size?: number }) {
+function ThreadDot({ state, highlight, size = 18 }: { state: ThreadMonth["state"]; highlight?: boolean | undefined; size?: number }) {
   if (state === "vazio") return <span aria-hidden style={{ width: size, height: size }} className="inline-block" />;
   return (
     <span

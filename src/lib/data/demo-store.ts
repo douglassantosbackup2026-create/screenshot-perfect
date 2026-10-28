@@ -1,6 +1,7 @@
 // Camada de dados em MODO DEMONSTRAÇÃO (sem login): guarda o estado só neste aparelho.
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
 import { useSyncExternalStore } from "react";
+import { repairState } from "./state-schema";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
 import { validateAsset, type AssetCategory } from "@/lib/calc/assets";
 import { snapshotFromAssets, type BreakdownItem } from "@/lib/calc/networth";
@@ -16,6 +17,8 @@ import {
   type BudgetTxInput,
 } from "@/lib/calc/budget";
 import { dueOccurrences, validateRule, type RecurrenceRule } from "@/lib/calc/recurring";
+import { installmentAt, installmentRule, validateInstallments } from "@/lib/calc/installments";
+import { validateLimit, type LimitPeriod } from "@/lib/calc/limits";
 import { applyRules, normalize, type CategoryRule, type RuleOp } from "@/lib/calc/categorize";
 import { dedupe, type ImportedTx } from "@/lib/calc/import";
 import { holdsPositions, positionFromTrades, validateTargets, valuePosition, type AssetClass, type Trade, type TradeType } from "@/lib/calc/portfolio";
@@ -47,7 +50,7 @@ import { dailyMission, gradePlacement, gradeReview, isLessonUnlocked, missionAcc
 
 export type WorkType = "pj" | "autonomo" | "mei" | "clt" | "servidor" | "outro";
 export type Destination = "previdencia" | "investimentos" | "reserva" | "outro";
-export type SnapshotReason = "created" | "edit" | "quick_review" | "life_event" | "annual_review";
+export type SnapshotReason = "created" | "edit" | "quick_review" | "life_event" | "annual_review" | "what_if";
 export type Objective = "entender" | "organizar" | "previdencia";
 export type ReviewCadence = "mensal" | "trimestral" | "semestral";
 /** Dados que a pessoa pulou ou ainda não informou; aparecem como aviso, nunca são inventados. */
@@ -71,7 +74,14 @@ export type Profile = {
   objective: Objective | null;
   reviewCadence: ReviewCadence;
   missingFields: MissingField[];
+  /** Orçamento simples (limites por categoria) ou por envelopes. Sem valor: envelopes se já usou, senão simples. */
+  budgetMode?: BudgetMode;
 };
+export type BudgetMode = "simples" | "envelopes";
+
+/** Quem já distribuiu dinheiro em envelopes continua nos envelopes; quem está começando vê o modo simples. */
+export const budgetModeOf = (s: { profile: { budgetMode?: BudgetMode }; budget: { assigned: Record<string, unknown> } }): BudgetMode =>
+  s.profile.budgetMode ?? (Object.keys(s.budget.assigned).length ? "envelopes" : "simples");
 
 export type Plan = { id: string; createdAt: string; updatedAt: string; inputs: PlanInputs };
 export type Snapshot = {
@@ -125,6 +135,9 @@ export type Asset = {
   note: string | null;
   source: "manual";
   updatedAt: string;
+  /** Só em dívidas: juros ao mês (decimal, 0,03 = 3%) e parcela mensal em R$. */
+  rateMonthly?: number | null;
+  payment?: number | null;
 };
 /** Valor de um item em um mês (espelho de public.asset_valuations); o último registro do mês vale. */
 export type AssetValuation = { assetId: string; month: string; value: number; at: string };
@@ -160,7 +173,27 @@ export type RecurringRule = RecurrenceRule & {
   categoryId: string | null;
   note: string | null;
   active: boolean;
+  /** Compra parcelada: total da compra (centavos positivos) e número de parcelas. O valor de cada uma sai daqui. */
+  installment?: { total: number; count: number } | null;
+  /** Datas nominais de ocorrências que a pessoa excluiu: não são lançadas de novo. */
+  skipped?: string[];
 };
+
+/**
+ * Como desfazer a última mudança nos lançamentos: o que foi criado sai e o que existia antes volta.
+ * Vale por 24 horas; depois disso a opção some.
+ */
+export type UndoEntry = {
+  label: string;
+  at: string;
+  addedTxIds: string[];
+  restoreTxs: Transaction[];
+  addedRuleId: string | null;
+};
+export const UNDO_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Limite de gasto por período, numa categoria ou no total (categoryId null). Valor em centavos. */
+export type SpendLimit = { id: string; categoryId: string | null; period: LimitPeriod; amount: number; active: boolean; createdAt: string };
 
 /** Categorias iniciais; a pessoa pode criar outras. */
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -198,6 +231,8 @@ export type DemoState = {
   profile: Profile;
   plan: Plan | null;
   snapshots: Snapshot[];
+  /** Foto do plano usada no projetado × real. Sem valor, vale a primeira foto. Não muda quando o plano é editado. */
+  anchorSnapshotId?: string | null;
   contributions: Contribution[];
   program: { currentDay: number; startedAt: string; completedAt: string | null };
   lessonCompletions: Record<number, string>;
@@ -222,6 +257,12 @@ export type DemoState = {
   /** Metas de alocação por classe, em %, somando 100. */
   allocationTargets: Partial<Record<AssetClass, number>>;
   journey: Journey;
+  /** Avisos do dia a dia que a pessoa marcou como "ignorar" (chave estável do aviso). */
+  dismissedAlerts?: string[];
+  /** Última mudança nos lançamentos, para o "Desfazer". */
+  lastAction?: UndoEntry | null;
+  /** Limites de gasto por período. */
+  limits?: SpendLimit[];
   /** Dias ativos ("YYYY-MM-DD", horário de Brasília) para a sequência diária. */
   days: string[];
   stats: Stats;
@@ -372,10 +413,31 @@ export function makeSeed(now = new Date()): DemoState {
   inn.transferId = out.id;
   out.contributionId = contribution.id;
   transactions.push(out, inn);
+  // Para os avisos aparecerem no exemplo: o streaming custava 39,90 e passa a 55,90 neste mês,
+  // e a farmácia entrou duas vezes no cartão.
+  for (const k of [-3, -2, -1]) transactions.push(tx(card, day(addMonths(month, k), 15), -3990, "Streaming", "cat-assinaturas"));
+  const todayDay = Number(today.slice(8, 10));
+  const pharmacy = todayDay >= 2 ? [day(month, todayDay - 1), today] : [day(prevMonth, 28), today];
+  for (const d of pharmacy) transactions.push(tx(card, d, -8990, "Farmácia", "cat-saude"));
   const recurring: RecurringRule[] = [
-    { payee: "Aluguel", amount: -200000, categoryId: "cat-moradia", accountId: cc, d: 10, weekend: "antes" as const },
-    { payee: "Streaming", amount: -5590, categoryId: "cat-assinaturas", accountId: card, d: 15, weekend: "manter" as const },
-  ].map(({ d, ...r }) => ({ ...r, id: newId(), note: null, active: true, startDate: day(prevMonth, d), frequency: "mensal" as const, interval: 1, endDate: null }));
+    { payee: "Aluguel", amount: -200000, categoryId: "cat-moradia", accountId: cc, start: day(prevMonth, 10), weekend: "antes" as const },
+    { payee: "Streaming", amount: -5590, categoryId: "cat-assinaturas", accountId: card, start: day(month, 15), weekend: "manter" as const },
+  ].map(({ start, ...r }) => ({ ...r, id: newId(), note: null, active: true, startDate: start, frequency: "mensal" as const, interval: 1, endDate: null }));
+  // Compra parcelada: notebook em 10x no cartão, a primeira no mês passado.
+  recurring.push({
+    ...installmentRule(day(prevMonth, 20), 10),
+    id: newId(),
+    accountId: card,
+    amount: -36000,
+    payee: "Notebook",
+    categoryId: "cat-outros",
+    note: null,
+    active: true,
+    installment: { total: 360000, count: 10 },
+  });
+  const filteredTx = transactions.filter((t) => t.date <= today);
+  transactions.length = 0;
+  transactions.push(...filteredTx);
   const categoryRules: CategoryRule[] = [
     { id: newId(), op: "contem", value: "uber", categoryId: "cat-transporte", renameTo: "Uber" },
     { id: newId(), op: "contem", value: "supermercado", categoryId: "cat-mercado", renameTo: null },
@@ -390,6 +452,7 @@ export function makeSeed(now = new Date()): DemoState {
     "cat-assinaturas": 6000,
     "cat-impostos": 42000,
     "cat-lazer": 20000,
+    "cat-outros": 36000,
     [travel.id]: 60000,
     [RETIREMENT_ENVELOPE]: 100000,
   };
@@ -583,9 +646,61 @@ function markActive(s: DemoState, now: Date) {
   if (!s.days.includes(today)) s.days = [...s.days, today];
 }
 
-/** Completa um estado salvo por versões anteriores com os campos novos. */
-function migrate(raw: DemoState): DemoState {
-  if (raw.version === 8) return raw;
+/** Estado de quem está começando: sem plano, sem registros, com as categorias padrão. */
+export function emptyState(now = new Date()): DemoState {
+  const s = makeSeed(now);
+  return {
+    ...s,
+    profile: {
+      ...s.profile,
+      displayName: "",
+      onboardingCompletedAt: null,
+      birthYear: null,
+      workType: null,
+      hasOverdueDebt: null,
+      goalRetirementAge: null,
+      goalIncome: null,
+      objective: null,
+      missingFields: [],
+    },
+    assets: [],
+    assetValuations: [],
+    accounts: [],
+    categories: [...DEFAULT_CATEGORIES],
+    transactions: [],
+    recurring: [],
+    categoryRules: [],
+    budget: { assigned: {}, templates: [] },
+    holdings: [],
+    trades: [],
+    allocationTargets: {},
+    journey: { testedOutUnits: [], dailyMissions: [] },
+    plan: null,
+    snapshots: [],
+    contributions: [],
+    program: { currentDay: 1, startedAt: now.toISOString(), completedAt: null },
+    lessonCompletions: {},
+    answers: {},
+    missionCompletions: [],
+    xpEvents: [],
+    weeks: [],
+    achievements: [],
+    wealthEntries: [],
+    goals: [],
+    challenges: [],
+    days: [],
+    stats: { ...EMPTY_STATS },
+  };
+}
+
+/**
+ * Conserta o que veio salvo (ver state-schema.ts) e completa um estado de versões anteriores com os
+ * campos novos. Aceita qualquer coisa: dado corrompido nunca impede o app de abrir.
+ */
+function migrate(input: unknown): DemoState {
+  const { state: raw, dropped, reset } = repairState(input, emptyState());
+  if (dropped || reset.length) console.warn("Estado salvo consertado", { dropped, reset });
+  if (raw.version === 8) return { ...emptyState(), ...raw };
   const assets = raw.assets ?? [];
   return {
     ...raw,
@@ -621,32 +736,229 @@ function migrate(raw: DemoState): DemoState {
 
 // ---------- Store ----------
 let state: DemoState | null = null;
+
+// Cache de leitura: contas pesadas (orçamento, carteira, avisos) rodam uma vez por estado gravado,
+// não a cada render. Só vale para o estado atual: um rascunho dentro de `mutate` nunca entra no
+// cache, e qualquer troca de estado (gravação, login, conflito) o descarta.
+let memoFor: DemoState | null = null;
+const memo = new Map<string, unknown>();
+export function memoOnState<T>(s: DemoState, key: string, compute: () => T): T {
+  if (s !== state) return compute();
+  if (memoFor !== state) {
+    memo.clear();
+    memoFor = state;
+  }
+  if (memo.has(key)) return memo.get(key) as T;
+  const value = compute();
+  memo.set(key, value);
+  return value;
+}
 const listeners = new Set<() => void>();
 
 // Conta conectada: o estado é salvo por pessoa no banco (tabela user_state).
 let cloudUser: string | null = null;
+/** updated_at da última versão lida ou gravada; outra aba ou aparelho que gravar depois muda esse valor. */
+let cloudVersion: string | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retries = 0;
+let saving: Promise<boolean> | null = null;
+let dirty = false;
 const FRESH_PENDING = "pi_fresh_pending";
+/** Cópia local do que ainda não chegou ao banco (aba fechada, sem internet, erro). */
+const PENDING = "pi_pending_cloud";
+const RETRY_MS = [2000, 5000, 15000, 30000];
 
-async function saveCloud() {
+/** "conflict": outra aba ou aparelho gravou antes; a versão do banco foi recarregada. */
+export type SaveStatus = "saved" | "saving" | "error" | "conflict";
+let saveStatus: SaveStatus = "saved";
+const saveListeners = new Set<() => void>();
+function setSaveStatus(next: SaveStatus) {
+  if (next === saveStatus) return;
+  saveStatus = next;
+  saveListeners.forEach((l) => l());
+}
+export function useSaveStatus(): SaveStatus {
+  return useSyncExternalStore(
+    (l) => {
+      saveListeners.add(l);
+      return () => saveListeners.delete(l);
+    },
+    () => saveStatus,
+    () => "saved",
+  );
+}
+
+type Pending = { user: string; base: string | null; data: DemoState };
+function writePending() {
   if (!cloudUser || !state) return;
+  try {
+    window.localStorage.setItem(PENDING, JSON.stringify({ user: cloudUser, base: cloudVersion, data: state } satisfies Pending));
+  } catch {
+    /* armazenamento indisponível */
+  }
+}
+function readPending(user: string): Pending | null {
+  try {
+    const p = JSON.parse(window.localStorage.getItem(PENDING) ?? "null") as Pending | null;
+    return p?.user === user ? p : null;
+  } catch {
+    return null;
+  }
+}
+function clearPending() {
+  try {
+    window.localStorage.removeItem(PENDING);
+  } catch {
+    /* armazenamento indisponível */
+  }
+}
+
+/** Grava no banco. Só uma gravação por vez; mudanças feitas no meio entram na seguinte. */
+function saveCloud(): Promise<boolean> {
+  if (saving) {
+    dirty = true;
+    return saving;
+  }
+  // Qualquer exceção (por exemplo, o módulo do cliente que não carregou depois de um deploy) vira
+  // "não salvo" com nova tentativa, nunca uma falha silenciosa.
+  saving = runSave()
+    .catch((e: unknown) => {
+      console.error("Falha ao salvar no banco", e);
+      writePending();
+      setSaveStatus("error");
+      scheduleRetry();
+      return false;
+    })
+    .finally(() => (saving = null));
+  return saving;
+}
+
+async function runSave(): Promise<boolean> {
   const { supabase } = await import("@/integrations/supabase/client");
-  const { error } = await supabase
-    .from("user_state")
-    .upsert({ user_id: cloudUser, data: state as never, updated_at: new Date().toISOString() });
-  if (error) console.error("Falha ao salvar no banco", error.message);
+  do {
+    dirty = false;
+    const user = cloudUser;
+    const data = state;
+    if (!user || !data) return true;
+    setSaveStatus("saving");
+    const at = new Date().toISOString();
+    // Grava só se o banco ainda estiver na versão que esta aba conhece; senão outra aba gravou antes.
+    const res = cloudVersion
+      ? await supabase
+          .from("user_state")
+          .update({ data: data, updated_at: at })
+          .eq("user_id", user)
+          .eq("updated_at", cloudVersion)
+          .select("updated_at")
+      : await supabase
+          .from("user_state")
+          .insert({ user_id: user, data: data, updated_at: at })
+          .select("updated_at");
+    if (user !== cloudUser) return true;
+    if (res.error && res.error.code !== "23505") {
+      console.error("Falha ao salvar no banco", res.error.message);
+      writePending();
+      setSaveStatus("error");
+      scheduleRetry();
+      return false;
+    }
+    if (res.error || !res.data?.length) return reloadAfterConflict();
+    cloudVersion = res.data[0]!.updated_at;
+    retries = 0;
+    if (state === data) clearPending();
+    else writePending();
+  } while (dirty);
+  setSaveStatus("saved");
+  return true;
+}
+
+async function reloadAfterConflict(): Promise<boolean> {
+  const user = cloudUser;
+  if (!user) return true;
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { data, error } = await supabase.from("user_state").select("data, updated_at").eq("user_id", user).maybeSingle();
+  if (user !== cloudUser) return true;
+  if (error || !data) {
+    setSaveStatus("error");
+    scheduleRetry();
+    return false;
+  }
+  state = migrate(data.data);
+  cloudVersion = data.updated_at;
+  clearPending();
+  listeners.forEach((l) => l());
+  setSaveStatus("conflict");
+  return false;
+}
+
+function scheduleRetry() {
+  if (retryTimer || retries >= RETRY_MS.length) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void saveCloud();
+  }, RETRY_MS[retries++]);
+}
+
+/** Tenta gravar de novo agora (botão "Tentar de novo" ou volta da internet). */
+export function retrySave(): Promise<boolean> {
+  retries = 0;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  return saveCloud();
+}
+
+/** Grava já o que estiver esperando. Devolve false se não deu para gravar. */
+export async function flushSave(): Promise<boolean> {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    return saveCloud();
+  }
+  if (saving) return saving;
+  if (saveStatus === "error") return retrySave();
+  return true;
+}
+
+/** Grava o que estiver pendente e para de sincronizar (antes de excluir a conta). */
+export async function stopSync(): Promise<boolean> {
+  const ok = await flushSave();
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  cloudUser = null;
+  cloudVersion = null;
+  return ok;
+}
+
+if (typeof window !== "undefined") {
+  const flushNow = () => {
+    if (!saveTimer) return;
+    writePending();
+    void flushSave();
+  };
+  window.addEventListener("pagehide", flushNow);
+  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flushNow());
+  window.addEventListener("online", () => saveStatus === "error" && void retrySave());
 }
 
 /** Carrega os dados da pessoa conectada. Sem dados ainda, aproveita o que ela começou antes de entrar. */
 export async function attachUser(userId: string): Promise<DemoState> {
   if (cloudUser === userId && state) return state;
   const { supabase } = await import("@/integrations/supabase/client");
-  const { data, error } = await supabase.from("user_state").select("data").eq("user_id", userId).maybeSingle();
+  const { data, error } = await supabase.from("user_state").select("data, updated_at").eq("user_id", userId).maybeSingle();
   if (error) throw new Error("Não foi possível carregar seus dados.");
   cloudUser = userId;
-  if (data?.data) {
-    state = migrate(data.data as unknown as DemoState);
+  cloudVersion = data?.updated_at ?? null;
+  // O que ficou sem gravar da última vez só vale se o banco não mudou desde então.
+  const pending = readPending(userId);
+  if (pending && pending.base === cloudVersion) {
+    state = migrate(pending.data);
+    void saveCloud();
+  } else if (data?.data) {
+    clearPending();
+    state = migrate(data.data);
   } else {
+    clearPending();
     const startedHere = window.localStorage.getItem(FRESH_PENDING) === "1";
     if (!startedHere) demo.startFresh();
     else state = load();
@@ -659,9 +971,18 @@ export async function attachUser(userId: string): Promise<DemoState> {
 }
 
 export function detachUser() {
+  if (saveTimer) clearTimeout(saveTimer);
+  if (retryTimer) clearTimeout(retryTimer);
+  saveTimer = retryTimer = null;
+  retries = 0;
   cloudUser = null;
+  cloudVersion = null;
   state = null;
-  if (typeof window !== "undefined") window.localStorage.removeItem(KEY);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(KEY);
+    clearPending();
+  }
+  setSaveStatus("saved");
   listeners.forEach((l) => l());
 }
 
@@ -669,7 +990,7 @@ function load(): DemoState {
   if (state) return state;
   try {
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;
-    state = raw ? migrate(JSON.parse(raw) as DemoState) : makeSeed();
+    state = raw ? migrate(JSON.parse(raw)) : makeSeed();
   } catch {
     state = makeSeed();
   }
@@ -678,8 +999,14 @@ function load(): DemoState {
 function commit(next: DemoState) {
   state = next;
   if (cloudUser) {
+    // A cópia local e a gravação saem juntas, 400 ms depois da última mudança: serializar o estado
+    // inteiro a cada toque custava caro. Fechar a aba antes disso grava na hora (pagehide).
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => void saveCloud(), 400);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      writePending();
+      void saveCloud();
+    }, 400);
   } else {
     try {
       window.localStorage.setItem(KEY, JSON.stringify(next));
@@ -723,49 +1050,7 @@ export const demo = {
     commit(makeSeed());
   },
   startFresh() {
-    const s = makeSeed();
-    commit({
-      ...s,
-      profile: {
-        ...s.profile,
-        displayName: "",
-        onboardingCompletedAt: null,
-        birthYear: null,
-        workType: null,
-        hasOverdueDebt: null,
-        goalRetirementAge: null,
-        goalIncome: null,
-        objective: null,
-        missingFields: [],
-      },
-      assets: [],
-      assetValuations: [],
-      accounts: [],
-      categories: [...DEFAULT_CATEGORIES],
-      transactions: [],
-      recurring: [],
-      categoryRules: [],
-      budget: { assigned: {}, templates: [] },
-      holdings: [],
-      trades: [],
-      allocationTargets: {},
-      journey: { testedOutUnits: [], dailyMissions: [] },
-      plan: null,
-      snapshots: [],
-      contributions: [],
-      program: { currentDay: 1, startedAt: new Date().toISOString(), completedAt: null },
-      lessonCompletions: {},
-      answers: {},
-      missionCompletions: [],
-      xpEvents: [],
-      weeks: [],
-      achievements: [],
-      wealthEntries: [],
-      goals: [],
-      challenges: [],
-      days: [],
-      stats: { ...EMPTY_STATS },
-    });
+    commit(emptyState());
     if (!cloudUser && typeof window !== "undefined") window.localStorage.setItem(FRESH_PENDING, "1");
   },
   updateProfile(patch: Partial<Profile>) {
@@ -885,6 +1170,12 @@ export const demo = {
       return a.awarded;
     });
   },
+  /** Replanejar: o projetado × real passa a comparar com a versão atual do plano. */
+  reanchor() {
+    const s = structuredClone(load());
+    s.anchorSnapshotId = s.snapshots[0]?.id ?? null;
+    commit(s);
+  },
   logContribution(input: { month: string; made: boolean; amount?: number | null; destination?: Destination | null; note?: string | null }): ActionResult {
     return mutate((s, now) => recordContribution(s, now, input).xp);
   },
@@ -911,9 +1202,21 @@ export const demo = {
     });
   },
   /** Cria ou atualiza um item do patrimônio (espelho de upsert_asset). Não concede XP. */
-  saveAsset(input: { id?: string | undefined; name: string; category: AssetCategory; value: number; forRetirement: boolean; note?: string | null }) {
+  saveAsset(input: {
+    id?: string | undefined;
+    name: string;
+    category: AssetCategory;
+    value: number;
+    forRetirement: boolean;
+    note?: string | null;
+    rateMonthly?: number | null;
+    payment?: number | null;
+  }) {
     const errors = validateAsset(input);
     if (errors.length) throw new Error(errors[0]);
+    const isDebt = input.category === "divida";
+    if (isDebt && input.rateMonthly != null && !(input.rateMonthly >= 0 && input.rateMonthly <= 0.2)) throw new Error("Os juros vão de 0% a 20% ao mês.");
+    if (isDebt && input.payment != null && !(input.payment >= 0)) throw new Error("A parcela não pode ser negativa.");
     const s = structuredClone(load());
     const now = new Date();
     const previous = input.id ? s.assets.find((a) => a.id === input.id) : undefined;
@@ -930,6 +1233,8 @@ export const demo = {
       note: input.note ?? null,
       source: "manual",
       updatedAt: now.toISOString(),
+      rateMonthly: isDebt ? (input.rateMonthly ?? null) : null,
+      payment: isDebt ? (input.payment ?? null) : null,
     };
     s.assets = input.id ? s.assets.map((a) => (a.id === input.id ? item : a)) : [...s.assets, item];
     if (!previous || previous.value !== item.value) recordValuation(s, item.id, item.value, now);
@@ -1128,6 +1433,25 @@ export const demo = {
     else s.categories.push({ id: newId(), name, kind: input.kind });
     commit(s);
   },
+  /**
+   * Envelope "Reserva de emergência" com meta até uma data: cria a categoria se ainda não existir
+   * (ou usa a que já existe) e grava o modelo. Devolve o id do envelope.
+   */
+  saveReserveEnvelope(target: number, deadline: string): string {
+    const s = structuredClone(load());
+    const name = "Reserva de emergência";
+    let cat = s.categories.find((c) => c.kind === "despesa" && normalize(c.name) === normalize(name));
+    if (!cat) {
+      cat = { id: newId(), name, kind: "despesa" };
+      s.categories.push(cat);
+    }
+    const t: BudgetTemplate = { envelopeId: cat.id, kind: "ate_data", amount: null, target, deadline: monthOf(deadline), percent: null };
+    const errors = validateTemplate(t);
+    if (errors.length) throw new Error(errors[0]);
+    s.budget.templates = [...s.budget.templates.filter((x) => x.envelopeId !== cat.id), t];
+    commit(s);
+    return cat.id;
+  },
   /** Os lançamentos da categoria ficam sem categoria; as regras e recorrências dela, também. */
   deleteCategory(id: string) {
     const s = structuredClone(load());
@@ -1205,15 +1529,19 @@ export const demo = {
     const s = structuredClone(load());
     const t = validTx(s, input);
     const withRule = applyRules(s.categoryRules, { ...t, categoryId: input.categoryId ?? null });
-    s.transactions.push(newTransaction({ ...withRule, note: input.note ?? null }, new Date()));
+    const created = newTransaction({ ...withRule, note: input.note ?? null }, new Date());
+    s.transactions.push(created);
     if (input.remember) rememberRule(s, t.payee, input.categoryId ?? null);
+    s.lastAction = undoEntry("Lançamento", { addedTxIds: [created.id] });
     commit(s);
+    return created;
   },
   /** Edita um lançamento. Numa transferência, valor, data e nota mudam nas duas pernas. */
   updateTransaction(id: string, patch: { date?: string; amount?: number; payee?: string; categoryId?: string | null; note?: string | null; remember?: boolean }) {
     const s = structuredClone(load());
     const t = s.transactions.find((x) => x.id === id);
     if (!t) throw new Error("Lançamento não encontrado.");
+    const before = s.transactions.filter((x) => x.id === id || x.id === t.transferId);
     const next = { ...t, ...validTx(s, { ...t, ...patch }), note: patch.note === undefined ? t.note : patch.note };
     if (t.transferId) {
       next.categoryId = null;
@@ -1226,13 +1554,106 @@ export const demo = {
       s.transactions = s.transactions.map((x) => (x.id === id ? next : x));
       if (patch.remember) rememberRule(s, next.payee, next.categoryId);
     }
+    s.lastAction = undoEntry("Edição", { restoreTxs: structuredClone(before) });
     commit(s);
   },
   /** Exclui o lançamento e, se for transferência, a outra perna. O aporte do Diário, se houver, continua lá. */
   deleteTransaction(id: string) {
     const s = structuredClone(load());
     const t = s.transactions.find((x) => x.id === id);
+    const removed = s.transactions.filter((x) => x.id === id || x.id === t?.transferId);
     s.transactions = s.transactions.filter((x) => x.id !== id && x.id !== t?.transferId);
+    // Ocorrência de recorrência ou parcela excluída não volta na próxima vez que as recorrências rodarem.
+    if (t?.recurringId && t.occurrenceDate) {
+      const date = t.occurrenceDate;
+      s.recurring = s.recurring.map((r) => (r.id === t.recurringId ? { ...r, skipped: [...new Set([...(r.skipped ?? []), date])] } : r));
+    }
+    s.lastAction = undoEntry("Exclusão", { restoreTxs: removed });
+    commit(s);
+  },
+  /**
+   * Compra parcelada: vira uma recorrência mensal que termina na última parcela.
+   * As parcelas caem uma por mês, como as recorrências; a primeira já entra se a data dela chegou.
+   */
+  addInstallmentPurchase(input: { accountId: string; firstDate: string; total: number; count: number; payee: string; categoryId?: string | null; note?: string | null }) {
+    const errors = validateInstallments(input.total, input.count);
+    if (errors.length) throw new Error(errors[0]);
+    const s = structuredClone(load());
+    const t = validTx(s, { accountId: input.accountId, date: input.firstDate, amount: -input.total, payee: input.payee });
+    const categoryId = input.categoryId ?? applyRules(s.categoryRules, { ...t, categoryId: null as string | null }).categoryId;
+    const rule: RecurringRule = {
+      ...installmentRule(input.firstDate, input.count),
+      id: newId(),
+      accountId: t.accountId,
+      amount: -Math.floor(input.total / input.count),
+      payee: t.payee,
+      categoryId,
+      note: input.note ?? null,
+      active: true,
+      installment: { total: input.total, count: input.count },
+    };
+    s.recurring = [...s.recurring, rule];
+    materializeRecurring(s, new Date());
+    s.lastAction = undoEntry("Compra parcelada", { addedRuleId: rule.id });
+    commit(s);
+    return rule;
+  },
+  /** Cancela as parcelas que ainda não caíram (as já lançadas ficam) ou apaga a compra inteira. */
+  deleteInstallmentPurchase(ruleId: string, mode: "futuras" | "todas") {
+    const s = structuredClone(load());
+    const removed = mode === "todas" ? s.transactions.filter((t) => t.recurringId === ruleId) : [];
+    s.recurring = s.recurring.filter((r) => r.id !== ruleId);
+    s.transactions =
+      mode === "todas" ? s.transactions.filter((t) => t.recurringId !== ruleId) : s.transactions.map((t) => (t.recurringId === ruleId ? { ...t, recurringId: null } : t));
+    s.lastAction = mode === "todas" ? undoEntry("Exclusão da compra parcelada", { restoreTxs: removed }) : null;
+    commit(s);
+  },
+  /** Desfaz a última mudança nos lançamentos, se ainda estiver na janela de 24 horas. Devolve o que foi desfeito. */
+  undoLast(): string {
+    const s = structuredClone(load());
+    const u = s.lastAction;
+    if (!u || Date.now() - new Date(u.at).getTime() > UNDO_WINDOW_MS) throw new Error("Não há nada para desfazer.");
+    const drop = new Set([...u.addedTxIds, ...u.restoreTxs.map((t) => t.id)]);
+    s.transactions = [...s.transactions.filter((t) => !drop.has(t.id) && (!u.addedRuleId || t.recurringId !== u.addedRuleId)), ...u.restoreTxs];
+    if (u.addedRuleId) s.recurring = s.recurring.filter((r) => r.id !== u.addedRuleId);
+    // A ocorrência que voltou deixa de estar marcada como excluída.
+    for (const t of u.restoreTxs) {
+      if (!t.recurringId || !t.occurrenceDate) continue;
+      s.recurring = s.recurring.map((r) => (r.id === t.recurringId ? { ...r, skipped: (r.skipped ?? []).filter((d) => d !== t.occurrenceDate) } : r));
+    }
+    s.lastAction = null;
+    commit(s);
+    return u.label;
+  },
+  /** Cria ou edita um limite de gasto. Quem chama confere se o plano permite mais um. */
+  saveLimit(input: { id?: string | undefined; categoryId: string | null; period: LimitPeriod; amount: number }) {
+    const errors = validateLimit(input);
+    if (errors.length) throw new Error(errors[0]);
+    const s = structuredClone(load());
+    if (input.categoryId && !s.categories.some((c) => c.id === input.categoryId)) throw new Error("Categoria não encontrada.");
+    const list = s.limits ?? [];
+    const existing = input.id ? list.find((l) => l.id === input.id) : undefined;
+    const limit: SpendLimit = {
+      id: existing?.id ?? newId(),
+      categoryId: input.categoryId,
+      period: input.period,
+      amount: input.amount,
+      active: true,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    };
+    s.limits = existing ? list.map((l) => (l.id === limit.id ? limit : l)) : [...list, limit];
+    commit(s);
+    return limit;
+  },
+  deleteLimit(id: string) {
+    const s = structuredClone(load());
+    s.limits = (s.limits ?? []).filter((l) => l.id !== id);
+    commit(s);
+  },
+  /** "Ignorar" um aviso do dia a dia: ele não volta. */
+  dismissAlert(key: string) {
+    const s = structuredClone(load());
+    s.dismissedAlerts = [...new Set([...(s.dismissedAlerts ?? []), key])].slice(-200);
     commit(s);
   },
   /**
@@ -1355,10 +1776,19 @@ export function monthCloseSteps(s: DemoState, now = new Date()) {
   const usesLedger = s.accounts.length > 0;
   const inMonth = s.transactions.filter((t) => t.date.slice(0, 7) === month.slice(0, 7));
   const uncategorized = inMonth.filter((t) => !t.transferId && !t.categoryId);
+  // O orçamento vale nos dois modos: distribuir em envelopes ou ter um limite de gasto (modo Simples).
+  const budgeted = Object.values(s.budget.assigned[month] ?? {}).some((v) => v > 0) || (s.limits ?? []).some((l) => l.active);
+  // Sem conta cadastrada, os passos do livro-caixa não se aplicam: saem da lista em vez de contar como
+  // feitos (antes, uma conta nova já abria em "2 de 5" sem ter feito nada).
+  const ledgerSteps: { key: MonthStepKey; done: boolean }[] = usesLedger
+    ? [
+        { key: "lancamentos", done: inMonth.some((t) => t.source !== "recorrente") },
+        { key: "categorias", done: inMonth.length > 0 && uncategorized.length === 0 },
+        { key: "orcamento", done: budgeted },
+      ]
+    : [];
   const steps: { key: MonthStepKey; done: boolean }[] = [
-    { key: "lancamentos", done: !usesLedger || inMonth.some((t) => t.source !== "recorrente") },
-    { key: "categorias", done: !usesLedger || (inMonth.length > 0 && uncategorized.length === 0) },
-    { key: "orcamento", done: Object.values(s.budget.assigned[month] ?? {}).some((v) => v > 0) },
+    ...ledgerSteps,
     { key: "aporte", done: s.contributions.some((c) => c.month === month) },
     { key: "patrimonio", done: s.wealthEntries.some((w) => w.month === month) },
   ];
@@ -1446,6 +1876,9 @@ export function budgetEnvelopeIds(s: DemoState): string[] {
 
 /** O orçamento de cada mês, do primeiro mês com movimento ou distribuição até `month`. */
 export function budgetMonths(s: DemoState, month: string) {
+  return memoOnState(s, `budgetMonths:${month}`, () => computeBudgetMonths(s, month));
+}
+function computeBudgetMonths(s: DemoState, month: string) {
   const activity = budgetActivity(budgetTxInputs(s));
   const first = [...Object.keys(activity), ...Object.keys(s.budget.assigned), month].sort()[0]!;
   return computeBudget(budgetEnvelopeIds(s), activity, s.budget.assigned, first, monthOf(month));
@@ -1545,16 +1978,27 @@ function newTransaction(t: Pick<Transaction, "accountId" | "date" | "amount" | "
   };
 }
 
+/** Valor de uma ocorrência: o da regra, ou o da parcela (a primeira leva os centavos que sobram da divisão). */
+export function ruleAmount(r: RecurringRule, occurrenceDate: string): number {
+  if (!r.installment) return r.amount;
+  const i = installmentAt(r.installment.total, r.installment.count, r.startDate, occurrenceDate);
+  return i ? -i.amount : r.amount;
+}
+
+function undoEntry(label: string, e: Partial<Omit<UndoEntry, "label" | "at">>): UndoEntry {
+  return { label, at: new Date().toISOString(), addedTxIds: [], restoreTxs: [], addedRuleId: null, ...e };
+}
+
 /** Lança as ocorrências recorrentes vencidas até hoje (espelho de materialize_recurring). Devolve quantas lançou. */
 function materializeRecurring(s: DemoState, now: Date): number {
   const today = spDate(now);
   let added = 0;
   for (const r of s.recurring) {
     if (!r.active || !s.accounts.some((a) => a.id === r.accountId)) continue;
-    const generated = new Set(s.transactions.flatMap((t) => (t.recurringId === r.id && t.occurrenceDate ? [t.occurrenceDate] : [])));
+    const generated = new Set([...(r.skipped ?? []), ...s.transactions.flatMap((t) => (t.recurringId === r.id && t.occurrenceDate ? [t.occurrenceDate] : []))]);
     for (const o of dueOccurrences(r, generated, today)) {
       const t = newTransaction(
-        { accountId: r.accountId, date: o.date, amount: r.amount, payee: r.payee, categoryId: r.categoryId, note: r.note, source: "recorrente", recurringId: r.id, occurrenceDate: o.occurrenceDate },
+        { accountId: r.accountId, date: o.date, amount: ruleAmount(r, o.occurrenceDate), payee: r.payee, categoryId: r.categoryId, note: r.note, source: "recorrente", recurringId: r.id, occurrenceDate: o.occurrenceDate },
         now,
       );
       s.transactions.push(t);

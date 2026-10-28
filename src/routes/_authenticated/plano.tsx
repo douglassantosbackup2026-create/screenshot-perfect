@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { pageHead } from "@/lib/seo";
+import { JOURNEY_ENABLED } from "@/lib/features";
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AXIS_TICK, GRID, TOOLTIP_STYLE } from "@/components/chart-theme";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumberField, Segmented, LegalNote } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
 import { AreaTabs } from "@/components/nav/areas";
+import { LaunchBadge, useFeature } from "@/components/Upgrade";
+import { WhatIfSheet } from "@/components/plan/WhatIf";
+import { GoalSeekCard } from "@/components/plan/GoalSeek";
+import { PensionTaxCard } from "@/components/plan/PensionTax";
 import { ENGINE_VERSION, projectSeries, sensitivity, simulateAll, validateInputs, type PlanInputs, type ScenarioKey } from "@/lib/calc/retirement";
 import { summarizeAssets } from "@/lib/calc/assets";
 import { sinceLastReview } from "@/lib/data/selectors";
@@ -17,18 +24,8 @@ import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } fr
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
 
 export const Route = createFileRoute("/_authenticated/plano")({
-  validateSearch: (s: Record<string, unknown>): { criar?: boolean; aba?: "orcamento" } => ({
-    ...(s["criar"] ? { criar: true } : {}),
-    ...(s["aba"] === "orcamento" ? { aba: "orcamento" as const } : {}),
-  }),
-  head: () => ({
-    meta: [
-      { title: "Plano — Previdência Intelligence" },
-      { name: "description", content: "Seu plano de aposentadoria em três cenários, com premissas visíveis e editáveis." },
-      { property: "og:title", content: "Plano — Previdência Intelligence" },
-      { property: "og:description", content: "Seu plano de aposentadoria em três cenários, com premissas visíveis." },
-    ],
-  }),
+  validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s["criar"] ? { criar: true } : {}),
+  head: () => pageHead("Plano", "Seu plano de aposentadoria em três cenários, com premissas visíveis e editáveis.", "Seu plano de aposentadoria em três cenários, com premissas visíveis."),
   component: PlanPage,
 });
 
@@ -41,21 +38,18 @@ const LIFE_REASONS = ["Renda", "Família", "Trabalho", "Cidade", "Outro"];
 
 function PlanPage() {
   const s = useDemo();
-  const { criar, aba } = Route.useSearch();
+  const { criar } = Route.useSearch();
   const [creating, setCreating] = useState(false);
   useEffect(() => {
     if (criar && !s.plan) setCreating(true);
   }, [criar, s.plan]);
-
-  // O orçamento saiu do Plano e foi para a área Dinheiro; links antigos continuam funcionando.
-  if (aba === "orcamento") return <Navigate to="/orcamento" replace />;
 
   if (!s.plan && !creating) {
     return (
       <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
         <AreaTabs />
         <h1>Seu plano</h1>
-        <p className="mt-4">Seu plano fica pronto na Unidade 2 da jornada. Quer montar agora?</p>
+        <p className="mt-4">{JOURNEY_ENABLED ? "Seu plano fica pronto na Unidade 2 da jornada. Quer montar agora?" : "Você ainda não tem um plano. Leva poucos minutos: quer montar agora?"}</p>
         <Button className="mt-6 w-full" onClick={() => setCreating(true)}>
           Montar meu plano
         </Button>
@@ -71,13 +65,20 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const [scenario, setScenario] = useState<ScenarioKey>("central");
   const [withInss, setWithInss] = useState<"sem" | "com">("sem");
   const [editOpen, setEditOpen] = useState(isNew);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [lifeOpen, setLifeOpen] = useState(false);
   const [lifeReason, setLifeReason] = useState<string | null>(null);
+  const [whatIfOpen, setWhatIfOpen] = useState(false);
+  const whatIf = useFeature("what_if");
 
+  // Volta ao plano salvo só quando ele muda de verdade. `initial` é um objeto novo a cada mudança no
+  // store (um lançamento pelo "+", uma gravação), e depender dele apagava o que a pessoa estava editando.
+  const savedVersion = s.plan?.updatedAt ?? null;
   useEffect(() => {
     setDraft(initial);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedVersion]);
 
   const errors = validateInputs(draft);
   const all = useMemo(() => (errors.length ? null : simulateAll(draft)), [draft, errors.length]);
@@ -102,6 +103,13 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
     setLifeReason(null);
   }
 
+  function saveWhatIf(inputs: PlanInputs) {
+    const res = demo.savePlan(inputs, "what_if");
+    xpToast("Plano atualizado com a simulação.", res.xpAwarded);
+    handleResult(res);
+    setWhatIfOpen(false);
+  }
+
   const set = <K extends keyof PlanInputs>(k: K) => (v: PlanInputs[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const setPct = (k: "inflationAA" | "costsAA") => (v: number | null) => setDraft((d) => ({ ...d, [k]: (v ?? 0) / 100 }));
   const setRet = (k: ScenarioKey) => (v: number | null) => setDraft((d) => ({ ...d, returns: { ...d.returns, [k]: (v ?? 0) / 100 } }));
@@ -115,6 +123,20 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
       <AreaTabs />
       <h1>Seu plano</h1>
+
+      {dirty && s.plan && (
+        <div role="status" className="sticky top-2 z-20 mt-4 flex items-center justify-between gap-3 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-card">
+          <span className="text-sm font-semibold">Alterações não salvas</span>
+          <span className="flex gap-2">
+            <Button size="sm" variant="ghost" className="text-primary-foreground hover:bg-black/10" onClick={() => setDraft(initial)}>
+              Descartar
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => save("edit")}>
+              Salvar
+            </Button>
+          </span>
+        </div>
+      )}
 
       {/* No celular, uma coluna na ordem do código; no desktop, resumo à esquerda e gráfico à direita. */}
       <div className="mt-6 grid gap-4 lg:grid-cols-[5fr_7fr] lg:items-start lg:gap-x-6 lg:[grid-template-areas:'res_chart'_'seg_chart'_'pre_chart'_'calc_hist'_'rev_hist'_'sens_hist']">
@@ -158,6 +180,26 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
           </p>
         </section>
       )}
+      {r && !isNew && s.plan && (
+        <Button variant="outline" className="mt-4 w-full" onClick={() => (whatIf.allowed ? setWhatIfOpen(true) : whatIf.ask())}>
+          {whatIf.allowed ? <Sparkles size={16} strokeWidth={1.75} aria-hidden /> : <Lock size={16} strokeWidth={1.75} aria-label="Recurso pago" />}
+          E se…?
+        </Button>
+      )}
+      {r && !isNew && s.plan && whatIf.preview && <LaunchBadge />}
+      {r && (
+        <GoalSeekCard
+          inputs={draft}
+          scenario={scenario}
+          includeInss={includeInss}
+          onUseAge={(age) => {
+            set("retirementAge")(age);
+            setEditOpen(true);
+            toast("Idade alterada nas premissas. Salve o plano se quiser manter.");
+          }}
+        />
+      )}
+      {s.plan && <PensionTaxCard inputs={s.plan.inputs} />}
       {errors.length > 0 && <p className="mt-6 text-sm text-destructive">{errors[0]}</p>}
       </div>
 
@@ -187,11 +229,11 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
             <div className="h-56 w-full" aria-hidden>
               <ResponsiveContainer>
                 <AreaChart data={series} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="age" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+                  <CartesianGrid {...GRID} />
+                  <XAxis dataKey="age" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                   <YAxis
                     width={48}
-                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                    tick={AXIS_TICK}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : `${Math.round(v / 1e3)} mil`)}
@@ -199,7 +241,7 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
                   <Tooltip
                     formatter={(v: number) => [formatWealth(v), "Patrimônio"]}
                     labelFormatter={(a) => `${a} anos`}
-                    contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10 }}
+                    contentStyle={TOOLTIP_STYLE}
                   />
                   <Area type="monotone" dataKey="wealth" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.12} strokeWidth={2} isAnimationActive={false} />
                   <ReferenceLine x={draft.retirementAge} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
@@ -294,18 +336,10 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
       </Collapsible>
 
       {!isNew && (
-        <section className="space-y-2 lg:[grid-area:rev]">
-          <Button variant="outline" className="w-full" onClick={() => setQuickOpen(true)}>
-            Fazer revisão rápida
+        <section className="lg:[grid-area:rev]">
+          <Button variant="outline" className="w-full" onClick={() => setReviewOpen(true)}>
+            Revisar plano
           </Button>
-          <Button variant="outline" className="w-full" onClick={() => setLifeOpen(true)}>
-            Mudou algo na sua vida?
-          </Button>
-          {annualAvailable && (
-            <Button variant="outline" className="w-full" onClick={() => save("annual_review")}>
-              Fazer revisão anual
-            </Button>
-          )}
         </section>
       )}
 
@@ -359,6 +393,42 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
       <footer className="mt-10 border-t border-border pt-6">
         <LegalNote>{SIMULATION_FOOTER}</LegalNote>
       </footer>
+
+      {s.plan && (
+        <WhatIfSheet base={s.plan.inputs} scenario={scenario} includeInss={includeInss} open={whatIfOpen} onOpenChange={setWhatIfOpen} onSave={saveWhatIf} />
+      )}
+      {whatIf.dialog}
+
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revisar plano</DialogTitle>
+            <DialogDescription>Escolha o tipo de revisão.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {[
+              { label: "Revisão rápida", hint: "Confirmar que as premissas ainda valem", go: () => setQuickOpen(true) },
+              { label: "Mudou algo na sua vida", hint: "Renda, família, trabalho ou cidade", go: () => setLifeOpen(true) },
+              ...(annualAvailable
+                ? [{ label: "Revisão anual", hint: "Registrar a revisão completa do ano", go: () => save("annual_review") }]
+                : []),
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => {
+                  setReviewOpen(false);
+                  o.go();
+                }}
+                className="block min-h-14 w-full rounded-2xl bg-muted px-4 py-3 text-left hover:bg-muted/70"
+              >
+                <span className="block font-semibold">{o.label}</span>
+                <span className="block text-sm text-muted-foreground">{o.hint}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={quickOpen} onOpenChange={setQuickOpen}>
         <DialogContent>

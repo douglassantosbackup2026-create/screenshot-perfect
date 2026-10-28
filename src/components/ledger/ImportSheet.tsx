@@ -1,9 +1,10 @@
 // Importar extrato OFX ou CSV para uma conta, com prévia antes de gravar.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { AccountSelect } from "@/components/ledger/fields";
 import { handleResult, xpToast } from "@/components/feedback";
 import { parseCSV, parseOFX, type ImportedTx } from "@/lib/calc/import";
@@ -25,10 +26,14 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
     setInvert(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  if (!open) return null;
 
   const isOfx = /\.(ofx|qfx)$/i.test(fileName) || (text ?? "").includes("<STMTTRN>");
-  const parsed: { rows: ImportedTx[]; skipped: number } = text === null ? { rows: [], skipped: 0 } : isOfx ? { rows: parseOFX(text), skipped: 0 } : parseCSV(text, invert);
+  // O arquivo pode ter milhares de linhas: lê de novo só quando o texto ou a inversão mudam.
+  const parsed = useMemo<{ rows: ImportedTx[]; skipped: number }>(
+    () => (text === null ? { rows: [], skipped: 0 } : isOfx ? { rows: parseOFX(text), skipped: 0 } : parseCSV(text, invert)),
+    [text, isOfx, invert],
+  );
+  if (!open) return null;
 
   async function pick(file: File | undefined) {
     if (!file) return;
@@ -59,7 +64,7 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Importar extrato</SheetTitle>
           <SheetDescription>
@@ -117,7 +122,7 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
             </Button>
           </div>
         )}
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

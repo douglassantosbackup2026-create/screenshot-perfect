@@ -7,7 +7,6 @@ export type NodeStatus = "done" | "current" | "available" | "locked";
 export type JourneyNode = { day: number; unit: number; indexInUnit: number; unitSize: number; status: NodeStatus };
 
 export const JOURNEY_ORDER: number[] = UNITS.flatMap((u) => u.lessons);
-export const unitOf = (day: number): Unit | undefined => UNITS.find((u) => u.lessons.includes(day));
 export const lessonOf = (day: number): Lesson | undefined => LESSONS.find((l) => l.day === day);
 
 /**

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { Quiz, type QuizResult } from "@/components/Quiz";
 import { handleResult } from "@/components/feedback";
 import { demo } from "@/lib/data/demo-store";
@@ -32,7 +33,7 @@ export function PlacementQuiz({ unit, onClose }: { unit: number | null; onClose:
 
   return (
     <Sheet open onOpenChange={(o) => !o && close()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Já sabe isso? Unidade {u.n}</SheetTitle>
           <SheetDescription>
@@ -56,7 +57,7 @@ export function PlacementQuiz({ unit, onClose }: { unit: number | null; onClose:
             <Quiz items={placementQuestions(u.n)} onDone={done} />
           )}
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

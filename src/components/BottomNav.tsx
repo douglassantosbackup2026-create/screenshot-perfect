@@ -11,7 +11,7 @@ function Item({ area, active }: { area: Area; active: boolean }) {
         to={area.to}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors hover:text-foreground",
+          "flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs transition-colors hover:text-foreground",
           active ? "font-semibold text-primary" : "text-muted-foreground",
         )}
       >

@@ -3,7 +3,7 @@
 
 import { normalize } from './categorize';
 
-export interface ImportedTx {
+export type ImportedTx = {
   importedId: string | null; // FITID do OFX ou identificador do CSV
   date: string;              // "YYYY-MM-DD"
   amount: number;            // centavos
@@ -100,7 +100,7 @@ const HEADERS = {
 };
 const findCol = (header: string[], names: string[]) => header.findIndex((h) => names.some((n) => normalize(h).startsWith(n)));
 
-export interface CsvResult {
+export type CsvResult = {
   rows: ImportedTx[];
   skipped: number; // linhas que não deu para ler
 }
@@ -110,7 +110,7 @@ export interface CsvResult {
  * `invert` troca o sinal: faturas de cartão costumam trazer as compras como valores positivos.
  */
 export function parseCSV(text: string, invert = false): CsvResult {
-  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) return { rows: [], skipped: 0 };
   const first = lines[0]!;
   const sep = [';', '\t', ','].sort((a, b) => first.split(b).length - first.split(a).length)[0]!;
@@ -138,7 +138,7 @@ export function parseCSV(text: string, invert = false): CsvResult {
   return { rows, skipped };
 }
 
-export interface ExistingTx {
+export type ExistingTx = {
   id: string;
   date: string;
   amount: number;
@@ -147,7 +147,7 @@ export interface ExistingTx {
   imported: boolean; // veio de uma importação anterior
 }
 
-export interface DedupeResult {
+export type DedupeResult = {
   fresh: ImportedTx[];                                 // novos: entram como lançamentos
   matched: { existingId: string; tx: ImportedTx }[];   // casam com um lançamento manual: ficam vinculados a ele
   duplicates: ImportedTx[];                            // já estavam importados: ficam de fora

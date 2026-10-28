@@ -4,13 +4,13 @@
 import { isIncomeSource, isLiability, summarizeAssets, type AssetCategory, type AssetItem } from './assets';
 import type { TimelinePoint } from './progress';
 
-export interface Valuation {
+export type Valuation = {
   assetId: string;
   month: string; // "YYYY-MM-01"
   value: number;
 }
 
-export interface HistoryPoint {
+export type HistoryPoint = {
   month: string;
   value: number;
   delta: number | null; // null no primeiro registro
@@ -27,19 +27,19 @@ export function assetHistory(valuations: Valuation[], assetId: string): HistoryP
   });
 }
 
-export interface SnapshotItem extends AssetItem {
+export type SnapshotItem = {
   id: string;
   name: string;
-}
+} & AssetItem
 
-export interface BreakdownItem {
+export type BreakdownItem = {
   assetId: string;
   name: string;
   category: AssetCategory;
   value: number;
 }
 
-export interface AssetSnapshot {
+export type AssetSnapshot = {
   total: number;       // o mesmo total que o plano usa: ativos destinados à aposentadoria
   previdencia: number; // parte do total em PGBL e VGBL
   breakdown: BreakdownItem[];
@@ -67,7 +67,7 @@ export function modifiedDietz(start: number, end: number, contributions: number)
   return (end - start - contributions) / base;
 }
 
-export interface PeriodReturn {
+export type PeriodReturn = {
   month: string;
   rate: number | null;
 }
@@ -87,7 +87,7 @@ export function cumulativeReturn(rates: (number | null)[]): number | null {
   return valid.reduce((acc, r) => acc * (1 + r), 1) - 1;
 }
 
-export interface GrowthSummary {
+export type GrowthSummary = {
   fromMonth: string;
   toMonth: string;
   growth: number;        // total mais recente − primeiro total
@@ -107,7 +107,7 @@ export function growthSummary(timeline: TimelinePoint[]): GrowthSummary | null {
 
 export const FI_MILESTONES = [0.25, 0.5, 0.75, 1] as const;
 
-export interface Milestone {
+export type Milestone = {
   ratio: number;
   reached: boolean;
 }

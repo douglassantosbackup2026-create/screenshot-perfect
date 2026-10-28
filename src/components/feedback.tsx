@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import type { AchievementCode } from "@/lib/gamification/rules";
 import { achievementInfo } from "@/lib/labels";
 import type { ActionResult } from "@/lib/data/demo-store";
+import { JOURNEY_ENABLED } from "@/lib/features";
 
 export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
   map: Map,
@@ -49,13 +50,37 @@ export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
 
 /** Toast discreto de XP. */
 export function xpToast(message: string, xp: number) {
-  toast(xp > 0 ? `${message} +${xp} XP` : message);
+  toast(JOURNEY_ENABLED && xp > 0 ? `${message} +${xp} XP` : message);
 }
 
 const EVT = "pi:achievements";
 /** Mostra a folha de conquista quando a operação retorna conquistas novas. */
 export function handleResult(r: Pick<ActionResult, "newAchievements">) {
-  if (r.newAchievements.length) window.dispatchEvent(new CustomEvent(EVT, { detail: r.newAchievements }));
+  if (JOURNEY_ENABLED && r.newAchievements.length) window.dispatchEvent(new CustomEvent(EVT, { detail: r.newAchievements }));
+}
+
+/**
+ * Roda uma operação do store com o retorno de sempre: em caso de sucesso, a mensagem (com XP, se houver)
+ * e as conquistas; em erro, a mensagem da regra num toast. Devolve true se deu certo.
+ */
+const isActionResult = (r: unknown): r is ActionResult =>
+  typeof r === "object" && r !== null && "newAchievements" in r && "xpAwarded" in r;
+
+export function runAction<T>(fn: () => T, success?: string | ((r: T) => string)): boolean {
+  try {
+    const r = fn();
+    const result = isActionResult(r) ? r : null;
+    if (success) {
+      const message = typeof success === "function" ? success(r) : success;
+      if (result) xpToast(message, result.xpAwarded);
+      else toast(message);
+    }
+    if (result) handleResult(result);
+    return true;
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : "Não foi possível concluir agora. Tente de novo.");
+    return false;
+  }
 }
 
 export function AchievementSheet() {

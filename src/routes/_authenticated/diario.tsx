@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { HideValuesToggle } from "@/components/HideValuesToggle";
+import { useShowValues } from "@/hooks/use-show-values";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { ConstancyThread } from "@/components/ConstancyThread";
 import { LedgerSection } from "@/components/ledger/LedgerSection";
 import { AreaTabs } from "@/components/nav/areas";
 import type { TxEditing } from "@/components/ledger/TransactionSheet";
 import { NumberField } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
+import { JOURNEY_ENABLED } from "@/lib/features";
 import { demo, useDemo, type Contribution, type Destination } from "@/lib/data/demo-store";
 import { threadMonths } from "@/lib/data/thread";
 import { formatMonthly, formatWealth } from "@/lib/calc/format";
@@ -23,14 +28,7 @@ export const Route = createFileRoute("/_authenticated/diario")({
     ...(s["registrar"] ? { registrar: true } : {}),
     ...(s["lancar"] ? { lancar: true } : {}),
   }),
-  head: () => ({
-    meta: [
-      { title: "Diário — Previdência Intelligence" },
-      { name: "description", content: "O fio da constância e o dia a dia do dinheiro: aportes, gastos, receitas e extratos." },
-      { property: "og:title", content: "Diário — Previdência Intelligence" },
-      { property: "og:description", content: "O fio da constância e o dia a dia do dinheiro: aportes, gastos, receitas e extratos." },
-    ],
-  }),
+  head: () => pageHead("Lançamentos", "O fio da constância e o dia a dia do dinheiro: aportes, gastos, receitas e extratos."),
   component: Diary,
 });
 
@@ -42,7 +40,7 @@ function Diary() {
   const [logMonth, setLogMonth] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
-  const [showValues, setShowValues] = useState(!s.profile.hideValues);
+  const { showValues, toggle: toggleValues } = useShowValues();
   const [txEditing, setTxEditing] = useState<TxEditing>(null);
 
   useEffect(() => {
@@ -76,27 +74,38 @@ function Diary() {
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <AreaTabs />
-      <h1>Diário</h1>
-      <Button className="mt-5 w-full" onClick={() => setLogMonth(current)} variant={currentLogged ? "outline" : "default"}>
-        Registrar aporte de {monthName(current)}
-      </Button>
-
-      <div className="mt-6 flex items-center justify-between gap-3 text-sm">
-        <p>
-          {months.length} {months.length === 1 ? "mês" : "meses"} no fio · {withContribution} com aporte
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowValues((v) => !v)}
-          className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-muted-foreground hover:bg-muted"
-          aria-pressed={showValues}
-        >
-          {showValues ? <EyeOff size={18} strokeWidth={1.75} aria-hidden /> : <Eye size={18} strokeWidth={1.75} aria-hidden />}
-          {showValues ? <span className="money">{formatWealth(total)}</span> : "Mostrar total"}
-        </button>
+      <div className="flex items-center justify-between gap-3">
+        <h1>Lançamentos</h1>
+        <HideValuesToggle showValues={showValues} onToggle={toggleValues} />
       </div>
 
-      <section className="mt-6">
+      {/* O aporte do mês numa linha; o histórico de aportes fica abaixo dos lançamentos. */}
+      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 shadow-card">
+        <span className="text-sm">
+          Aporte de {monthName(current)}:{" "}
+          <span className={currentLogged ? "font-semibold text-primary" : "font-semibold"}>{currentLogged ? "registrado" : "pendente"}</span>
+        </span>
+        <Button size="sm" variant={currentLogged ? "outline" : "default"} onClick={() => setLogMonth(current)}>
+          {currentLogged ? "Ver" : "Registrar"}
+        </Button>
+      </div>
+
+      <LedgerSection s={s} showValues={showValues} editing={txEditing} setEditing={setTxEditing} />
+
+      <section className="mt-10" aria-label="Aportes mês a mês">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-xl">Aportes mês a mês</h2>
+          <p className="text-sm text-muted-foreground">
+            {months.length} {months.length === 1 ? "mês" : "meses"} · {withContribution} com aporte
+            {showValues && total > 0 && (
+              <>
+                {" "}
+                · <span className="money">{formatWealth(total)}</span>
+              </>
+            )}
+          </p>
+        </div>
+        <div className="mt-4">
         <ConstancyThread
           months={months.map((m) => ({
             month: m.month,
@@ -106,9 +115,8 @@ function Diary() {
             onSelect: () => (m.items.length ? setDetail(m.month) : setLogMonth(m.month)),
           }))}
         />
+        </div>
       </section>
-
-      <LedgerSection s={s} showValues={showValues} editing={txEditing} setEditing={setTxEditing} />
 
       <LogSheet
         month={logMonth}
@@ -155,12 +163,12 @@ function LogSheet({ month, onClose, onSaved }: { month: string | null; onClose: 
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Registrar aporte</SheetTitle>
           <SheetDescription>
             {isCurrent ? "Você fez um aporte este mês?" : `Você fez um aporte em ${monthYear(month)}?`}
-            {isRecent ? " O XP vem de registrar o mês, com ou sem aporte, nunca do valor." : " Meses antigos ficam no fio, sem XP."}
+            {JOURNEY_ENABLED && (isRecent ? " O XP vem de registrar o mês, com ou sem aporte, nunca do valor." : " Meses antigos ficam no fio, sem XP.")}
           </SheetDescription>
         </SheetHeader>
         {made === null ? (
@@ -203,7 +211,7 @@ function LogSheet({ month, onClose, onSaved }: { month: string | null; onClose: 
             </Button>
           </div>
         )}
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }
@@ -215,7 +223,7 @@ function DetailSheet({ month, items, onClose }: { month: string | null; items: C
   if (!month) return null;
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">{monthYear(month)}</SheetTitle>
           <SheetDescription>Só você vê estes valores.</SheetDescription>
@@ -270,23 +278,24 @@ function DetailSheet({ month, items, onClose }: { month: string | null; items: C
                         Editar
                       </Button>
                     )}
-                    <Button
+                    <ConfirmButton
                       size="sm"
-                      variant="ghost"
-                      onClick={() => {
+                      confirmLabel="Confirmar exclusão"
+                      onConfirm={() => {
                         demo.deleteContribution(c.id);
+                        toast("Registro do aporte excluído.");
                         if (items.length === 1) onClose();
                       }}
                     >
                       Excluir
-                    </Button>
+                    </ConfirmButton>
                   </div>
                 </>
               )}
             </li>
           ))}
         </ul>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

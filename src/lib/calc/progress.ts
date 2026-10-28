@@ -3,17 +3,17 @@
 
 import { effectiveRealReturn, futureValue, monthlyRate, simulate, type PlanInputs } from './retirement';
 
-export interface WealthPoint {
+export type WealthPoint = {
   month: string; // "YYYY-MM-01"
   total: number;
 }
 
-export interface MonthlyAmount {
+export type MonthlyAmount = {
   month: string; // "YYYY-MM-01"
   amount: number;
 }
 
-export interface FiProgress {
+export type FiProgress = {
   ratio: number;                       // patrimônio atual ÷ patrimônio-alvo, entre 0 e 1
   targetWealth: number;                // cenário central, sem INSS
   projectedRatioAtRetirement: number;  // cobertura projetada na aposentadoria
@@ -25,7 +25,7 @@ export function fiProgress(inputs: PlanInputs, currentWealth: number): FiProgres
   return { ratio, targetWealth: r.targetWealth, projectedRatioAtRetirement: r.coverageRatio };
 }
 
-export interface TimelinePoint {
+export type TimelinePoint = {
   month: string;
   total: number;
   deltaFromPrevious: number | null;    // null no primeiro registro
@@ -59,7 +59,7 @@ function monthIndex(month: string): number {
   return Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1;
 }
 
-export interface SelfComparison {
+export type SelfComparison = {
   fromMonth: string;
   toMonth: string;
   delta: number;
@@ -101,7 +101,7 @@ export function projectMonthlyPath(inputs: PlanInputs, startWealth: number, mont
   return Array.from({ length: months + 1 }, (_, k) => futureValue(startWealth, inputs.monthlyContribution, rm, k));
 }
 
-export interface ContributionRecord {
+export type ContributionRecord = {
   month: string; // "YYYY-MM-01"
   made: boolean;
   amount: number | null;
@@ -126,7 +126,7 @@ export function monthlyContributionSeries(contributions: ContributionRecord[], e
   });
 }
 
-export interface DestinationShare {
+export type DestinationShare = {
   destination: string | null; // null = não informado
   amount: number;
   share: number;              // fração do total, soma 1

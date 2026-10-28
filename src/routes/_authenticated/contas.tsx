@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { pageHead } from "@/lib/seo";
+import { Plus, Trash2 } from "lucide-react";
 import { AreaTabs } from "@/components/nav/areas";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { EmptyState } from "@/components/EmptyState";
+import { HideValuesToggle } from "@/components/HideValuesToggle";
+import { useShowValues } from "@/hooks/use-show-values";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
-import { HIDDEN } from "@/components/dashboard";
-import { ACCOUNT_KINDS, accountGroup, accountKindLabel, toCents, type AccountKind } from "@/lib/calc/ledger";
+import { HIDDEN } from "@/lib/labels";
+import { ACCOUNT_KINDS, accountGroup, accountKindLabel, fromCents, toCents, type AccountKind } from "@/lib/calc/ledger";
 import type { RuleOp } from "@/lib/calc/categorize";
 import { formatMoney } from "@/lib/calc/format";
 import { demo, useDemo, type Account, type CategoryKind, type DemoState } from "@/lib/data/demo-store";
@@ -17,14 +23,7 @@ import { accountsOverview } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/contas")({
-  head: () => ({
-    meta: [
-      { title: "Contas — Previdência Intelligence" },
-      { name: "description", content: "Suas contas, cartões e categorias, e as regras que categorizam os lançamentos sozinhas." },
-      { property: "og:title", content: "Contas — Previdência Intelligence" },
-      { property: "og:description", content: "Suas contas, cartões e categorias, e as regras que categorizam os lançamentos sozinhas." },
-    ],
-  }),
+  head: () => pageHead("Contas", "Suas contas, cartões e categorias, e as regras que categorizam os lançamentos sozinhas."),
   component: Accounts,
 });
 
@@ -32,7 +31,7 @@ type Editing = { account: Account | null } | null;
 
 function Accounts() {
   const s = useDemo();
-  const [showValues, setShowValues] = useState(!s.profile.hideValues);
+  const { showValues, toggle: toggleValues } = useShowValues();
   const [editing, setEditing] = useState<Editing>(null);
   const overview = accountsOverview(s);
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
@@ -46,15 +45,7 @@ function Accounts() {
           <p className="mt-1 text-sm text-muted-foreground">Saldos calculados a partir do que você lançou ou importou.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setShowValues((v) => !v)}
-            className="flex min-h-11 items-center gap-2 rounded-full bg-card px-4 text-sm text-muted-foreground shadow-card hover:text-foreground"
-            aria-pressed={showValues}
-          >
-            {showValues ? <EyeOff size={16} strokeWidth={1.75} aria-hidden /> : <Eye size={16} strokeWidth={1.75} aria-hidden />}
-            {showValues ? "Ocultar valores" : "Mostrar valores"}
-          </button>
+          <HideValuesToggle showValues={showValues} onToggle={toggleValues} />
           <Button onClick={() => setEditing({ account: null })}>
             <Plus size={16} strokeWidth={2} aria-hidden /> Nova conta
           </Button>
@@ -62,13 +53,13 @@ function Accounts() {
       </header>
 
       {s.accounts.length === 0 ? (
-        <section className="mt-6 rounded-2xl bg-card p-6 text-center shadow-card">
-          <p className="font-semibold">Nenhuma conta ainda</p>
-          <p className="mt-1 text-sm text-muted-foreground">Comece pela conta corrente onde cai a sua renda.</p>
-          <Button className="mt-4" onClick={() => setEditing({ account: null })}>
-            Cadastrar a primeira conta
-          </Button>
-        </section>
+        <EmptyState
+          className="mt-6"
+          title="Nenhuma conta ainda"
+          action={<Button onClick={() => setEditing({ account: null })}>Cadastrar a primeira conta</Button>}
+        >
+          Comece pela conta corrente onde cai a sua renda.
+        </EmptyState>
       ) : (
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
           {overview.groups
@@ -142,17 +133,18 @@ function Categories({ s }: { s: DemoState }) {
           .map((c) => (
             <li key={c.id} className="flex min-h-10 items-center gap-1 rounded-full border border-border pl-4 pr-1 text-sm">
               {c.name}
-              <button
-                type="button"
+              <ConfirmButton
+                size="sm"
+                confirmLabel="Excluir?"
                 aria-label={`Excluir ${c.name}`}
-                onClick={() => {
+                className="min-w-11 rounded-full text-muted-foreground"
+                onConfirm={() => {
                   demo.deleteCategory(c.id);
                   toast(`Categoria “${c.name}” excluída. Os lançamentos dela ficaram sem categoria.`);
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <Trash2 size={14} aria-hidden />
-              </button>
+              </ConfirmButton>
             </li>
           ))}
       </ul>
@@ -205,7 +197,7 @@ function Rules({ s }: { s: DemoState }) {
                 type="button"
                 aria-label="Excluir regra"
                 onClick={() => demo.deleteCategoryRule(r.id)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <Trash2 size={14} aria-hidden />
               </button>
@@ -261,7 +253,7 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
     setName(account?.name ?? "");
     setKind(account?.kind ?? "corrente");
     // Em cartões e dívidas, a pessoa informa quanto deve; guardamos como saldo negativo.
-    setOpening(account ? Math.abs(account.openingBalance) / 100 : null);
+    setOpening(account ? fromCents(Math.abs(account.openingBalance)) : null);
     setConfirmDelete(false);
   }, [editing, account]);
   if (!editing) return null;
@@ -280,7 +272,7 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">{account ? "Editar conta" : "Nova conta"}</SheetTitle>
           <SheetDescription>O app não se conecta ao banco nem pede senha. Os saldos vêm do que você lança ou importa.</SheetDescription>
@@ -337,7 +329,7 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
               </Button>
             ))}
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

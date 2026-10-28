@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isAdmin } from "@/lib/auth/roles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -8,19 +9,20 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumberField } from "@/components/forms";
 import { ACH_ICONS, handleResult } from "@/components/feedback";
-import { demo, detachUser, useDemo } from "@/lib/data/demo-store";
+import { demo, detachUser, flushSave, stopSync, useDemo } from "@/lib/data/demo-store";
 import { supabase } from "@/integrations/supabase/client";
 import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 import { ChangePassword } from "@/components/auth/ChangePassword";
+import { JOURNEY_ENABLED } from "@/lib/features";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
     meta: [
       { title: "Perfil — Previdência Intelligence" },
-      { name: "description", content: "Seu nível, conquistas, lembretes e preferências de privacidade." },
+      { name: "description", content: JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e preferências de privacidade." : "Sua rotina do mês e preferências de privacidade." },
       { property: "og:title", content: "Perfil — Previdência Intelligence" },
-      { property: "og:description", content: "Seu nível, conquistas, lembretes e privacidade." },
+      { property: "og:description", content: JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e privacidade." : "Sua rotina e privacidade." },
     ],
   }),
   component: Profile,
@@ -44,8 +46,16 @@ function Profile() {
   const [delOpen, setDelOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => void isAdmin().then(setAdmin), []);
   async function signOut() {
-    await supabase.auth.signOut();
+    if (!(await flushSave())) {
+      toast.error("Sua última alteração ainda não foi salva. Confira a internet e tente sair de novo.");
+      return;
+    }
+    const { error } = await supabase.auth.signOut();
+    // Sem internet, a sessão local sai do mesmo jeito; só a do servidor expira sozinha depois.
+    if (error) toast("Você saiu deste aparelho. Sem conexão, a sessão no servidor expira sozinha.");
     detachUser();
     navigate({ to: "/", replace: true });
   }
@@ -64,6 +74,8 @@ function Profile() {
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <h1>{s.profile.displayName || "Perfil"}</h1>
 
+      {JOURNEY_ENABLED && (
+      <>
       <section className="mt-8" aria-label="Níveis">
         <h2 className="text-lg">Seu nível</h2>
         <ol className="mt-4 space-y-2">
@@ -126,43 +138,38 @@ function Profile() {
           })}
         </ul>
       </section>
+      </>
+      )}
 
       <section className="mt-10 divide-y divide-border">
-        <h2 className="pb-2 text-lg">Reserva e lembretes</h2>
+        <h2 className="pb-2 text-lg">Reserva e rotina</h2>
         <Row label="Minha reserva de emergência está montada">
           <Switch
             checked={s.profile.emergencyFundReady}
             onCheckedChange={(v) => handleResult(demo.setEmergencyFund(v))}
           />
         </Row>
-        <Row label="Lembrete mensal do aporte">
-          <Switch checked={s.profile.monthlyReminder} onCheckedChange={(v) => demo.updateProfile({ monthlyReminder: v })} />
-        </Row>
-        {s.profile.monthlyReminder && (
-          <div className="py-3">
-            <NumberField
-              label="Dia do mês"
-              value={s.profile.reminderDay}
-              onChange={(v) => {
-                if (v == null) return;
-                if (Number.isInteger(v) && v >= 1 && v <= 28) demo.updateProfile({ reminderDay: v });
-                else toast.error("Escolha um dia entre 1 e 28: assim o lembrete existe em todos os meses.");
-              }}
-              min={1}
-              max={28}
-              step={1}
-              hint="Entre 1 e 28."
-            />
-          </div>
-        )}
-        <Row label="Lembrete semanal da missão">
-          <Switch checked={s.profile.weeklyReminder} onCheckedChange={(v) => demo.updateProfile({ weeklyReminder: v })} />
-        </Row>
+        {/* Lembretes por notificação ou e-mail ainda não existem: só o aviso dentro do app usa este dia. */}
+        <div className="py-3">
+          <NumberField
+            label="Dia em que você recebe"
+            value={s.profile.reminderDay}
+            onChange={(v) => {
+              if (v == null) return;
+              if (Number.isInteger(v) && v >= 1 && v <= 28) demo.updateProfile({ reminderDay: v });
+              else toast.error("Escolha um dia entre 1 e 28: assim ele existe em todos os meses.");
+            }}
+            min={1}
+            max={28}
+            step={1}
+            hint="A partir desse dia, o Início lembra de registrar o aporte e o patrimônio do mês."
+          />
+        </div>
       </section>
 
       <section className="mt-10 divide-y divide-border">
         <h2 className="pb-2 text-lg">Privacidade</h2>
-        <Row label="Ocultar valores por padrão" hint="Diário e Evolução abrem com os valores escondidos.">
+        <Row label="Ocultar valores por padrão" hint="Lançamentos, Patrimônio e Progresso abrem com os valores escondidos.">
           <Switch checked={s.profile.hideValues} onCheckedChange={(v) => demo.updateProfile({ hideValues: v })} />
         </Row>
         <Row label="Permitir dados de uso anônimos" hint="Nunca inclui valores financeiros.">
@@ -180,9 +187,10 @@ function Profile() {
 
       <nav className="mt-10 flex flex-col border-t border-border pt-4 text-sm" aria-label="Links">
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
-        <Link to="/sobre" className="min-h-11 py-3">Política de privacidade</Link>
+        <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Seu plano e o que o Inteligência acrescenta</Link>
+        <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
-        <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>
+        {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
         <ChangePassword />
         <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
           Sair
@@ -205,11 +213,21 @@ function Profile() {
               disabled={confirm !== "EXCLUIR" || deleting}
               onClick={async () => {
                 setDeleting(true);
+                // Nenhuma gravação pode chegar depois da exclusão e recriar os dados.
+                await stopSync();
                 const { error } = await supabase.rpc("delete_my_account");
                 setDeleting(false);
-                if (error) return void toast.error("Não foi possível excluir agora. Tente de novo.");
+                if (error) {
+                  // A sincronização foi parada; recarregar religa tudo do jeito certo (rota → attachUser),
+                  // em vez de deixar as próximas edições presas só neste aparelho.
+                  toast.error("Não foi possível excluir agora. Seus dados continuam salvos. Tente de novo.");
+                  setTimeout(() => window.location.reload(), 1500);
+                  return;
+                }
                 setDelOpen(false);
-                await signOut();
+                await supabase.auth.signOut();
+                detachUser();
+                navigate({ to: "/", replace: true });
                 toast("Sua conta e seus dados foram apagados.");
               }}
             >

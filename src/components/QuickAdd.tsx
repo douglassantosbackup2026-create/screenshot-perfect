@@ -1,50 +1,36 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { CalendarCheck, Landmark, PiggyBank, Plus, Receipt, Target, Wallet, type LucideIcon } from "lucide-react";
+import { Landmark, Plus, Receipt, Wallet, type LucideIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { TransactionSheet, type TxEditing } from "@/components/ledger/TransactionSheet";
+import { useDemo } from "@/lib/data/demo-store";
 import { cn } from "@/lib/utils";
 
-/** Botão "+" amarelo com os atalhos de registro. */
+/** Botão "+" amarelo com os atalhos de registro. O lançamento abre aqui mesmo, sem trocar de tela. */
 export function QuickAdd({ className }: { className?: string }) {
+  const s = useDemo();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<TxEditing>(null);
   const navigate = useNavigate();
 
   const actions: { label: string; hint: string; icon: LucideIcon; go: () => void }[] = [
     {
-      label: "Fechar o mês",
-      hint: "Os cinco passos do mês, num lugar só",
-      icon: CalendarCheck,
-      go: () => navigate({ to: "/fechamento" }),
+      label: "Novo lançamento",
+      hint: "Um gasto, uma receita ou uma transferência",
+      icon: Receipt,
+      go: () => (s.accounts.length ? setEditing({ tx: null }) : navigate({ to: "/contas" })),
     },
     {
       label: "Registrar aporte",
-      hint: "O aporte deste mês, no Diário",
+      hint: "Quanto você guardou para a aposentadoria neste mês",
       icon: Wallet,
       go: () => navigate({ to: "/diario", search: { registrar: true } }),
     },
     {
-      label: "Novo lançamento",
-      hint: "Um gasto, uma receita ou uma transferência",
-      icon: Receipt,
-      go: () => navigate({ to: "/diario", search: { lancar: true } }),
-    },
-    {
-      label: "Registrar patrimônio",
-      hint: "Quanto você tem guardado hoje",
+      label: "Atualizar patrimônio",
+      hint: "Previdência, investimentos, imóveis e dívidas",
       icon: Landmark,
-      go: () => navigate({ to: "/evolucao", search: { registrar: true } }),
-    },
-    {
-      label: "Item do patrimônio",
-      hint: "Previdência, investimento, imóvel ou dívida",
-      icon: PiggyBank,
-      go: () => navigate({ to: "/patrimonio", search: { novo: true } }),
-    },
-    {
-      label: "Nova meta",
-      hint: "Um valor ou um hábito",
-      icon: Target,
-      go: () => navigate({ to: "/evolucao", search: { meta: true } }),
+      go: () => navigate({ to: "/patrimonio" }),
     },
   ];
 
@@ -91,6 +77,7 @@ export function QuickAdd({ className }: { className?: string }) {
           </ul>
         </SheetContent>
       </Sheet>
+      <TransactionSheet s={s} editing={editing} onClose={() => setEditing(null)} />
     </>
   );
 }

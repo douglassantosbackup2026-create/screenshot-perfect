@@ -7,12 +7,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
-import { HIDDEN } from "@/components/dashboard";
+import { HIDDEN } from "@/lib/labels";
 import { handleResult, xpToast } from "@/components/feedback";
 import { ASSET_CLASSES, assetClassLabel, holdsPositions, type AssetClass, type TradeType } from "@/lib/calc/portfolio";
-import { toCents } from "@/lib/calc/ledger";
+import { fromCents, toCents } from "@/lib/calc/ledger";
 import { formatMoney, formatPercent } from "@/lib/calc/format";
 import { demo, type DemoState, type Holding } from "@/lib/data/demo-store";
 import { contributionSuggestion, portfolioView } from "@/lib/data/selectors";
@@ -230,7 +231,7 @@ function HoldingSheet({
     setAssetId(h?.assetId ?? eligible[0]?.id);
     setName(h?.name ?? "");
     setAssetClass(h?.assetClass ?? "renda_fixa");
-    setPrice(h ? h.price / 100 : null);
+    setPrice(h ? fromCents(h.price) : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
   if (!editing) return null;
@@ -248,7 +249,7 @@ function HoldingSheet({
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">{h ? h.name : "Nova posição"}</SheetTitle>
           <SheetDescription>
@@ -350,7 +351,7 @@ function HoldingSheet({
             </Button>
           )}
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }
@@ -426,7 +427,7 @@ function TargetsSheet({ s, open, onClose }: { s: DemoState; open: boolean; onClo
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Metas de alocação</SheetTitle>
           <SheetDescription>Quanto de cada classe você quer ter no que é para a aposentadoria. As metas precisam somar 100%.</SheetDescription>
@@ -452,7 +453,7 @@ function TargetsSheet({ s, open, onClose }: { s: DemoState; open: boolean; onClo
             </Button>
           )}
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

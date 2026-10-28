@@ -1,20 +1,29 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Check, Eye, EyeOff, Landmark, Mountain, Star, Wallet } from "lucide-react";
+import { pageHead } from "@/lib/seo";
+import { BookOpen, Check, Landmark, Mountain, Star, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Area, Bar, BarChart, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AXIS_TICK, GRID, TOOLTIP_STYLE } from "@/components/chart-theme";
 import { Button } from "@/components/ui/button";
+import { HideValuesToggle } from "@/components/HideValuesToggle";
+import { useShowValues } from "@/hooks/use-show-values";
+import { CardBoundary } from "@/components/ErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
-import { ActivityList, ChartCard, ContributionsChart, DeltaChip, DestinationDonut, Gauge, GoalCard, HIDDEN, StatCard } from "@/components/dashboard";
+import { ActivityList, ChartCard, ContributionsChart, DeltaChip, DestinationDonut, Gauge, GoalCard, StatCard } from "@/components/dashboard";
+import { HIDDEN } from "@/lib/labels";
 import { ThreadStrip } from "@/components/ConstancyThread";
+import { WealthSheet } from "@/components/wealth/WealthSheet";
 import { ReportsSection } from "@/components/reports/ReportsSection";
+import { ProjectedVsReal } from "@/components/plan/Tracking";
 import { activeChallenges, completedDays, demo, MAX_ACTIVE_CHALLENGES, useDemo, type DemoState, type GoalKind } from "@/lib/data/demo-store";
-import { activeGoals, assetSnapshot, currentWealth, milestones, planSummary, recentActivity, wealthGrowth } from "@/lib/data/selectors";
+import { activeGoals, currentWealth, milestones, planSummary, recentActivity, wealthGrowth } from "@/lib/data/selectors";
 import { lastMonths } from "@/lib/data/thread";
 import { contributionsByDestination, fiProgress, monthlyContributionSeries, projectMonthlyPath, selfComparison, wealthTimeline } from "@/lib/calc/progress";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
@@ -22,6 +31,7 @@ import { levelFromXp } from "@/lib/gamification/rules";
 import { unitProgress } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import { cn } from "@/lib/utils";
+import { JOURNEY_ENABLED } from "@/lib/features";
 import { formatDate, monthShort, monthYear } from "@/lib/labels";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 import { CHALLENGES } from "@/content/challenges";
@@ -31,14 +41,7 @@ export const Route = createFileRoute("/_authenticated/evolucao")({
     ...(s["registrar"] ? { registrar: true } : {}),
     ...(s["meta"] ? { meta: true } : {}),
   }),
-  head: () => ({
-    meta: [
-      { title: "Progresso — Previdência Intelligence" },
-      { name: "description", content: "Sua evolução patrimonial, metas e desafios, comparados só com você mesmo." },
-      { property: "og:title", content: "Progresso — Previdência Intelligence" },
-      { property: "og:description", content: "Sua evolução patrimonial, metas e desafios, comparados só com você mesmo." },
-    ],
-  }),
+  head: () => pageHead("Progresso", "Sua evolução patrimonial, metas e desafios, comparados só com você mesmo."),
   component: Evolution,
 });
 
@@ -57,19 +60,20 @@ function Evolution() {
   const { registrar, meta } = Route.useSearch();
   const navigate = useNavigate();
   const current = monthOf(spDate(new Date()));
-  const [showValues, setShowValues] = useState(!s.profile.hideValues);
+  const { showValues, toggle: toggleValues } = useShowValues();
   const [period, setPeriod] = useState<Period>("6");
   const [wealthMonth, setWealthMonth] = useState<string | null>(null);
   const [goalOpen, setGoalOpen] = useState(false);
   const [months, setMonths] = useState<6 | 12>(6);
 
   useEffect(() => {
-    if (registrar || meta) {
-      if (registrar) setWealthMonth(current);
-      if (meta) setGoalOpen(true);
+    // O registro do patrimônio mora no Patrimônio; links antigos para cá seguem para lá.
+    if (registrar) navigate({ to: "/patrimonio", search: { registrar: true }, replace: true });
+    else if (meta) {
+      setGoalOpen(true);
       navigate({ to: "/evolucao", search: {}, replace: true });
     }
-  }, [registrar, meta, current, navigate]);
+  }, [registrar, meta, navigate]);
 
   const money = (v: number) => (showValues ? formatWealth(v) : HIDDEN);
   const wealth = currentWealth(s);
@@ -92,26 +96,20 @@ function Evolution() {
           <p className="mt-1 text-sm text-muted-foreground">Você comparado com você mesmo. Ninguém mais vê estes números.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setShowValues((v) => !v)}
-            className="flex min-h-11 items-center gap-2 rounded-full bg-card px-4 text-sm text-muted-foreground shadow-card hover:text-foreground"
-            aria-pressed={showValues}
-          >
-            {showValues ? <EyeOff size={16} strokeWidth={1.75} aria-hidden /> : <Eye size={16} strokeWidth={1.75} aria-hidden />}
-            {showValues ? "Ocultar valores" : "Mostrar valores"}
-          </button>
-          <Button variant={loggedThisMonth ? "outline" : "default"} onClick={() => setWealthMonth(current)}>
-            {loggedThisMonth ? "Atualizar patrimônio" : "Registrar patrimônio"}
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/patrimonio">Ver itens</Link>
+          <HideValuesToggle showValues={showValues} onToggle={toggleValues} />
+          <Button asChild variant={loggedThisMonth ? "outline" : "default"}>
+            <Link to="/patrimonio" search={loggedThisMonth ? {} : { registrar: true }}>
+              {loggedThisMonth ? "Ver patrimônio" : "Registrar patrimônio"}
+            </Link>
           </Button>
         </div>
       </header>
 
       <div
-        className="-mx-5 mt-6 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0"
+        className={cn(
+          "-mx-5 mt-6 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0",
+          JOURNEY_ENABLED ? "lg:grid-cols-4" : "lg:grid-cols-2",
+        )}
         aria-label="Seus números"
       >
         <StatCard
@@ -130,6 +128,8 @@ function Evolution() {
           value={thisMonth?.made ? (thisMonth.amount != null ? (showValues ? formatMonthly(thisMonth.amount) : HIDDEN) : "Feito") : thisMonth ? "Registrado" : "—"}
           footer={plan ? `Plano pede ${showValues ? formatMonthly(plan.required) : HIDDEN}` : "Crie seu plano para ter uma meta"}
         />
+        {JOURNEY_ENABLED && (
+        <>
         <StatCard
           className="w-[72%] shrink-0 snap-start lg:w-auto"
           label="Aprendizado"
@@ -146,6 +146,8 @@ function Evolution() {
           value={`${s.stats.totalXp} XP`}
           footer={`Nível ${lvl.level} · ${lvl.name} · ${s.stats.dayStreak} ${s.stats.dayStreak === 1 ? "dia" : "dias"} seguidos`}
         />
+        </>
+        )}
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-12">
@@ -220,8 +222,18 @@ function Evolution() {
           )}
           <TimelineChart s={s} showValues={showValues} />
         </ChartCard>
+      </div>
 
-        <GrowthCard s={s} showValues={showValues} />
+      <Tabs defaultValue="evolucao" className="mt-8">
+        <TabsList className="w-full max-w-md">
+          <TabsTrigger value="evolucao" className="flex-1">Evolução</TabsTrigger>
+          <TabsTrigger value="metas" className="flex-1">Metas</TabsTrigger>
+          <TabsTrigger value="historico" className="flex-1">Histórico</TabsTrigger>
+        </TabsList>
+        <TabsContent value="evolucao" className="mt-4 grid gap-4 lg:grid-cols-12">
+        <CardBoundary><ProjectedVsReal s={s} showValues={showValues} /></CardBoundary>
+
+        <CardBoundary><GrowthCard s={s} showValues={showValues} /></CardBoundary>
 
         <ChartCard
           title="Aportes x meta"
@@ -235,7 +247,7 @@ function Evolution() {
                   role="radio"
                   aria-checked={months === m}
                   onClick={() => setMonths(m)}
-                  className={cn("min-h-8 rounded-full px-3", months === m ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground")}
+                  className={cn("min-h-11 rounded-full px-3", months === m ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground")}
                 >
                   {m} meses
                 </button>
@@ -251,13 +263,18 @@ function Evolution() {
         </ChartCard>
 
         <ChartCard title="Seu fio" className="lg:col-span-12" action={<span className="text-xs text-muted-foreground">últimos 6 meses</span>}>
-          <Link to="/diario" className="block rounded-2xl p-2 hover:bg-muted" aria-label="Abrir o Diário">
+          <Link to="/diario" className="block rounded-2xl p-2 hover:bg-muted" aria-label="Abrir Lançamentos">
             <ThreadStrip months={lastMonths(s.contributions, 6, new Date())} />
           </Link>
         </ChartCard>
+        </TabsContent>
 
+        <TabsContent value="metas" className="mt-4 grid gap-4 lg:grid-cols-12">
         <Goals s={s} wealth={wealth} showValues={showValues} onNew={() => setGoalOpen(true)} />
         <Challenges s={s} />
+        </TabsContent>
+
+        <TabsContent value="historico" className="mt-4 grid gap-4 lg:grid-cols-12">
         <ChartCard title="Histórico" className="lg:col-span-6">
           <ActivityList
             items={recentActivity(s, 15)}
@@ -273,8 +290,9 @@ function Evolution() {
           />
         </ChartCard>
 
-        <ReportsSection s={s} showValues={showValues} />
-      </div>
+        <CardBoundary><ReportsSection s={s} showValues={showValues} /></CardBoundary>
+        </TabsContent>
+      </Tabs>
 
       <WealthSheet s={s} month={wealthMonth} onClose={() => setWealthMonth(null)} />
       <GoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} />
@@ -305,11 +323,11 @@ function TimelineChart({ s, showValues }: { s: DemoState; showValues: boolean })
       <div className="h-56 w-full" aria-hidden>
         <ResponsiveContainer>
           <ComposedChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+            <CartesianGrid {...GRID} />
+            <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
             <YAxis
               width={showValues ? 48 : 8}
-              tick={showValues ? { fontSize: 12, fill: "var(--muted-foreground)" } : false}
+              tick={showValues ? AXIS_TICK : false}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : `${Math.round(v / 1e3)} mil`)}
@@ -317,7 +335,7 @@ function TimelineChart({ s, showValues }: { s: DemoState; showValues: boolean })
             {showValues && (
               <Tooltip
                 formatter={(v: number, name: string) => [formatWealth(v), name === "real" ? "Registrado" : "Projeção"]}
-                contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12 }}
+                contentStyle={TOOLTIP_STYLE}
               />
             )}
             <Area type="monotone" dataKey="real" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.15} strokeWidth={2.5} isAnimationActive={false} connectNulls={false} />
@@ -375,11 +393,11 @@ function GrowthCard({ s, showValues }: { s: DemoState; showValues: boolean }) {
         <div className="h-48 w-full" aria-hidden>
           <ResponsiveContainer>
             <BarChart data={data} stackOffset="sign" margin={{ top: 10, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} />
+              <CartesianGrid {...GRID} />
+              <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
               <YAxis
                 width={showValues ? 48 : 4}
-                tick={showValues ? { fontSize: 12, fill: "var(--muted-foreground)" } : false}
+                tick={showValues ? AXIS_TICK : false}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v: number) => (Math.abs(v) >= 1e3 ? `${Math.round(v / 1e3)} mil` : String(Math.round(v)))}
@@ -389,7 +407,7 @@ function GrowthCard({ s, showValues }: { s: DemoState; showValues: boolean }) {
                 <Tooltip
                   cursor={{ fill: "rgb(255 255 255 / 0.04)" }}
                   formatter={(v: number, name: string) => [signed(v, formatMonthly), name === "aportes" ? "Aportes" : "Rendimento e ajustes"]}
-                  contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12 }}
+                  contentStyle={TOOLTIP_STYLE}
                 />
               )}
               <Bar dataKey="aportes" stackId="v" fill="var(--primary)" maxBarSize={36} isAnimationActive={false} />
@@ -398,7 +416,7 @@ function GrowthCard({ s, showValues }: { s: DemoState; showValues: boolean }) {
           </ResponsiveContainer>
         </div>
         <figcaption className="mt-2 text-sm text-muted-foreground">
-          Amarelo: aportes registrados no Diário. Cinza: o restante da variação (rendimento, saques e atualização dos valores). A estimativa só fica
+          Amarelo: aportes registrados. Cinza: o restante da variação (rendimento, saques e atualização dos valores). A estimativa só fica
           fiel se todos os aportes estiverem registrados.
         </figcaption>
       </figure>
@@ -504,92 +522,6 @@ function Challenges({ s }: { s: DemoState }) {
   );
 }
 
-function WealthSheet({ s, month, onClose }: { s: DemoState; month: string | null; onClose: () => void }) {
-  const existing = month ? s.wealthEntries.find((w) => w.month === month) : undefined;
-  const [total, setTotal] = useState<number | null>(null);
-  const [previdencia, setPrevidencia] = useState<number | null>(null);
-  const [note, setNote] = useState("");
-  useEffect(() => {
-    setTotal(existing?.total ?? null);
-    setPrevidencia(existing?.previdencia ?? null);
-    setNote(existing?.note ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
-  if (!month) return null;
-  const snap = month === monthOf(spDate(new Date())) ? assetSnapshot(s) : null;
-
-  function save(fromAssets = false) {
-    try {
-      const r = fromAssets
-        ? demo.logWealthFromAssets(note.trim() || null)
-        : demo.logWealth({ month: month!, total: total ?? NaN, previdencia, note: note.trim() || null });
-      xpToast(`Patrimônio de ${monthYear(month!).toLowerCase()} registrado.`, r.xpAwarded);
-      handleResult(r);
-      onClose();
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  }
-
-  return (
-    <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
-        <SheetHeader>
-          <SheetTitle className="text-xl font-semibold">Patrimônio de {monthYear(month).toLowerCase()}</SheetTitle>
-          <SheetDescription>
-            Some o que você tem guardado para o futuro. O XP vem do hábito de registrar, nunca do valor.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="mt-6 space-y-4 pb-4">
-          {snap && (
-            <div className="rounded-2xl bg-muted p-4">
-              <p className="text-sm">
-                Seus itens do Patrimônio somam <span className="money font-semibold">{formatWealth(snap.total)}</span> para a aposentadoria.
-              </p>
-              <Button variant="outline" className="mt-3 w-full" onClick={() => save(true)}>
-                Registrar com os itens do Patrimônio
-              </Button>
-            </div>
-          )}
-          {existing?.breakdown && (
-            <ul className="space-y-1 text-sm text-muted-foreground" aria-label="Itens deste registro">
-              {existing.breakdown.map((b) => (
-                <li key={b.assetId} className="flex justify-between gap-4">
-                  <span>{b.name}</span>
-                  <span className="money">{formatWealth(b.value)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <NumberField label="Total guardado" value={total} onChange={setTotal} prefix="R$" hint="Só você vê." />
-          <NumberField label="Quanto disso está em previdência" value={previdencia} onChange={setPrevidencia} prefix="R$" optional />
-          <div>
-            <label htmlFor="wealth-note" className="text-sm font-semibold">
-              Nota <span className="font-normal text-muted-foreground">(opcional)</span>
-            </label>
-            <Textarea id="wealth-note" maxLength={280} value={note} onChange={(e) => setNote(e.target.value)} className="mt-1.5" />
-          </div>
-          <Button className="w-full" onClick={() => save()}>
-            {existing ? "Atualizar registro" : "Registrar patrimônio"}
-          </Button>
-          {existing && (
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                demo.deleteWealth(existing.id);
-                onClose();
-              }}
-            >
-              Excluir registro
-            </Button>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<GoalKind>("valor");
@@ -618,7 +550,7 @@ function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="mx-auto max-h-[90vh] max-w-[480px] overflow-y-auto rounded-t-2xl">
+      <BottomSheetContent>
         <SheetHeader>
           <SheetTitle className="text-xl font-semibold">Nova meta</SheetTitle>
           <SheetDescription>Metas são suas. Não há meta certa nem errada.</SheetDescription>
@@ -657,7 +589,7 @@ function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
             Criar meta
           </Button>
         </div>
-      </SheetContent>
+      </BottomSheetContent>
     </Sheet>
   );
 }

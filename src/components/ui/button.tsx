@@ -21,7 +21,8 @@ const buttonVariants = cva(
       },
       size: {
         default: "min-h-11 px-5 py-2",
-        sm: "min-h-9 px-3 text-sm",
+        // 44px no celular (alvo de toque mínimo); compacto no desktop, onde o ponteiro é preciso.
+        sm: "min-h-11 px-3 text-sm lg:min-h-9",
         lg: "min-h-12 px-8",
         icon: "h-11 w-11",
       },
