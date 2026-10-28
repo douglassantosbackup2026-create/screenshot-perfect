@@ -188,7 +188,7 @@ function Profile() {
 
       <nav className="mt-10 flex flex-col border-t border-border pt-4 text-sm" aria-label="Links">
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
-        <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Seu plano e o que o Inteligência acrescenta</Link>
+        <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Sua assinatura e o que o Inteligência acrescenta</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}

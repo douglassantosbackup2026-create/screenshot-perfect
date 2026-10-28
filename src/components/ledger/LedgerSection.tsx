@@ -1,4 +1,4 @@
-// Lançamentos do mês no Diário: resumo, gastos por categoria, próximas recorrências e a lista por dia.
+// Lançamentos do mês (rota /diario): resumo, gastos por categoria, próximas recorrências e a lista por dia.
 // Só exibe; as contas vêm de src/lib/calc e src/lib/data/selectors.
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";

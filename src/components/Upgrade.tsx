@@ -98,7 +98,7 @@ function UpgradeDialog({
             Continuar explorando
           </Button>
           <Button asChild>
-            <Link to="/planos">Ver planos</Link>
+            <Link to="/planos">Ver assinatura</Link>
           </Button>
         </DialogFooter>
       </DialogContent>

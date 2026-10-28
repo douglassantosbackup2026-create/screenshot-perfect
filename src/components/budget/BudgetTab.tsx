@@ -1,4 +1,4 @@
-// Aba Orçamento do Plano: "a distribuir", o envelope Aposentadoria ligado ao plano, os envelopes de gasto e as contas fixas.
+// Orçamento, na área Dinheiro: "a distribuir", o envelope Aposentadoria ligado ao plano, os envelopes de gasto e as contas fixas.
 // Só exibe; as contas vêm de src/lib/calc/budget.ts por src/lib/data/selectors.ts.
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";

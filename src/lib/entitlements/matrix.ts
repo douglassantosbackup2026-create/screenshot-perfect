@@ -10,7 +10,7 @@ export type FeatureKey = "what_if" | "goal_seek" | "progress_corridor" | "month_
 export type Feature = {
   key: FeatureKey;
   /** Área da tela onde o recurso aparece. */
-  area: "Plano" | "Progresso" | "Dia a dia" | "Patrimônio";
+  area: "Plano" | "Progresso" | "Dinheiro" | "Patrimônio";
   /** Nome curto mostrado no modal ("Você queria usar: …"). */
   label: string;
   /** Linha do modal explicando o que o upgrade libera. */
@@ -44,14 +44,14 @@ export const FEATURES: Record<FeatureKey, Feature> = {
   // Avisos de orçamento, parcelas e reserva de emergência são do plano gratuito e não precisam de entrada aqui.
   month_projection: {
     key: "month_projection",
-    area: "Dia a dia",
+    area: "Dinheiro",
     label: "Fim do mês",
     upsell: "Veja quanto deve sobrar no fim do mês e em que dia o saldo fica mais apertado.",
     minTier: "inteligencia",
   },
   anomaly_alerts: {
     key: "anomaly_alerts",
-    area: "Dia a dia",
+    area: "Dinheiro",
     label: "Avisos de cobranças",
     upsell:
       "Saiba na hora quando uma cobrança vem repetida, uma assinatura sobe de preço ou a fatura passa da média.",
@@ -59,7 +59,7 @@ export const FEATURES: Record<FeatureKey, Feature> = {
   },
   custom_limits: {
     key: "custom_limits",
-    area: "Dia a dia",
+    area: "Dinheiro",
     label: "Limites de gasto ilimitados",
     upsell: "Crie quantos limites quiser, por categoria e por dia, semana, quinzena ou mês.",
     minTier: "inteligencia",

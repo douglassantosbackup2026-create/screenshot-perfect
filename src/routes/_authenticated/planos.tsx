@@ -7,7 +7,7 @@ import { PLANS, PRICING_NOTE } from "@/content/pricing";
 import { FEATURES } from "@/lib/entitlements/matrix";
 
 export const Route = createFileRoute("/_authenticated/planos")({
-  head: () => pageHead("Planos", "O que é grátis para sempre e o que o plano Inteligência acrescenta."),
+  head: () => pageHead("Assinatura", "O que é grátis para sempre e o que o Inteligência acrescenta."),
   component: Plans,
 });
 
@@ -20,7 +20,7 @@ function Plans() {
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
-      <h1>Planos</h1>
+      <h1>Assinatura</h1>
       <p className="mt-1 text-muted-foreground">O que você usa hoje continua grátis. O Inteligência mostra se você está no ritmo e ajuda a decidir melhor.</p>
 
       {access.launchOpen && (

@@ -1,4 +1,4 @@
-// Peças do painel (Hoje e Evolução): indicadores, gráficos, medidor e listas.
+// Peças do painel (Início e Progresso): indicadores, gráficos, medidor e listas.
 // Só exibem números; toda conta vem de src/lib/calc.
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
