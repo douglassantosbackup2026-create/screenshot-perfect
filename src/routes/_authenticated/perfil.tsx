@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { ChangePassword } from "@/components/auth/ChangePassword";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
+import { useServerFn } from "@tanstack/react-start";
+import { cancelSubscription } from "@/lib/billing/subscription.functions";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
@@ -45,6 +47,7 @@ function Profile() {
   const s = useDemo();
   const navigate = useNavigate();
   const [delOpen, setDelOpen] = useState(false);
+  const cancelAtMercadoPago = useServerFn(cancelSubscription);
   const [confirm, setConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [admin, setAdmin] = useState(false);
@@ -188,7 +191,7 @@ function Profile() {
 
       <nav className="mt-10 flex flex-col border-t border-border pt-4 text-sm" aria-label="Links">
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
-        <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Sua assinatura e o que o Inteligência acrescenta</Link>
+        <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Sua assinatura</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
@@ -203,7 +206,7 @@ function Profile() {
           <DialogHeader>
             <DialogTitle>Excluir minha conta</DialogTitle>
             <DialogDescription>
-              Isso apaga seu plano, seus registros e seu progresso. Não dá para desfazer. Digite EXCLUIR para confirmar.
+              Isso cancela sua assinatura e apaga seu plano, seus registros e seu progresso. Não dá para desfazer. Digite EXCLUIR para confirmar.
             </DialogDescription>
           </DialogHeader>
           <label htmlFor="confirm" className="sr-only">Digite EXCLUIR</label>
@@ -214,6 +217,13 @@ function Profile() {
               disabled={confirm !== "EXCLUIR" || deleting}
               onClick={async () => {
                 setDeleting(true);
+                // Cancela a assinatura antes: apagar a conta não pode deixar o cartão sendo cobrado.
+                const cancelled = await cancelAtMercadoPago().catch(() => ({ error: "falhou" }));
+                if (cancelled.error) {
+                  setDeleting(false);
+                  toast.error("Não foi possível cancelar sua assinatura agora, então a conta não foi excluída. Tente de novo.");
+                  return;
+                }
                 // Nenhuma gravação pode chegar depois da exclusão e recriar os dados.
                 await stopSync();
                 const { error } = await supabase.rpc("delete_my_account");

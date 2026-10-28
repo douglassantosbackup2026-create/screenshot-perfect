@@ -75,3 +75,16 @@ export function MobileHeader() {
     </header>
   );
 }
+
+/** Topo sem assinatura: só a marca (leva à Assinatura) e o Perfil, onde dá para exportar dados ou sair. */
+export function LockedHeader() {
+  return (
+    <header className="mx-auto flex w-full max-w-[480px] items-center justify-between px-5 pt-4 lg:max-w-3xl lg:px-8">
+      <Link to="/planos" className="flex min-h-11 items-center gap-2 text-sm font-semibold tracking-tight">
+        <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+        {APP_NAME}
+      </Link>
+      <ProfileButton />
+    </header>
+  );
+}

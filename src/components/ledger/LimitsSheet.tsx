@@ -16,11 +16,9 @@ import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/u
 import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
 import { HIDDEN } from "@/lib/labels";
-import { useAccess, useFeature } from "@/components/Upgrade";
 import { formatMoney, formatPercent } from "@/lib/calc/format";
 import { toCents } from "@/lib/calc/ledger";
 import { LIMIT_PERIODS, type LimitPeriod } from "@/lib/calc/limits";
-import { canCreateLimit } from "@/lib/entitlements/matrix";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import { limitsView } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
@@ -36,18 +34,14 @@ export function LimitsSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const access = useAccess();
-  const more = useFeature("custom_limits");
   const [categoryId, setCategoryId] = useState<string>(ALL);
   const [period, setPeriod] = useState<LimitPeriod>("semana");
   const [amount, setAmount] = useState<number | null>(null);
   const money = (cents: number) => (s.profile.hideValues ? HIDDEN : formatMoney(cents));
   // Só calcula com a folha aberta; fechada, ela fica montada mas não aparece.
   const limits = open ? limitsView(s) : [];
-  const count = (s.limits ?? []).length;
 
   function save() {
-    if (!canCreateLimit(count, access)) return more.ask();
     try {
       demo.saveLimit({
         categoryId: categoryId === ALL ? null : categoryId,
@@ -145,13 +139,7 @@ export function LimitsSheet({
           <Button className="w-full" onClick={save}>
             Criar limite
           </Button>
-          {!canCreateLimit(count, access) && (
-            <p className="text-xs text-muted-foreground">
-              No plano gratuito, 1 limite. Mais limites no plano Inteligência.
-            </p>
-          )}
         </div>
-        {more.dialog}
       </BottomSheetContent>
     </Sheet>
   );

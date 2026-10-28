@@ -38,3 +38,11 @@ Servidor: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY
 Billing: `MERCADO_PAGO_ACCESS_TOKEN`, `MERCADO_PAGO_WEBHOOK_SECRET`, `VITE_BILLING_ENABLED`
 
 URL da API: `https://nzhzmuhjdqcdjoltrsik.supabase.co`
+
+## Assinatura (não existe plano grátis)
+
+- Com `VITE_BILLING_ENABLED=true`, só entra no app quem tem assinatura válida em `entitlements`. Sem assinatura, abrem apenas `/planos` (Assinatura) e `/perfil` (exportar dados, excluir conta, sair). Admin entra sempre. Sem a variável, o app fica aberto para todos.
+- A assinatura é recorrente no Mercado Pago (preapproval), só no cartão de crédito. `src/lib/billing/subscription.functions.ts` cria e cancela; excluir a conta cancela a assinatura antes.
+- Webhook: `POST /api/public/mercadopago/webhook`. No painel do Mercado Pago (Suas integrações → Webhooks), ligar os eventos **Pagamentos**, **Planos e assinaturas** (`subscription_preapproval`) e **Pagamentos recorrentes** (`subscription_authorized_payment`), e copiar a assinatura secreta para `MERCADO_PAGO_WEBHOOK_SECRET`.
+- Cada cobrança aprovada chama `credit_payment` (31 ou 366 dias somados à validade, uma vez por pagamento). O status da assinatura fica em `subscriptions`. A decisão de cada evento está em `src/lib/billing/webhook.ts`, com testes.
+- Ligar em produção, nesta ordem: secrets do Mercado Pago, eventos do webhook, migration `20261102120000_assinatura_recorrente.sql`, e só então `VITE_BILLING_ENABLED=true`.

@@ -8,7 +8,7 @@ describe("preços cobrados", () => {
   it("Inteligência mensal custa R$ 29,90", () => expect(priceCents("inteligencia", "mensal")).toBe(2990));
   it("Inteligência anual custa R$ 239,90", () => expect(priceCents("inteligencia", "anual")).toBe(23990));
   it("Pro mensal custa R$ 59,90", () => expect(priceCents("pro", "mensal")).toBe(5990));
-  it("plano gratuito não é cobrável", () => expect(priceCents("free", "mensal")).toBeNull());
+  it("não existe plano grátis para cobrar", () => expect(priceCents("free", "mensal")).toBeNull());
   it("converte 29.9 em 2990 centavos", () => expect(toCents(29.9)).toBe(2990));
 });
 

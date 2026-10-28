@@ -56,10 +56,10 @@ function SignIn() {
       {target === "/onboarding" && (
         <div className="mt-6 rounded-2xl bg-card p-4 shadow-card">
           <p className="font-semibold">Primeira vez por aqui?</p>
-          <p className="mt-1 text-sm text-muted-foreground">Crie sua conta grátis para montar e salvar o seu plano.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Crie sua conta e assine para usar o app.</p>
           <Button asChild className="mt-3 w-full">
             <Link to="/cadastro" search={{ redirect: target }}>
-              Criar conta grátis
+              Criar conta
             </Link>
           </Button>
         </div>

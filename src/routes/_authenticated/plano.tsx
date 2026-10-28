@@ -5,14 +5,13 @@ import { JOURNEY_ENABLED } from "@/lib/features";
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AXIS_TICK, GRID, TOOLTIP_STYLE } from "@/components/chart-theme";
 import { toast } from "sonner";
-import { ChevronDown, Lock, Sparkles } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NumberField, Segmented, LegalNote } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
 import { AreaTabs } from "@/components/nav/areas";
-import { LaunchBadge, useFeature } from "@/components/Upgrade";
 import { WhatIfSheet } from "@/components/plan/WhatIf";
 import { GoalSeekCard } from "@/components/plan/GoalSeek";
 import { PensionTaxCard } from "@/components/plan/PensionTax";
@@ -70,7 +69,6 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const [lifeOpen, setLifeOpen] = useState(false);
   const [lifeReason, setLifeReason] = useState<string | null>(null);
   const [whatIfOpen, setWhatIfOpen] = useState(false);
-  const whatIf = useFeature("what_if");
 
   // Volta ao plano salvo só quando ele muda de verdade. `initial` é um objeto novo a cada mudança no
   // store (um lançamento pelo "+", uma gravação), e depender dele apagava o que a pessoa estava editando.
@@ -181,12 +179,11 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         </section>
       )}
       {r && !isNew && s.plan && (
-        <Button variant="outline" className="mt-4 w-full" onClick={() => (whatIf.allowed ? setWhatIfOpen(true) : whatIf.ask())}>
-          {whatIf.allowed ? <Sparkles size={16} strokeWidth={1.75} aria-hidden /> : <Lock size={16} strokeWidth={1.75} aria-label="Recurso pago" />}
+        <Button variant="outline" className="mt-4 w-full" onClick={() => setWhatIfOpen(true)}>
+          <Sparkles size={16} strokeWidth={1.75} aria-hidden />
           E se…?
         </Button>
       )}
-      {r && !isNew && s.plan && whatIf.preview && <LaunchBadge />}
       {r && (
         <GoalSeekCard
           inputs={draft}
@@ -397,7 +394,6 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
       {s.plan && (
         <WhatIfSheet base={s.plan.inputs} scenario={scenario} includeInss={includeInss} open={whatIfOpen} onOpenChange={setWhatIfOpen} onSave={saveWhatIf} />
       )}
-      {whatIf.dialog}
 
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
         <DialogContent>

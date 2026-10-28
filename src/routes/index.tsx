@@ -91,11 +91,11 @@ function Index() {
       </h1>
       <p className="mt-4 text-lg text-muted-foreground">
         {JOURNEY_ENABLED
-          ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Grátis e sem vender nada para você."
-          : "Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Grátis e sem vender nada para você."}
+          ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Sem vender nada para você: R$ 29,90 por mês, cancele quando quiser."
+          : "Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Sem vender nada para você: R$ 29,90 por mês, cancele quando quiser."}
       </p>
       <div className="mt-6 flex flex-col gap-2">
-        <Button onClick={start}>{signedIn ? "Abrir o app" : "Começar grátis"}</Button>
+        <Button onClick={start}>{signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}</Button>
       </div>
 
       <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">
@@ -139,7 +139,7 @@ function Index() {
       <section className="mt-16 rounded-2xl bg-card shadow-card p-6 text-center">
         <h2>Comece hoje. Leva 5 minutos.</h2>
         <Button className="mt-5 w-full" onClick={start}>
-          {signedIn ? "Abrir o app" : "Começar grátis"}
+          {signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}
         </Button>
       </section>
 

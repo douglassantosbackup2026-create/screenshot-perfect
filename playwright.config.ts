@@ -17,6 +17,8 @@ export default defineConfig({
     command: `npx vite dev --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: true,
+    // Testa como em produção: sem plano grátis, só entra quem assina.
+    env: { VITE_BILLING_ENABLED: "true" },
     timeout: 120_000,
   },
 });

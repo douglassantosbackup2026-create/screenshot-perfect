@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ChartCard } from "@/components/dashboard";
 import { HIDDEN } from "@/lib/labels";
-import { Blurred, useFeature } from "@/components/Upgrade";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import { progressTracking } from "@/lib/data/selectors";
 import type { VerdictCode } from "@/lib/calc/tracking";
@@ -52,7 +51,6 @@ const VERDICT: Record<VerdictCode, { label: string; detail: string; tone: string
 
 export function ProjectedVsReal({ s, showValues }: { s: DemoState; showValues: boolean }) {
   const t = progressTracking(s);
-  const corridor = useFeature("progress_corridor");
   if (!t) return null;
   const money = (v: number) => (showValues ? formatWealth(v) : HIDDEN);
   const v = t.verdict;
@@ -73,8 +71,7 @@ export function ProjectedVsReal({ s, showValues }: { s: DemoState; showValues: b
       title="Projetado × real"
       className="lg:col-span-12"
       action={
-        v &&
-        corridor.allowed && (
+        v && (
           <span
             className={cn("rounded-full px-3 py-1 text-xs font-semibold", VERDICT[v.code].tone)}
           >
@@ -83,7 +80,7 @@ export function ProjectedVsReal({ s, showValues }: { s: DemoState; showValues: b
         )
       }
     >
-      <Blurred feature="progress_corridor">
+      <>
         <p className="text-sm text-muted-foreground">
           Comparando com o plano de {formatDate(t.anchor.createdAt)}. Essa é uma foto congelada: ela
           não muda quando você edita o plano depois.
@@ -197,7 +194,7 @@ export function ProjectedVsReal({ s, showValues }: { s: DemoState; showValues: b
             </Button>
           </div>
         )}
-      </Blurred>
+      </>
     </ChartCard>
   );
 }

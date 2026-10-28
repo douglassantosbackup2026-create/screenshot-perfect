@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { makeSeed } from "../src/lib/data/demo-store";
-import { profileOf, signIn, transactionsOf } from "./fake-supabase";
+import { ACTIVE, profileOf, signIn, transactionsOf } from "./fake-supabase";
 
 test("logada, o botão da landing abre o app sem apagar os dados", async ({ page }) => {
   const db = await signIn(page, makeSeed());
@@ -69,14 +69,59 @@ test("página de privacidade é pública", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Privacidade" })).toBeVisible();
 });
 
-test("sem conta, 'Começar grátis' leva ao cadastro, não ao login", async ({ page }) => {
+test("sem conta, 'Assinar o Mitikos' leva ao cadastro, não ao login", async ({ page }) => {
   await page.goto("/");
   // O botão já vem no HTML do servidor; espera a página ligar os cliques.
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Começar grátis" }).first().click();
+  await expect(page.getByText(/grátis/i).filter({ hasNotText: "Tem plano grátis?" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Assinar o Mitikos" }).first().click();
   await expect(page).toHaveURL(/\/cadastro\?redirect=%2Fonboarding/);
-  await expect(page.getByRole("heading", { name: /Criar conta grátis|Salve seu plano/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Criar conta$|Salve seu plano/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continuar com Google" })).toBeVisible();
+});
+
+test("sem assinatura, o app leva à Assinatura e esconde o menu; o Perfil continua aberto", async ({ page }) => {
+  await signIn(page, makeSeed(), { entitlement: null });
+  await page.goto("/hoje");
+  await expect(page).toHaveURL(/\/planos$/);
+  await expect(page.getByRole("heading", { name: "Assine para usar o Mitikos" })).toBeVisible();
+  await expect(page.getByText("Seus dados estão guardados. Assine para voltar a usar.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Assinar mensal/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Assinar anual/ })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegação principal" })).toHaveCount(0);
+
+  await page.goto("/perfil");
+  await expect(page).toHaveURL(/\/perfil$/);
+  await page.goto("/diario");
+  await expect(page).toHaveURL(/\/planos$/);
+});
+
+test("assinatura vencida também leva à Assinatura", async ({ page }) => {
+  await signIn(page, makeSeed(), { entitlement: { plan: "inteligencia", valid_until: "2020-01-01T00:00:00Z" } });
+  await page.goto("/plano");
+  await expect(page).toHaveURL(/\/planos$/);
+});
+
+test("conta nova: assina, a volta do Mercado Pago confirma e segue para o onboarding", async ({ page }) => {
+  const db = await signIn(page, null, { entitlement: null });
+  await page.goto("/onboarding");
+  await expect(page).toHaveURL(/\/planos$/);
+  await expect(page.getByRole("heading", { name: "Assine para usar o Mitikos" })).toBeVisible();
+
+  // O webhook do Mercado Pago grava a assinatura enquanto a pessoa volta para /pagamento.
+  await page.goto("/pagamento");
+  await expect(page.getByRole("heading", { name: "Confirmando sua assinatura…" })).toBeVisible();
+  db.entitlement = ACTIVE;
+  await expect(page.getByRole("heading", { name: "Assinatura confirmada" })).toBeVisible();
+  await page.getByRole("link", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByRole("heading", { name: "Boas-vindas ao Mitikos" })).toBeVisible();
+});
+
+test("admin entra sem assinatura", async ({ page }) => {
+  await signIn(page, makeSeed(), { entitlement: null, admin: true });
+  await page.goto("/hoje");
+  await expect(page).toHaveURL(/\/hoje$/);
 });
 
 test("a landing apresenta o Mitikos como orçamento, patrimônio e aposentadoria num app só", async ({ page }) => {
@@ -140,18 +185,19 @@ test("as três frentes pelo menu: Dinheiro, Futuro e Progresso, com o nome do me
   await expect(page).toHaveTitle("Progresso — Mitikos");
 });
 
-test("/planos mostra o que é grátis para sempre e a lista de espera do Inteligência", async ({ page }) => {
+test("/planos para quem assina: sem plano grátis, sem botão de assinar e o Pro na lista de espera", async ({ page }) => {
   await signIn(page, makeSeed());
   await page.goto("/planos");
-  await expect(page.getByText("Grátis para sempre")).toBeVisible();
-  await expect(page.getByText(/Lançamento:/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Quero ser avisado" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assinatura", exact: true })).toBeVisible();
+  await expect(page.getByText(/grátis/i)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Assinar mensal/ })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Plano Pro" }).getByRole("button", { name: "Quero ser avisado" })).toBeVisible();
 });
 
 test("no celular, todo botão visível tem pelo menos 44px de altura", async ({ page }) => {
   await signIn(page, makeSeed());
   const small: string[] = [];
-  for (const path of ["/hoje", "/fechamento", "/plano", "/evolucao"]) {
+  for (const path of ["/hoje", "/fechamento", "/plano", "/evolucao", "/planos"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     for (const b of await page.getByRole("button").all()) {

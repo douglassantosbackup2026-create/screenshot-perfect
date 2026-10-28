@@ -419,6 +419,33 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          period: string
+          plan: string
+          preapproval_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          period: string
+          plan: string
+          preapproval_id: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          period?: string
+          plan?: string
+          preapproval_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           completed_at: string | null

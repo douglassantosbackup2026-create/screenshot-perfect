@@ -1,80 +1,165 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Check } from "lucide-react";
-import { pageHead } from "@/lib/seo";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { APP_NAME, pageHead } from "@/lib/seo";
 import { Waitlist } from "@/components/sales/sections";
-import { useAccess } from "@/components/Upgrade";
+import { SubscribeButtons } from "@/components/billing/SubscribeButtons";
+import { useAccess } from "@/lib/billing/access";
+import { cancelSubscription } from "@/lib/billing/subscription.functions";
 import { PLANS, PRICING_NOTE } from "@/content/pricing";
-import { FEATURES } from "@/lib/entitlements/matrix";
+import { formatDate } from "@/lib/labels";
+import { useDemo } from "@/lib/data/demo-store";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/planos")({
-  head: () => pageHead("Assinatura", "O que é grátis para sempre e o que o Inteligência acrescenta."),
+  head: () => pageHead("Assinatura", `Assine o ${APP_NAME}: orçamento, patrimônio e aposentadoria num app só.`),
   component: Plans,
 });
 
+type Current = { status: string; period: string; validUntil: string | null };
+
+const STATUS: Record<string, string> = {
+  authorized: "Ativa, com renovação automática",
+  pending: "Aguardando a confirmação do cartão",
+  paused: "Pausada",
+  cancelled: "Cancelada",
+};
+
+/** Assinatura salva no banco (gravada pelo webhook) e até quando o acesso vale. */
+function useCurrentSubscription() {
+  const [current, setCurrent] = useState<Current | null>(null);
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    void (async () => {
+      const [sub, ent] = await Promise.all([
+        supabase.from("subscriptions").select("status, period").maybeSingle(),
+        supabase.from("entitlements").select("valid_until").maybeSingle(),
+      ]);
+      if (sub.data) setCurrent({ status: sub.data.status, period: sub.data.period, validUntil: ent.data?.valid_until ?? null });
+    })();
+  }, [version]);
+  return { current, reload: () => setVersion((v) => v + 1) };
+}
+
 function Plans() {
   const access = useAccess();
-  const free = PLANS.find((p) => p.slug === "free")!;
-  const paid = PLANS.find((p) => p.slug === "inteligencia")!;
+  const s = useDemo();
+  const plan = PLANS.find((p) => p.slug === "inteligencia")!;
   const pro = PLANS.find((p) => p.slug === "pro")!;
-  const paidFeatures = Object.values(FEATURES).filter((f) => f.minTier === "inteligencia");
+  const { current, reload } = useCurrentSubscription();
+  const subscribed = access.active && !access.billingOff;
+  const returning = !access.active && !!s.profile.onboardingCompletedAt;
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
-      <h1>Assinatura</h1>
-      <p className="mt-1 text-muted-foreground">O que você usa hoje continua grátis. O Inteligência mostra se você está no ritmo e ajuda a decidir melhor.</p>
+      <h1>{access.active ? "Assinatura" : `Assine para usar o ${APP_NAME}`}</h1>
+      <p className="mt-1 text-muted-foreground">
+        {returning
+          ? "Seus dados estão guardados. Assine para voltar a usar."
+          : "Uma assinatura com tudo: orçamento, patrimônio e aposentadoria."}
+      </p>
 
-      {access.launchOpen && (
+      {access.billingOff && (
         <p className="mt-6 rounded-2xl bg-primary/15 p-4 text-sm">
-          <span className="font-semibold">Lançamento:</span> os recursos do Inteligência estão liberados de graça por enquanto. Quando a cobrança
-          começar, avisamos antes, e nada é cobrado sem você assinar.
+          As assinaturas ainda não começaram. Por enquanto, o app está liberado; avisamos antes de começar a cobrar.
         </p>
       )}
 
+      {subscribed && current && <CurrentCard current={current} onCancelled={reload} />}
+
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <section className="rounded-3xl bg-card p-6 shadow-card" aria-label={`Plano ${free.name}`}>
-          <p className="font-display text-xl font-semibold">{free.name}</p>
-          <p className="money mt-1 text-2xl font-semibold">{free.price}</p>
-          <p className="mt-1 text-sm font-semibold text-primary">Grátis para sempre</p>
+        <section className="rounded-3xl bg-card p-6 shadow-card ring-2 ring-primary" aria-label={`Plano ${plan.name}`}>
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-xl font-semibold">{plan.name}</p>
+            <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">{plan.tag}</span>
+          </div>
+          <p className="money mt-1 text-2xl font-semibold">
+            {plan.price}
+            <span className="text-sm font-normal text-muted-foreground">{plan.period}</span>
+          </p>
+          {plan.annualNote && <p className="text-sm text-muted-foreground">{plan.annualNote}</p>}
           <ul className="mt-4 space-y-2 text-sm">
-            {free.features.map((f) => (
+            {plan.features.map((f) => (
               <li key={f} className="flex gap-2">
                 <Check size={16} className="mt-0.5 shrink-0 text-primary" aria-hidden />
                 {f}
               </li>
             ))}
           </ul>
+          {!access.active && <SubscribeButtons />}
         </section>
 
-        <section className="rounded-3xl bg-card p-6 shadow-card ring-2 ring-primary" aria-label={`Plano ${paid.name}`}>
+        <section className="rounded-3xl bg-card p-6 shadow-card" aria-label={`Plano ${pro.name}`}>
           <div className="flex items-center justify-between gap-3">
-            <p className="font-display text-xl font-semibold">{paid.name}</p>
-            <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">{paid.tag}</span>
+            <p className="font-display text-xl font-semibold">{pro.name}</p>
+            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">{pro.tag}</span>
           </div>
-          <p className="money mt-1 text-2xl font-semibold">
-            {paid.price}
-            <span className="text-sm font-normal text-muted-foreground">{paid.period}</span>
-          </p>
-          {paid.annualNote && <p className="text-sm text-muted-foreground">{paid.annualNote}</p>}
-          <p className="mt-3 text-sm">Tudo do {free.name}, e mais:</p>
-          <ul className="mt-3 space-y-3 text-sm">
-            {paidFeatures.map((f) => (
-              <li key={f.key} className="flex gap-2">
-                <Check size={16} className="mt-0.5 shrink-0 text-primary" aria-hidden />
-                <span>
-                  <span className="font-semibold">{f.label}</span>
-                  <span className="block text-muted-foreground">{f.upsell}</span>
-                </span>
-              </li>
+          <p className="mt-1 text-sm text-muted-foreground">{pro.summary}</p>
+          <ul className="mt-4 space-y-2 text-sm">
+            {pro.features.map((f) => (
+              <li key={f}>· {f}</li>
             ))}
           </ul>
-          {paid.waitlistSource && <Waitlist source={paid.waitlistSource} planName={paid.name} />}
+          {pro.waitlistSource && <Waitlist source={pro.waitlistSource} planName={pro.name} />}
         </section>
       </div>
 
-      <p className="mt-6 text-sm text-muted-foreground">
-        <span className="font-semibold text-foreground">{pro.name}:</span> em preparação, para quem quer ir mais fundo no acompanhamento.
-      </p>
-      <p className="mt-2 text-xs text-muted-foreground">{PRICING_NOTE}</p>
+      <p className="mt-6 text-xs text-muted-foreground">{PRICING_NOTE}</p>
     </main>
+  );
+}
+
+function CurrentCard({ current, onCancelled }: { current: Current; onCancelled: () => void }) {
+  const cancel = useServerFn(cancelSubscription);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const cancelled = current.status === "cancelled";
+  const until = current.validUntil ? formatDate(current.validUntil) : null;
+
+  async function confirm() {
+    setBusy(true);
+    try {
+      const r = await cancel();
+      if (r.error) return void toast.error(r.error);
+      toast("Assinatura cancelada. Nenhuma nova cobrança será feita.");
+      setConfirming(false);
+      onCancelled();
+    } catch {
+      toast.error("Não foi possível cancelar agora. Tente de novo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-3xl bg-card p-6 shadow-card" aria-label="Sua assinatura">
+      <p className="text-sm text-muted-foreground">Sua assinatura</p>
+      <p className="mt-1 font-semibold">Inteligência {current.period}</p>
+      <p className="mt-1 text-sm">{STATUS[current.status] ?? current.status}</p>
+      {until && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          {cancelled ? `Acesso até ${until}.` : `Pago até ${until}; a próxima cobrança é automática.`}
+        </p>
+      )}
+      {!cancelled &&
+        (confirming ? (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm">Cancelar para as próximas cobranças? Você continua usando até o fim do período pago.</p>
+            <Button variant="outline" className="w-full" disabled={busy} onClick={confirm}>
+              {busy ? "Cancelando…" : "Confirmar cancelamento"}
+            </Button>
+            <Button variant="ghost" className="w-full" disabled={busy} onClick={() => setConfirming(false)}>
+              Manter assinatura
+            </Button>
+          </div>
+        ) : (
+          <Button variant="ghost" className="mt-4 w-full" onClick={() => setConfirming(true)}>
+            Cancelar assinatura
+          </Button>
+        ))}
+    </section>
   );
 }

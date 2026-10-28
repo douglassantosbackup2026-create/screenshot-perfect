@@ -8,7 +8,6 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { runAction } from "@/components/feedback";
 import { Progress } from "@/components/ui/progress";
 import { HIDDEN } from "@/lib/labels";
-import { Blurred, useFeature } from "@/components/Upgrade";
 import { formatMoney, formatPercent } from "@/lib/calc/format";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import {
@@ -48,13 +47,7 @@ function alertText(a: DailyAlert, money: (c: number) => string): string {
   }
 }
 
-/** Avisos do plano gratuito: os que vêm do orçamento e dos limites que a própria pessoa definiu. */
-const isFreeAlert = (a: DailyAlert) => a.kind === "orcamento" || a.kind === "limite";
-
-/**
- * Avisos do mês. Os de orçamento são do plano gratuito; cobrança repetida, preço e média
- * ficam atrás do recurso "Avisos de cobranças".
- */
+/** Avisos do mês: orçamento, limites e cobranças fora do padrão. */
 export function DailyAlertsCard({
   s,
   showValues,
@@ -67,13 +60,8 @@ export function DailyAlertsCard({
   title?: string;
 }) {
   const money = useMoney(showValues);
-  const anomalies = useFeature("anomaly_alerts");
   const all = dailyAlerts(s);
-  const budget = all.filter(isFreeAlert);
-  const others = all.filter((a) => !isFreeAlert(a));
   if (!all.length) return null;
-  const shown = anomalies.allowed ? all : budget;
-  const hidden = anomalies.allowed ? 0 : others.length;
 
   return (
     <section className={cn("rounded-2xl bg-card p-5 shadow-card", className)} aria-label={title}>
@@ -82,7 +70,7 @@ export function DailyAlertsCard({
         {title}
       </h2>
       <ul className="mt-3 space-y-2">
-        {shown.map((a) => (
+        {all.map((a) => (
           <li
             key={a.key}
             className="flex items-start justify-between gap-3 rounded-xl bg-muted p-3 text-sm"
@@ -104,17 +92,6 @@ export function DailyAlertsCard({
           </li>
         ))}
       </ul>
-      {hidden > 0 && (
-        <button
-          type="button"
-          onClick={anomalies.ask}
-          className="mt-3 text-left text-sm font-semibold text-primary hover:underline"
-        >
-          {hidden === 1 ? "Mais 1 aviso de cobrança" : `Mais ${hidden} avisos de cobranças`} no
-          plano Inteligência
-        </button>
-      )}
-      {anomalies.dialog}
     </section>
   );
 }
@@ -131,7 +108,7 @@ export function MonthEndCard({ s, showValues }: { s: DemoState; showValues: bool
         <CalendarClock size={18} strokeWidth={1.75} className="text-primary" aria-hidden /> Fim do
         mês
       </h3>
-      <Blurred feature="month_projection">
+      <>
         <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-2xl bg-muted p-3">
             <dt className="text-xs text-muted-foreground">Saldo hoje</dt>
@@ -176,7 +153,7 @@ export function MonthEndCard({ s, showValues }: { s: DemoState; showValues: bool
           Contas do dia a dia e cartões. Entra só o que está agendado (recorrências e parcelas) até{" "}
           {dayLabel(p.monthEnd)}; gastos do dia a dia que ainda vão acontecer não entram.
         </p>
-      </Blurred>
+      </>
     </section>
   );
 }

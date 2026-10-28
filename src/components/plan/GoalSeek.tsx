@@ -1,7 +1,6 @@
 // "Com quantos anos posso parar?": a menor idade em que o patrimônio já paga a renda desejada.
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Blurred } from "@/components/Upgrade";
 import { earliestRetirementAge, type PlanInputs, type ScenarioKey } from "@/lib/calc/retirement";
 import { formatAgeMonths, formatMonthly, formatWealth } from "@/lib/calc/format";
 
@@ -27,7 +26,7 @@ export function GoalSeekCard({
       aria-label="Com quantos anos posso parar"
     >
       <h2 className="text-base">Com quantos anos posso parar?</h2>
-      <Blurred feature="goal_seek">
+      <>
         {r ? (
           <>
             <p className="mt-2 font-display text-3xl font-semibold text-primary">
@@ -60,7 +59,7 @@ export function GoalSeekCard({
             neste cenário. Aumentar o aporte ou rever a renda desejada muda isso.
           </p>
         )}
-      </Blurred>
+      </>
     </section>
   );
 }

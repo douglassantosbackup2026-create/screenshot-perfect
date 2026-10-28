@@ -15,9 +15,9 @@ export const Route = createFileRoute("/cadastro")({
   head: () => ({
     meta: [
       { title: `Criar conta — ${APP_NAME}` },
-      { name: "description", content: "Crie sua conta grátis e salve seu plano de aposentadoria sem depender do INSS." },
+      { name: "description", content: "Crie sua conta e assine para cuidar do orçamento, do patrimônio e da aposentadoria num app só." },
       { property: "og:title", content: `Criar conta — ${APP_NAME}` },
-      { property: "og:description", content: "Crie sua conta grátis e salve seu plano de aposentadoria." },
+      { property: "og:description", content: "Crie sua conta e escolha seu plano." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -69,8 +69,8 @@ function SignUp() {
 
   return (
     <AuthShell
-      title={fromCalc ? "Salve seu plano" : "Criar conta grátis"}
-      subtitle={fromCalc ? "Seu cálculo já está pronto. Crie o acesso grátis para guardar e acompanhar todo mês." : "Leva menos de um minuto. Sem cartão."}
+      title={fromCalc ? "Salve seu plano" : "Criar conta"}
+      subtitle={fromCalc ? "Seu cálculo já está pronto. Crie sua conta e assine para guardar e acompanhar todo mês." : "Leva menos de um minuto. Depois, você escolhe seu plano."}
     >
       <Button variant="outline" className="mt-6 w-full" onClick={google}>
         Continuar com Google
@@ -106,7 +106,7 @@ function SignUp() {
           </span>
         </label>
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? "Criando…" : fromCalc ? "Salvar meu plano" : "Criar conta grátis"}
+          {busy ? "Criando…" : fromCalc ? "Salvar meu plano" : "Criar conta"}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm">

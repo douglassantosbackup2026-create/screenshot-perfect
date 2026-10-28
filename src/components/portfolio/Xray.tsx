@@ -2,7 +2,6 @@
 // Só exibe; a conta vem de src/lib/calc/xray.ts via xrayView.
 import { Link } from "@tanstack/react-router";
 import { ScanSearch } from "lucide-react";
-import { Blurred } from "@/components/Upgrade";
 import { formatPercent } from "@/lib/calc/format";
 import type { XrayIssue } from "@/lib/calc/xray";
 import type { DemoState } from "@/lib/data/demo-store";
@@ -51,7 +50,7 @@ export function XrayCard({ s }: { s: DemoState }) {
       <h2 className="flex items-center gap-2 text-lg">
         <ScanSearch size={18} className="text-primary" aria-hidden /> Raio-X
       </h2>
-      <Blurred feature="xray">
+      <>
         <dl className="mt-3 grid grid-cols-3 gap-2">
           <div className="rounded-2xl bg-muted p-3">
             <dt className="text-xs text-muted-foreground">Maior item</dt>
@@ -101,7 +100,7 @@ export function XrayCard({ s }: { s: DemoState }) {
           Liquidez considera reserva e investimentos; previdência e imóveis demoram mais para virar
           dinheiro. Com base nos valores que você informou.
         </p>
-      </Blurred>
+      </>
     </section>
   );
 }

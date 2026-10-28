@@ -127,7 +127,7 @@ function Calculator() {
       </section>
 
       <Button className="mt-8 w-full" onClick={start}>
-        Salvar meu plano grátis
+        Salvar meu plano
       </Button>
 
       <section className="mt-10">

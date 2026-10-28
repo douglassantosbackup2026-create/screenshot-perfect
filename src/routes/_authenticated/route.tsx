@@ -2,9 +2,14 @@ import { createFileRoute, Outlet, redirect, useLocation, useRouter, type ErrorCo
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { BottomNav } from "@/components/BottomNav";
 import { ErrorBoundary, PageError } from "@/components/ErrorBoundary";
-import { MobileHeader, TopNav } from "@/components/TopNav";
+import { LockedHeader, MobileHeader, TopNav } from "@/components/TopNav";
 import { supabase } from "@/integrations/supabase/client";
 import { attachUser } from "@/lib/data/demo-store";
+import { grantAdminAccess, loadAccess, useAccess } from "@/lib/billing/access";
+import { isAdmin } from "@/lib/auth/roles";
+
+/** Abrem sem assinatura: a própria Assinatura e o Perfil (exportar dados, excluir a conta, sair). */
+const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil"];
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -14,6 +19,13 @@ export const Route = createFileRoute("/_authenticated")({
     if (error && isAuthRetryableFetchError(error)) throw new Error("Sem conexão. Confira a internet e tente de novo.");
     if (!data.user) throw redirect({ to: "/entrar", search: { redirect: location.pathname } });
     const s = await attachUser(data.user.id);
+    // Não existe plano grátis: sem assinatura, só a Assinatura e o Perfil. Admin entra sempre.
+    const access = await loadAccess(data.user.id);
+    if (!access.active) {
+      if (await isAdmin()) grantAdminAccess();
+      else if (OPEN_WITHOUT_SUBSCRIPTION.some((p) => location.pathname.startsWith(p))) return;
+      else throw redirect({ to: "/planos" });
+    }
     const onboarding = location.pathname.startsWith("/onboarding");
     if (!s.profile.onboardingCompletedAt && !onboarding) throw redirect({ to: "/onboarding" });
     // Refazer o onboarding apagaria tudo o que a pessoa já registrou.
@@ -45,9 +57,11 @@ function LoadError({ error }: ErrorComponentProps) {
 
 function AuthenticatedLayout() {
   const { pathname } = useLocation();
-  const hideNav = pathname.startsWith("/onboarding") || pathname.startsWith("/programa");
+  const { active } = useAccess();
+  const hideNav = !active || pathname.startsWith("/onboarding") || pathname.startsWith("/programa");
   return (
     <>
+      {!active && <LockedHeader />}
       {!hideNav && <TopNav />}
       {!hideNav && <MobileHeader />}
       {/* Uma tela que quebra não leva a navegação junto; trocar de tela tenta de novo. */}
