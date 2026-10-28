@@ -17,8 +17,9 @@ import { XP } from "@/lib/gamification/rules";
 import type { DailyKind } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { APP_NAME } from "@/lib/seo";
 
-const TITLE = JOURNEY_ENABLED ? "Jornada — Previdência Intelligence" : "Início — Previdência Intelligence";
+const TITLE = JOURNEY_ENABLED ? `Jornada — ${APP_NAME}` : `Início — ${APP_NAME}`;
 const DESCRIPTION = JOURNEY_ENABLED
   ? "Sua trilha de aprendizado, a missão do dia e o seu próximo passo."
   : "O fechamento do mês, a sugestão de aporte e o seu próximo passo.";

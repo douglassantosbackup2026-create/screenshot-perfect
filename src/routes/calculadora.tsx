@@ -11,6 +11,7 @@ import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
 import { startOnboarding } from "@/lib/data/start-onboarding";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/calculadora")({
   head: () => ({
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/calculadora")({
         name: "description",
         content: "Calcule, sem login, quanto guardar por mês para se aposentar sem depender do INSS. Valores em reais de hoje e premissas à vista.",
       },
-      { property: "og:title", content: "Calculadora — Previdência Intelligence" },
+      { property: "og:title", content: `Calculadora — ${APP_NAME}` },
       { property: "og:description", content: "Quanto falta para me aposentar sem o INSS? Faça a conta em um minuto." },
     ],
   }),
@@ -83,7 +84,7 @@ function Calculator() {
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-16 pt-8">
       <Link to="/" className="text-sm font-semibold text-primary">
-        Previdência Intelligence
+        {APP_NAME}
       </Link>
       <h1 className="mt-6">Quanto falta para me aposentar sem o INSS</h1>
       <p className="mt-3 text-muted-foreground">Sem login. Nada do que você digita é gravado.</p>
@@ -150,7 +151,7 @@ function Calculator() {
             />
             <label className="flex items-start gap-3 text-sm">
               <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
-              Aceito receber e-mails do Previdência Intelligence. Só o e-mail é guardado, sem os valores da simulação.
+              Aceito receber e-mails do {APP_NAME}. Só o e-mail é guardado, sem os valores da simulação.
             </label>
             <Button type="submit" variant="outline" className="w-full" disabled={!consent || sending}>
               {sending ? "Salvando…" : "Quero receber as dicas"}

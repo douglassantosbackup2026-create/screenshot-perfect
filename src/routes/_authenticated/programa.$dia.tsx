@@ -15,6 +15,7 @@ import { XP } from "@/lib/gamification/rules";
 import { lessonFooter } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/programa/$dia")({
   beforeLoad: () => {
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/programa/$dia")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData ? `${loaderData.lesson.title} — Previdência Intelligence` : "Lição — Previdência Intelligence" },
+      { title: loaderData ? `${loaderData.lesson.title} — ${APP_NAME}` : `Lição — ${APP_NAME}` },
       { name: "description", content: loaderData?.lesson.objective ?? "Lição curta da jornada." },
       { property: "og:title", content: loaderData ? loaderData.lesson.title : "Lição" },
       { property: "og:description", content: loaderData?.lesson.objective ?? "Lição curta da jornada." },

@@ -27,6 +27,7 @@ import type { AchievementCode } from "@/lib/gamification/rules";
 import { achievementInfo } from "@/lib/labels";
 import type { ActionResult } from "@/lib/data/demo-store";
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { APP_NAME } from "@/lib/seo";
 
 export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
   map: Map,
@@ -162,7 +163,7 @@ function achievementImage(title: string): Promise<Blob> {
   wrap(g, title, 300, 480, 680, 92);
   g.font = "500 36px 'Poppins', sans-serif";
   g.fillStyle = color("--muted-foreground", "#A6A49C");
-  g.fillText("Previdência Intelligence", 300, 900);
+  g.fillText(APP_NAME, 300, 900);
   return new Promise((res) => c.toBlob((b) => res(b!), "image/png"));
 }
 function wrap(g: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number) {

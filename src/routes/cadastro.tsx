@@ -8,14 +8,15 @@ import { AuthShell, Field } from "@/components/auth/AuthShell";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage, passwordProblems, safePath } from "@/lib/auth/password";
 import { CALC_PREFILL_KEY } from "@/lib/data/demo-store";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/cadastro")({
   validateSearch: z.object({ redirect: z.string().optional() }),
   head: () => ({
     meta: [
-      { title: "Criar conta — Previdência Intelligence" },
+      { title: `Criar conta — ${APP_NAME}` },
       { name: "description", content: "Crie sua conta grátis e salve seu plano de aposentadoria sem depender do INSS." },
-      { property: "og:title", content: "Criar conta — Previdência Intelligence" },
+      { property: "og:title", content: `Criar conta — ${APP_NAME}` },
       { property: "og:description", content: "Crie sua conta grátis e salve seu plano de aposentadoria." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

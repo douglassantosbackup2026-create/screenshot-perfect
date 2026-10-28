@@ -1,7 +1,7 @@
 {
-  "name": "Previdência Intelligence",
-  "short_name": "Previdência",
-  "description": "Um plano de aposentadoria que não depende do governo, e que você consegue seguir.",
+  "name": "Mitikos",
+  "short_name": "Mitikos",
+  "description": "Orçamento, patrimônio e aposentadoria num app só.",
   "lang": "pt-BR",
   "start_url": "/hoje",
   "scope": "/",

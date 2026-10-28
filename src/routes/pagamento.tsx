@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/pagamento")({
   validateSearch: z.object({ status: z.string().optional(), collection_status: z.string().optional() }),
   head: () => ({
     meta: [
-      { title: "Pagamento — Previdência Intelligence" },
+      { title: `Pagamento — ${APP_NAME}` },
       { name: "description", content: "Acompanhe a confirmação do pagamento do seu plano." },
-      { property: "og:title", content: "Pagamento — Previdência Intelligence" },
+      { property: "og:title", content: `Pagamento — ${APP_NAME}` },
       { property: "og:description", content: "Confirmação do pagamento do seu plano." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

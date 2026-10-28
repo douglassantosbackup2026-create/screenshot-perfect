@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { AuthShell, Field } from "@/components/auth/AuthShell";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage } from "@/lib/auth/password";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/esqueci-senha")({
   head: () => ({
     meta: [
-      { title: "Esqueci minha senha — Previdência Intelligence" },
+      { title: `Esqueci minha senha — ${APP_NAME}` },
       { name: "description", content: "Receba um link por e-mail para criar uma nova senha." },
-      { property: "og:title", content: "Esqueci minha senha — Previdência Intelligence" },
+      { property: "og:title", content: `Esqueci minha senha — ${APP_NAME}` },
       { property: "og:description", content: "Recupere o acesso à sua conta." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

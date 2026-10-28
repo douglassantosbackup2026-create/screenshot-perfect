@@ -10,11 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { SIMULATION_FOOTER } from "@/lib/labels";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Previdência Intelligence — aposentadoria sem depender do INSS" },
+      { title: `${APP_NAME} — aposentadoria sem depender do INSS` },
       {
         name: "description",
         content:
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/")({
             ? "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano numa jornada de lições curtas e acompanhe sua evolução todo mês."
             : "Quanto falta para você se aposentar sem depender do INSS? Faça a conta, monte seu plano e acompanhe sua evolução todo mês.",
       },
-      { property: "og:title", content: "Previdência Intelligence" },
+      { property: "og:title", content: APP_NAME },
       {
         property: "og:description",
         content: "Um plano de aposentadoria que não depende do governo — e que você consegue seguir.",
@@ -78,7 +79,7 @@ function Index() {
         <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-5 py-2">
           <span className="flex items-center gap-2 font-semibold tracking-tight">
             <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
-            Previdência Intelligence
+            {APP_NAME}
           </span>
           <Link to={signedIn ? "/hoje" : "/entrar"} className="min-h-11 px-2 py-2.5 text-sm font-semibold text-primary">
             {signedIn ? "Abrir o app" : "Entrar"}

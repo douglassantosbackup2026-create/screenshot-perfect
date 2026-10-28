@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button";
 import { AuthShell, Field } from "@/components/auth/AuthShell";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage, safePath } from "@/lib/auth/password";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/entrar")({
   validateSearch: z.object({ redirect: z.string().optional() }),
   head: () => ({
     meta: [
-      { title: "Entrar — Previdência Intelligence" },
+      { title: `Entrar — ${APP_NAME}` },
       { name: "description", content: "Entre com seu e-mail e senha ou com sua conta Google." },
-      { property: "og:title", content: "Entrar — Previdência Intelligence" },
+      { property: "og:title", content: `Entrar — ${APP_NAME}` },
       { property: "og:description", content: "Entre com seu e-mail e senha." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { pageHead } from "@/lib/seo";
+import { pageHead, APP_NAME } from "@/lib/seo";
 import { Check, FileUp, PartyPopper, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -107,7 +107,7 @@ function MonthClose() {
 /** Texto sem valores em reais: só o mês fechado e proporções. */
 async function shareClose(s: DemoState, month: string) {
   const r = monthCloseShare(s, month);
-  const parts = [`Fechei ${monthYear(month).toLowerCase()} no Previdência Intelligence.`];
+  const parts = [`Fechei ${monthYear(month).toLowerCase()} no ${APP_NAME}.`];
   if (r.ratio != null) parts.push(`Guardei ${formatPercent(r.ratio)} do que meu plano de aposentadoria pede por mês.`);
   else if (r.contributed) parts.push("Fiz o aporte do mês para a aposentadoria.");
   if (r.fi != null) parts.push(`Já estou em ${formatPercent(r.fi)} do caminho para não depender do INSS.`);

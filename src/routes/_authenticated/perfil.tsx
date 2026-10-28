@@ -15,13 +15,14 @@ import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 import { ChangePassword } from "@/components/auth/ChangePassword";
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
     meta: [
-      { title: "Perfil — Previdência Intelligence" },
+      { title: `Perfil — ${APP_NAME}` },
       { name: "description", content: JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e preferências de privacidade." : "Sua rotina do mês e preferências de privacidade." },
-      { property: "og:title", content: "Perfil — Previdência Intelligence" },
+      { property: "og:title", content: `Perfil — ${APP_NAME}` },
       { property: "og:description", content: JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e privacidade." : "Sua rotina e privacidade." },
     ],
   }),
@@ -65,7 +66,7 @@ function Profile() {
     const blob = new Blob([JSON.stringify(demo.exportData(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "meus-dados-previdencia-intelligence.json";
+    a.download = "meus-dados-mitikos.json";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 0);
   }

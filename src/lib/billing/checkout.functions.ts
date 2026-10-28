@@ -3,6 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildReference, PLAN_NAMES, priceCents, type BillingPeriod, type PaidPlan } from "./catalog";
+import { APP_NAME } from "@/lib/seo";
 
 export const createCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -21,7 +22,7 @@ export const createCheckout = createServerFn({ method: "POST" })
         items: [
           {
             id: `${data.plan}-${data.period}`,
-            title: `Previdência Intelligence ${PLAN_NAMES[data.plan as PaidPlan]} (${data.period})`,
+            title: `${APP_NAME} ${PLAN_NAMES[data.plan as PaidPlan]} (${data.period})`,
             quantity: 1,
             currency_id: "BRL",
             unit_price: cents / 100,

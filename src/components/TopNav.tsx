@@ -4,6 +4,7 @@ import { SaveStatus } from "@/components/SaveStatus";
 import { AREAS, areaOf } from "@/components/nav/areas";
 import { useDemo } from "@/lib/data/demo-store";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/lib/seo";
 
 function ProfileButton({ className }: { className?: string }) {
   const s = useDemo();
@@ -30,7 +31,7 @@ export function TopNav() {
     <header className="mx-auto hidden w-full max-w-6xl items-center justify-between gap-6 px-8 pt-6 lg:flex">
       <Link to="/hoje" className="flex items-center gap-2 rounded-full bg-card px-4 py-2.5 font-semibold tracking-tight shadow-card">
         <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
-        Previdência Intelligence
+        {APP_NAME}
       </Link>
       <nav aria-label="Navegação principal" className="rounded-full bg-card p-1.5 shadow-card">
         <ul className="flex items-center gap-1">
@@ -65,7 +66,7 @@ export function MobileHeader() {
     <header className="mx-auto flex w-full max-w-[480px] items-center justify-between px-5 pt-4 lg:hidden">
       <Link to="/hoje" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
         <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
-        Previdência Intelligence
+        {APP_NAME}
       </Link>
       <div className="flex items-center gap-3">
         <SaveStatus />

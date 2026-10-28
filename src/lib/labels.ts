@@ -1,4 +1,5 @@
 import { ACHIEVEMENTS, type AchievementCode } from "@/lib/gamification/rules";
+import { APP_NAME } from "@/lib/seo";
 
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -46,7 +47,7 @@ export const SIMULATION_FOOTER =
 export const INSS_HELP =
   "Use a estimativa que aparece no Meu INSS. O app não calcula benefícios do INSS; ele apenas usa o valor que você informar.";
 export const ABOUT_TEXT =
-  "O Previdência Intelligence é uma ferramenta de educação e planejamento. Não somos banco, corretora, seguradora nem consultoria de investimentos. Não vendemos produtos financeiros, não pedimos senhas e não movimentamos dinheiro.";
+  `O ${APP_NAME} é uma ferramenta de educação e planejamento. Não somos banco, corretora, seguradora nem consultoria de investimentos. Não vendemos produtos financeiros, não pedimos senhas e não movimentamos dinheiro.`;
 export const lessonFooter = (date: string) =>
   `Conteúdo educativo revisado em ${date}. Não é recomendação individual de investimento. Regras e valores oficiais podem mudar; confira sempre a fonte.`;
 

@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AchievementSheet } from "@/components/feedback";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { APP_NAME, APP_TAGLINE } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -81,8 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#0C0C0B" },
-      { title: "Previdência Intelligence" },
-      { name: "description", content: "Um plano de aposentadoria que não depende do governo — e que você consegue seguir." },
+      { title: APP_NAME },
+      { name: "description", content: APP_TAGLINE },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

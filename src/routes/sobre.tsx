@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ABOUT_TEXT } from "@/lib/labels";
+import { APP_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/sobre")({
   head: () => ({
     meta: [
-      { title: "Sobre — Previdência Intelligence" },
+      { title: `Sobre — ${APP_NAME}` },
       { name: "description", content: "Ferramenta de educação e planejamento de aposentadoria. Não somos banco, corretora nem consultoria." },
-      { property: "og:title", content: "Sobre o Previdência Intelligence" },
+      { property: "og:title", content: `Sobre o ${APP_NAME}` },
       { property: "og:description", content: "Educação e planejamento de aposentadoria, sem vender produtos financeiros." },
     ],
   }),
