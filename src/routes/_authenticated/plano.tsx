@@ -21,6 +21,7 @@ import { sinceLastReview } from "@/lib/data/selectors";
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } from "@/lib/data/demo-store";
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
+import { CardBoundary } from "@/components/ErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/plano")({
   validateSearch: (s: Record<string, unknown>): { criar?: boolean } => (s["criar"] ? { criar: true } : {}),
@@ -185,6 +186,7 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         </Button>
       )}
       {r && (
+        <CardBoundary className="mt-4">
         <GoalSeekCard
           inputs={draft}
           scenario={scenario}
@@ -195,8 +197,13 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
             toast("Idade alterada nas premissas. Salve o plano se quiser manter.");
           }}
         />
+        </CardBoundary>
       )}
-      {s.plan && <PensionTaxCard inputs={s.plan.inputs} />}
+      {s.plan && (
+        <CardBoundary className="mt-4">
+          <PensionTaxCard inputs={s.plan.inputs} />
+        </CardBoundary>
+      )}
       {errors.length > 0 && <p className="mt-6 text-sm text-destructive">{errors[0]}</p>}
       </div>
 

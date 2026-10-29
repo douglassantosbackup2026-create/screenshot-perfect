@@ -21,6 +21,7 @@ import { ReserveCard } from "@/components/ledger/DayToDay";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 type Envelope = ReturnType<typeof budgetView>["spending"][number];
 const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
@@ -203,7 +204,7 @@ function AssignInput({ month, envelopeId, value, label }: { month: string; envel
       if (r.xpAwarded) xpToast("Mês planejado.", r.xpAwarded);
       handleResult(r);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
       setText(value ? String(fromCents(value)) : "");
     }
   }
@@ -365,7 +366,7 @@ function TemplateSheet({ envelope, onClose }: { envelope: Envelope | null; onClo
       toast.success("Meta do envelope salva.");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 
@@ -442,7 +443,7 @@ function MoveSheet({ s, v, month, from, onClose }: { s: DemoState; v: ReturnType
       toast.success("Dinheiro movido.");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

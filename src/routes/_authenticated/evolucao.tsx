@@ -35,6 +35,7 @@ import { JOURNEY_ENABLED } from "@/lib/features";
 import { formatDate, monthShort, monthYear } from "@/lib/labels";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 import { CHALLENGES } from "@/content/challenges";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/evolucao")({
   validateSearch: (s: Record<string, unknown>): { registrar?: boolean; meta?: boolean } => ({
@@ -465,7 +466,7 @@ function Challenges({ s }: { s: DemoState }) {
       handleResult(demo.startChallenge(slug));
       toast("Desafio começou. Bom ritmo!");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 
@@ -544,7 +545,7 @@ function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
       handleResult(r);
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

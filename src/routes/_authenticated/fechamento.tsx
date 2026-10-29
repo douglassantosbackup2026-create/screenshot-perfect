@@ -20,6 +20,7 @@ import { XP } from "@/lib/gamification/rules";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { formatDate, monthName, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/fechamento")({
   head: () => pageHead("Fechamento do mês", "Uns 10 minutos por mês: o mês lançado, categorizado, orçado, com o aporte e o patrimônio em dia.", "Uns 10 minutos, uma vez por mês."),
@@ -47,7 +48,7 @@ function MonthClose() {
       xpToast(`${monthYear(c.month)} fechado.`, r.xpAwarded);
       handleResult(r);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 
@@ -343,7 +344,7 @@ function WealthStep({ s, done }: { s: DemoState; done: boolean }) {
       xpToast("Patrimônio do mês registrado com os seus itens.", r.xpAwarded);
       handleResult(r);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
   if (done) return <p className="text-muted-foreground">Patrimônio do mês registrado.</p>;

@@ -18,6 +18,7 @@ import type { DailyKind } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
+import { errMsg } from "@/lib/errors";
 
 const TITLE = JOURNEY_ENABLED ? `Jornada — ${APP_NAME}` : `Início — ${APP_NAME}`;
 const DESCRIPTION = JOURNEY_ENABLED
@@ -306,7 +307,7 @@ function DailyMissionCard({ mission, done }: { mission: ReturnType<typeof journe
       xpToast("Missão do dia concluída.", r.xpAwarded);
       handleResult(r);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

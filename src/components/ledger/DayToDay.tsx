@@ -22,6 +22,7 @@ import { addDays } from "@/lib/calc/recurring";
 import { spDate } from "@/lib/gamification/rules";
 import { formatDate, monthShort } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 const useMoney = (showValues: boolean) => (cents: number) =>
@@ -250,7 +251,7 @@ export function ReserveCard({
       demo.saveReserveEnvelope(r.missing, addDays(spDate(new Date()), 365));
       toast.success("Envelope Reserva de emergência criado com meta para 12 meses.");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
   return (

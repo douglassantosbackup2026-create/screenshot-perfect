@@ -5,6 +5,7 @@ import { SimpleBudget } from "@/components/budget/SimpleBudget";
 import { Segmented } from "@/components/forms";
 import { AreaTabs } from "@/components/nav/areas";
 import { budgetModeOf, demo, useDemo } from "@/lib/data/demo-store";
+import { CardBoundary } from "@/components/ErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated/orcamento")({
   head: () => pageHead("Orçamento", "O orçamento do mês: limites de gasto por categoria ou envelopes, com a aposentadoria como prioridade.", "O orçamento do mês, simples ou por envelopes."),
@@ -29,7 +30,7 @@ function Budget() {
           ]}
         />
       </div>
-      {mode === "simples" ? <SimpleBudget s={s} /> : <BudgetTab s={s} />}
+      <CardBoundary resetKey={mode}>{mode === "simples" ? <SimpleBudget s={s} /> : <BudgetTab s={s} />}</CardBoundary>
     </main>
   );
 }

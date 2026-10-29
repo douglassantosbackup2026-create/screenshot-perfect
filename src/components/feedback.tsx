@@ -28,6 +28,7 @@ import { achievementInfo } from "@/lib/labels";
 import type { ActionResult } from "@/lib/data/demo-store";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
+import { errMsg } from "@/lib/errors";
 
 export const ACH_ICONS: Record<string, LucideIcon | undefined> = {
   map: Map,
@@ -79,7 +80,7 @@ export function runAction<T>(fn: () => T, success?: string | ((r: T) => string))
     if (result) handleResult(result);
     return true;
   } catch (e) {
-    toast.error(e instanceof Error ? e.message : "Não foi possível concluir agora. Tente de novo.");
+    toast.error(errMsg(e));
     return false;
   }
 }
@@ -97,16 +98,23 @@ export function AchievementSheet() {
 
   async function share() {
     if (!info) return;
-    const blob = await achievementImage(info.title);
-    const file = new File([blob], "conquista.png", { type: "image/png" });
-    const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
-    if (nav.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: info.title, text: `Conquista: ${info.title}` }).catch(() => {});
-    } else {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "conquista.png";
-      a.click();
+    try {
+      const blob = await achievementImage(info.title);
+      const file = new File([blob], "conquista.png", { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
+      if (nav.canShare?.({ files: [file] })) {
+        // Cancelar o compartilhamento não é erro.
+        await navigator.share({ files: [file], title: info.title, text: `Conquista: ${info.title}` }).catch(() => {});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "conquista.png";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch {
+      toast.error("Não foi possível gerar a imagem da conquista.");
     }
   }
 
@@ -141,7 +149,8 @@ function achievementImage(title: string): Promise<Blob> {
   const c = document.createElement("canvas");
   c.width = 1080;
   c.height = 1080;
-  const g = c.getContext("2d")!;
+  const g = c.getContext("2d");
+  if (!g) return Promise.reject(new Error("canvas indisponível"));
   const css = getComputedStyle(document.documentElement);
   const color = (v: string, fb: string) => css.getPropertyValue(v).trim() || fb;
   g.fillStyle = color("--background", "#0C0C0B");
@@ -164,7 +173,7 @@ function achievementImage(title: string): Promise<Blob> {
   g.font = "500 36px 'Poppins', sans-serif";
   g.fillStyle = color("--muted-foreground", "#A6A49C");
   g.fillText(APP_NAME, 300, 900);
-  return new Promise((res) => c.toBlob((b) => res(b!), "image/png"));
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("imagem vazia"))), "image/png"));
 }
 function wrap(g: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number) {
   let line = "";

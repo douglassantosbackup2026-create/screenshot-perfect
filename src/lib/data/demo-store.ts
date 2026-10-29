@@ -693,13 +693,24 @@ export function emptyState(now = new Date()): DemoState {
   };
 }
 
+/** O último conserto feito nos dados salvos, para avisar a pessoa uma vez (ver SaveNotices). */
+let repairNotice: { dropped: number; reset: number } | null = null;
+export function consumeRepairNotice() {
+  const n = repairNotice;
+  repairNotice = null;
+  return n;
+}
+
 /**
  * Conserta o que veio salvo (ver state-schema.ts) e completa um estado de versões anteriores com os
  * campos novos. Aceita qualquer coisa: dado corrompido nunca impede o app de abrir.
  */
 function migrate(input: unknown): DemoState {
   const { state: raw, dropped, reset } = repairState(input, emptyState());
-  if (dropped || reset.length) console.warn("Estado salvo consertado", { dropped, reset });
+  if (dropped || reset.length) {
+    console.warn("Estado salvo consertado", { dropped, reset });
+    repairNotice = { dropped, reset: reset.length };
+  }
   if (raw.version === 8) return { ...emptyState(), ...raw };
   const assets = raw.assets ?? [];
   return {
@@ -769,8 +780,13 @@ const FRESH_PENDING = "pi_fresh_pending";
 const PENDING = "pi_pending_cloud";
 const RETRY_MS = [2000, 5000, 15000, 30000];
 
-/** "conflict": outra aba ou aparelho gravou antes; a versão do banco foi recarregada. */
-export type SaveStatus = "saved" | "saving" | "error" | "conflict";
+/**
+ * "conflict": outra aba ou aparelho gravou antes; a versão do banco foi recarregada.
+ * "too-large": os dados passaram do limite do banco (2 MB); tentar de novo não resolve.
+ * "blocked": o banco recusou porque não há assinatura válida; tentar de novo não resolve.
+ * Nos dois últimos, os dados continuam guardados neste aparelho.
+ */
+export type SaveStatus = "saved" | "saving" | "error" | "conflict" | "too-large" | "blocked";
 let saveStatus: SaveStatus = "saved";
 const saveListeners = new Set<() => void>();
 function setSaveStatus(next: SaveStatus) {
@@ -859,6 +875,10 @@ async function runSave(): Promise<boolean> {
     if (res.error && res.error.code !== "23505") {
       console.error("Falha ao salvar no banco", res.error.message);
       writePending();
+      // 23514: passou do limite de tamanho (check do banco); 42501: RLS recusou (sem assinatura).
+      // Repetir a mesma gravação daria o mesmo erro, então não agenda nova tentativa.
+      if (res.error.code === "23514") return (setSaveStatus("too-large"), false);
+      if (res.error.code === "42501") return (setSaveStatus("blocked"), false);
       setSaveStatus("error");
       scheduleRetry();
       return false;
@@ -991,8 +1011,10 @@ function load(): DemoState {
   try {
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(KEY) : null;
     state = raw ? migrate(JSON.parse(raw)) : makeSeed();
-  } catch {
-    state = makeSeed();
+  } catch (e) {
+    // Cópia local ilegível: começa vazio, nunca com os dados de exemplo (que poderiam ir para a conta).
+    console.error("Dados locais ilegíveis", e);
+    state = emptyState();
   }
   return state;
 }

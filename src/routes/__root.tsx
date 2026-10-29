@@ -15,6 +15,7 @@ import { AchievementSheet } from "@/components/feedback";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { APP_NAME, APP_TAGLINE } from "@/lib/seo";
+import { installClientErrorReporting, reportClientError } from "../lib/client-errors";
 
 function NotFoundComponent() {
   return (
@@ -39,10 +40,11 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
-  console.error(error);
   const router = useRouter();
   useEffect(() => {
+    console.error(error);
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportClientError(error, "root");
   }, [error]);
 
   return (
@@ -127,6 +129,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   // Só para poder instalar o app; fora do preview do editor (iframe) e do ambiente de desenvolvimento.
+  useEffect(() => installClientErrorReporting(), []);
   useEffect(() => {
     if (import.meta.env.PROD && window.self === window.top && "serviceWorker" in navigator) {
       void navigator.serviceWorker.register("/sw.js").catch(() => {});

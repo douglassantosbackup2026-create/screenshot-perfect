@@ -21,6 +21,7 @@ import { formatMoney } from "@/lib/calc/format";
 import { demo, useDemo, type Account, type CategoryKind, type DemoState } from "@/lib/data/demo-store";
 import { accountsOverview } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/contas")({
   head: () => pageHead("Contas", "Suas contas, cartões e categorias, e as regras que categorizam os lançamentos sozinhas."),
@@ -110,7 +111,7 @@ function Categories({ s }: { s: DemoState }) {
       demo.saveCategory({ name, kind });
       setName("");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
   return (
@@ -176,7 +177,7 @@ function Rules({ s }: { s: DemoState }) {
       setValue("");
       setRenameTo("");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
   return (
@@ -266,7 +267,7 @@ function AccountSheet({ editing, onClose }: { editing: Editing; onClose: () => v
       toast.success(account ? "Conta atualizada." : "Conta criada.");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

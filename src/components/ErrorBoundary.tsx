@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { demo } from "@/lib/data/demo-store";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
+import { reportClientError } from "@/lib/client-errors";
 
 type Props = {
   children: ReactNode;
@@ -23,6 +24,7 @@ export class ErrorBoundary extends Component<Props, { failed: boolean }> {
   override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error(error, info.componentStack);
     reportLovableError(error, { boundary: "app_error_boundary" });
+    reportClientError(error, "boundary");
   }
 
   override componentDidUpdate(prev: Props) {
@@ -71,9 +73,10 @@ export function PageError({ message, onRetry }: { message?: string | undefined; 
 }
 
 /** Um card que falha vira um aviso pequeno; o resto da tela continua. */
-export function CardBoundary({ children, className }: { children: ReactNode; className?: string }) {
+export function CardBoundary({ children, className, resetKey }: { children: ReactNode; className?: string; resetKey?: unknown }) {
   return (
     <ErrorBoundary
+      resetKey={resetKey}
       fallback={(reset) => (
         <section className={`rounded-2xl bg-card p-5 text-sm shadow-card ${className ?? ""}`} role="alert">
           <p className="text-muted-foreground">Não foi possível mostrar isto agora.</p>

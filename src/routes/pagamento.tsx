@@ -35,12 +35,17 @@ function Payment() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
     async function check() {
-      const { data } = await supabase.auth.getUser();
-      if (stopped) return;
-      if (!data.user) return setState("signed-out");
-      const a = await loadAccess(data.user.id);
-      if (stopped) return;
-      if (a.active) return setState("active");
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (stopped) return;
+        if (!data.user) return setState("signed-out");
+        const a = await loadAccess(data.user.id);
+        if (stopped) return;
+        if (a.active) return setState("active");
+      } catch {
+        // Rede instável: conta como mais uma tentativa, em vez de travar em "Confirmando…".
+        if (stopped) return;
+      }
       tries += 1;
       if (tries >= MAX_TRIES) return setState("pending");
       timer = setTimeout(check, POLL_MS);

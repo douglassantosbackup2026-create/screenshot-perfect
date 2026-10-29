@@ -22,6 +22,7 @@ import { LIMIT_PERIODS, type LimitPeriod } from "@/lib/calc/limits";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import { limitsView } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 const ALL = "todos";
 
@@ -51,7 +52,7 @@ export function LimitsSheet({
       toast.success("Limite criado. Você recebe um aviso a partir de 75%.");
       setAmount(null);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

@@ -22,6 +22,8 @@ import { threadMonths } from "@/lib/data/thread";
 import { formatMonthly, formatWealth } from "@/lib/calc/format";
 import { DESTINATIONS, achievementInfo, monthName, monthYear, REASON_LABEL } from "@/lib/labels";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
+import { CardBoundary } from "@/components/ErrorBoundary";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/diario")({
   validateSearch: (s: Record<string, unknown>): { registrar?: boolean; lancar?: boolean } => ({
@@ -106,6 +108,7 @@ function Diary() {
           </p>
         </div>
         <div className="mt-4">
+        <CardBoundary>
         <ConstancyThread
           months={months.map((m) => ({
             month: m.month,
@@ -115,6 +118,7 @@ function Diary() {
             onSelect: () => (m.items.length ? setDetail(m.month) : setLogMonth(m.month)),
           }))}
         />
+        </CardBoundary>
         </div>
       </section>
 
@@ -157,7 +161,7 @@ function LogSheet({ month, onClose, onSaved }: { month: string | null; onClose: 
       handleResult(r);
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

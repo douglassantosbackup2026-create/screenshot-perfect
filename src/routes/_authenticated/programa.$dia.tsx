@@ -16,6 +16,7 @@ import { lessonFooter } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/programa/$dia")({
   beforeLoad: () => {
@@ -66,7 +67,7 @@ function LessonPage() {
       if (r.programCompleted) setCelebrate(true);
       else setJustDone(r.xpAwarded);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

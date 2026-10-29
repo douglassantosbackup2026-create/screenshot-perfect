@@ -1,19 +1,11 @@
 import { useEffect } from "react";
 import { CloudOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { retrySave, useSaveStatus } from "@/lib/data/demo-store";
+import { consumeRepairNotice, retrySave, useSaveStatus } from "@/lib/data/demo-store";
 
-/** Mostra quando os dados não chegaram ao banco. Salvo é o normal e não aparece. */
+/** Mostra quando os dados não chegaram ao banco. Salvo é o normal e não aparece. Pode aparecer em mais de um lugar. */
 export function SaveStatus() {
   const status = useSaveStatus();
-
-  useEffect(() => {
-    if (status === "conflict") {
-      toast("Seus dados mudaram em outra aba ou aparelho. Carregamos a versão mais recente; confira sua última alteração.", {
-        duration: 8000,
-      });
-    }
-  }, [status]);
 
   if (status === "saving") {
     return (
@@ -23,7 +15,7 @@ export function SaveStatus() {
       </span>
     );
   }
-  if (status === "error") {
+  if (status === "error" || status === "too-large" || status === "blocked") {
     return (
       <button
         type="button"
@@ -36,5 +28,32 @@ export function SaveStatus() {
       </button>
     );
   }
+  return null;
+}
+
+const NOTICES: Partial<Record<ReturnType<typeof useSaveStatus>, string>> = {
+  conflict: "Seus dados mudaram em outra aba ou aparelho. Carregamos a versão mais recente; confira sua última alteração.",
+  "too-large":
+    "Seus dados passaram do limite de armazenamento e a última alteração não foi salva no servidor. Ela continua guardada neste aparelho. Exporte seus dados no Perfil e fale com o suporte.",
+  blocked: "Não foi possível salvar: sua assinatura não está ativa. Suas alterações continuam guardadas neste aparelho.",
+};
+
+/** Avisos de gravação em toast. Montar uma vez só (no layout), senão cada aviso aparece repetido. */
+export function SaveNotices() {
+  const status = useSaveStatus();
+  useEffect(() => {
+    const text = NOTICES[status];
+    if (text) toast(text, { duration: status === "conflict" ? 8000 : 12000 });
+    // Dados consertados ao carregar (ao abrir o app ou depois de um conflito): avisa uma vez.
+    const repaired = consumeRepairNotice();
+    if (repaired) {
+      toast(
+        repaired.dropped
+          ? `${repaired.dropped === 1 ? "Um registro salvo estava com defeito e ficou de fora" : `${repaired.dropped} registros salvos estavam com defeito e ficaram de fora`}. Se notar algo faltando, exporte seus dados no Perfil e fale com o suporte.`
+          : "Alguns dados salvos estavam com defeito e voltaram ao padrão. Confira suas preferências no Perfil.",
+        { duration: 12000 },
+      );
+    }
+  }, [status]);
   return null;
 }

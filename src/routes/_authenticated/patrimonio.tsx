@@ -30,6 +30,7 @@ import { WealthSheet } from "@/components/wealth/WealthSheet";
 import { monthOf, spDate } from "@/lib/gamification/rules";
 import { formatDate, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/patrimonio")({
   validateSearch: (s: Record<string, unknown>): { novo?: boolean; registrar?: boolean } => ({
@@ -292,7 +293,7 @@ function AssetSheet({
       toast.success(asset ? "Item atualizado." : "Item adicionado.");
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

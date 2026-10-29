@@ -18,6 +18,7 @@ import { envelopeAfterExpense, quickEntryDraft } from "@/lib/data/selectors";
 import { HIDDEN } from "@/lib/labels";
 import { demo, type DemoState, type Destination, type Transaction } from "@/lib/data/demo-store";
 import { spDate } from "@/lib/gamification/rules";
+import { errMsg } from "@/lib/errors";
 
 type Kind = "saida" | "entrada" | "transferencia";
 
@@ -31,7 +32,7 @@ function withUndo(message: string, description?: string) {
         try {
           toast(`${demo.undoLast()} desfeito.`);
         } catch (e) {
-          toast.error((e as Error).message);
+          toast.error(errMsg(e));
         }
       },
     },
@@ -150,7 +151,7 @@ export function TransactionSheet({ s, editing, onClose }: { s: DemoState; editin
       }
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

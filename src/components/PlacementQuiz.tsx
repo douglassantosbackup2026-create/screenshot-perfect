@@ -8,6 +8,7 @@ import { handleResult } from "@/components/feedback";
 import { demo } from "@/lib/data/demo-store";
 import { placementQuestions } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
+import { errMsg } from "@/lib/errors";
 
 /** Teste de nivelamento de uma unidade: acertando todas, as lições dela ficam abertas e a próxima unidade libera. */
 export function PlacementQuiz({ unit, onClose }: { unit: number | null; onClose: () => void }) {
@@ -21,7 +22,7 @@ export function PlacementQuiz({ unit, onClose }: { unit: number | null; onClose:
       handleResult(res);
       setResult(res);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
       onClose();
     }
   }

@@ -13,6 +13,7 @@ import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState, type RecurringRule } from "@/lib/data/demo-store";
 import { spDate } from "@/lib/gamification/rules";
 import { formatDate } from "@/lib/labels";
+import { errMsg } from "@/lib/errors";
 
 const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 const freqLabel = (r: RecurringRule) => {
@@ -100,7 +101,7 @@ function RuleForm({ s, rule, onDone }: { s: DemoState; rule: RecurringRule | nul
       toast.success("Recorrência salva. O que já venceu foi lançado.");
       onDone();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

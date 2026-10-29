@@ -27,6 +27,7 @@ import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { DESTINATIONS, formatDate, HIDDEN, monthShort, monthYear } from "@/lib/labels";
 import type { ActivityItem } from "@/lib/data/selectors";
 import type { Destination, Goal } from "@/lib/data/demo-store";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 type AppPath = "/hoje" | "/plano" | "/evolucao" | "/diario" | "/perfil" | "/patrimonio";
 
@@ -95,8 +96,22 @@ export function ChartCard({ title, action, children, className }: { title: strin
         <h2 className="text-lg">{title}</h2>
         {action}
       </div>
-      <div className="mt-4">{children}</div>
+      {/* Um gráfico que quebra mostra o aviso aqui dentro; o resto da tela continua. */}
+      <div className="mt-4">
+        <ErrorBoundary fallback={(reset) => <ChartError onRetry={reset} />}>{children}</ErrorBoundary>
+      </div>
     </section>
+  );
+}
+
+function ChartError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="text-sm">
+      <p className="text-muted-foreground">Não foi possível mostrar isto agora.</p>
+      <button type="button" onClick={onRetry} className="mt-2 min-h-11 font-semibold text-primary">
+        Tentar de novo
+      </button>
+    </div>
   );
 }
 

@@ -10,6 +10,7 @@ import { handleResult, xpToast } from "@/components/feedback";
 import { parseCSV, parseOFX, type ImportedTx } from "@/lib/calc/import";
 import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState } from "@/lib/data/demo-store";
+import { errMsg } from "@/lib/errors";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -41,11 +42,15 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
       toast.error("Arquivo grande demais (até 2 MB).");
       return;
     }
-    // OFX de bancos brasileiros costuma vir em Latin-1; CSV, em UTF-8.
-    const buf = await file.arrayBuffer();
-    const utf8 = new TextDecoder("utf-8").decode(buf);
-    setText(utf8.includes("�") ? new TextDecoder("windows-1252").decode(buf) : utf8);
-    setFileName(file.name);
+    try {
+      // OFX de bancos brasileiros costuma vir em Latin-1; CSV, em UTF-8.
+      const buf = await file.arrayBuffer();
+      const utf8 = new TextDecoder("utf-8").decode(buf);
+      setText(utf8.includes("�") ? new TextDecoder("windows-1252").decode(buf) : utf8);
+      setFileName(file.name);
+    } catch {
+      toast.error("Não foi possível ler esse arquivo. Confira se é um CSV ou OFX e tente de novo.");
+    }
   }
 
   function confirm() {
@@ -58,7 +63,7 @@ export function ImportSheet({ s, open, onClose }: { s: DemoState; open: boolean;
       handleResult(r);
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

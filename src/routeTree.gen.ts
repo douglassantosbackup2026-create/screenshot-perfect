@@ -33,6 +33,7 @@ import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
+import { Route as ApiPublicClientErrorRouteImport } from './routes/api/public/client-error'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -156,6 +157,11 @@ const AuthenticatedProgramaDiaRoute =
     path: '/programa/$dia',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicClientErrorRoute = ApiPublicClientErrorRouteImport.update({
+  id: '/api/public/client-error',
+  path: '/api/public/client-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMercadopagoWebhookRoute =
   ApiPublicMercadopagoWebhookRouteImport.update({
     id: '/api/public/mercadopago/webhook',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRoutesById {
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRouteTypes {
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
+    | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/conteudo'
     | '/programa/$dia'
+    | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
   id:
     | '__root__'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/programa/$dia'
+    | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -336,6 +348,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SobreRoute: typeof SobreRoute
+  ApiPublicClientErrorRoute: typeof ApiPublicClientErrorRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
 }
 
@@ -509,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProgramaDiaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/client-error': {
+      id: '/api/public/client-error'
+      path: '/api/public/client-error'
+      fullPath: '/api/public/client-error'
+      preLoaderRoute: typeof ApiPublicClientErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mercadopago/webhook': {
       id: '/api/public/mercadopago/webhook'
       path: '/api/public/mercadopago/webhook'
@@ -567,6 +587,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SobreRoute: SobreRoute,
+  ApiPublicClientErrorRoute: ApiPublicClientErrorRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
 }
 export const routeTree = rootRouteImport

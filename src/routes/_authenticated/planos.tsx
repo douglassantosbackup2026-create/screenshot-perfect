@@ -20,6 +20,7 @@ export const Route = createFileRoute("/_authenticated/planos")({
 });
 
 type Current = { status: string; period: string; validUntil: string | null };
+type Loaded = { kind: "loading" } | { kind: "error" } | { kind: "ok"; current: Current | null };
 
 const STATUS: Record<string, string> = {
   authorized: "Ativa, com renovação automática",
@@ -29,19 +30,34 @@ const STATUS: Record<string, string> = {
 };
 
 /** Assinatura salva no banco (gravada pelo webhook) e até quando o acesso vale. */
-function useCurrentSubscription() {
-  const [current, setCurrent] = useState<Current | null>(null);
+function useCurrentSubscription(enabled: boolean) {
+  const [loaded, setLoaded] = useState<Loaded>({ kind: "loading" });
   const [version, setVersion] = useState(0);
   useEffect(() => {
+    if (!enabled) return;
+    let stale = false;
+    setLoaded({ kind: "loading" });
     void (async () => {
-      const [sub, ent] = await Promise.all([
-        supabase.from("subscriptions").select("status, period").maybeSingle(),
-        supabase.from("entitlements").select("valid_until").maybeSingle(),
-      ]);
-      if (sub.data) setCurrent({ status: sub.data.status, period: sub.data.period, validUntil: ent.data?.valid_until ?? null });
+      try {
+        const [sub, ent] = await Promise.all([
+          supabase.from("subscriptions").select("status, period").maybeSingle(),
+          supabase.from("entitlements").select("valid_until").maybeSingle(),
+        ]);
+        if (stale) return;
+        if (sub.error || ent.error) return setLoaded({ kind: "error" });
+        setLoaded({
+          kind: "ok",
+          current: sub.data ? { status: sub.data.status, period: sub.data.period, validUntil: ent.data?.valid_until ?? null } : null,
+        });
+      } catch {
+        if (!stale) setLoaded({ kind: "error" });
+      }
     })();
-  }, [version]);
-  return { current, reload: () => setVersion((v) => v + 1) };
+    return () => {
+      stale = true;
+    };
+  }, [enabled, version]);
+  return { loaded, reload: () => setVersion((v) => v + 1) };
 }
 
 function Plans() {
@@ -49,8 +65,8 @@ function Plans() {
   const s = useDemo();
   const plan = PLANS.find((p) => p.slug === "inteligencia")!;
   const pro = PLANS.find((p) => p.slug === "pro")!;
-  const { current, reload } = useCurrentSubscription();
   const subscribed = access.active && !access.billingOff;
+  const { loaded, reload } = useCurrentSubscription(subscribed);
   const returning = !access.active && !!s.profile.onboardingCompletedAt;
 
   return (
@@ -68,7 +84,18 @@ function Plans() {
         </p>
       )}
 
-      {subscribed && current && <CurrentCard current={current} onCancelled={reload} />}
+      {subscribed && loaded.kind === "loading" && (
+        <div className="mt-6 h-32 animate-pulse rounded-3xl bg-card" aria-busy="true" aria-label="Carregando sua assinatura" />
+      )}
+      {subscribed && loaded.kind === "error" && (
+        <section className="mt-6 rounded-3xl bg-card p-6 text-sm shadow-card" role="alert">
+          <p>Não foi possível carregar os detalhes da sua assinatura. Seu acesso continua normal.</p>
+          <Button variant="outline" className="mt-4" onClick={reload}>
+            Tentar de novo
+          </Button>
+        </section>
+      )}
+      {subscribed && loaded.kind === "ok" && loaded.current && <CurrentCard current={loaded.current} onCancelled={reload} />}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <section className="rounded-3xl bg-card p-6 shadow-card ring-2 ring-primary" aria-label={`Plano ${plan.name}`}>

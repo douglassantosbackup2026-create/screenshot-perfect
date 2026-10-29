@@ -20,6 +20,7 @@ import { contributionSuggestion, portfolioView } from "@/lib/data/selectors";
 import { spDate } from "@/lib/gamification/rules";
 import { formatDate } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { errMsg } from "@/lib/errors";
 
 type Position = ReturnType<typeof portfolioView>["positions"][number];
 const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
@@ -243,7 +244,7 @@ function HoldingSheet({
       toast.success(h ? "Posição atualizada." : "Posição criada. Lance a primeira compra.");
       if (!h) onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 
@@ -324,7 +325,7 @@ function HoldingSheet({
                           try {
                             demo.deleteTrade(t.id);
                           } catch (e) {
-                            toast.error((e as Error).message);
+                            toast.error(errMsg(e));
                           }
                         }}
                         className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -372,7 +373,7 @@ function TradeForm({ holdingId }: { holdingId: string }) {
       setPrice(null);
       setFees(null);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 
@@ -421,7 +422,7 @@ function TargetsSheet({ s, open, onClose }: { s: DemoState; open: boolean; onClo
       handleResult(r);
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

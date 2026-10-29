@@ -3,6 +3,7 @@ import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { BottomNav } from "@/components/BottomNav";
 import { ErrorBoundary, PageError } from "@/components/ErrorBoundary";
 import { LockedHeader, MobileHeader, TopNav } from "@/components/TopNav";
+import { SaveNotices, SaveStatus } from "@/components/SaveStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { attachUser } from "@/lib/data/demo-store";
 import { grantAdminAccess, loadAccess, useAccess } from "@/lib/billing/access";
@@ -61,9 +62,16 @@ function AuthenticatedLayout() {
   const hideNav = !active || pathname.startsWith("/onboarding") || pathname.startsWith("/programa");
   return (
     <>
+      <SaveNotices />
       {!active && <LockedHeader />}
       {!hideNav && <TopNav />}
       {!hideNav && <MobileHeader />}
+      {/* Sem o topo do app, o aviso de "não salvo" fica no canto (o LockedHeader já mostra o dele). */}
+      {hideNav && active && (
+        <div className="fixed right-4 top-4 z-40">
+          <SaveStatus />
+        </div>
+      )}
       {/* Uma tela que quebra não leva a navegação junto; trocar de tela tenta de novo. */}
       <ErrorBoundary resetKey={pathname} fallback={(reset) => <PageError onRetry={reset} />}>
         <Outlet />

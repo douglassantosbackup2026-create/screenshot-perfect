@@ -10,6 +10,7 @@ import { completedDays, dailyMissionDone, demo, todayMission, useDemo } from "@/
 import { missionAccepts, REVIEW_PASS, reviewQuestions } from "@/lib/journey/journey";
 import { spDate } from "@/lib/gamification/rules";
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/revisao")({
   beforeLoad: () => {
@@ -38,7 +39,7 @@ function Review() {
         xpToast("Missão do dia concluída.", res.xpAwarded);
         handleResult(res);
       } catch (e) {
-        toast.error((e as Error).message);
+        toast.error(errMsg(e));
       }
     }
   }

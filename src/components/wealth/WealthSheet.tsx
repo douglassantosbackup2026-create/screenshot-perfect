@@ -14,6 +14,7 @@ import { formatWealth } from "@/lib/calc/format";
 import { monthOf, spDate } from "@/lib/gamification/rules";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { monthYear } from "@/lib/labels";
+import { errMsg } from "@/lib/errors";
 
 export function WealthSheet({ s, month, onClose }: { s: DemoState; month: string | null; onClose: () => void }) {
   const existing = month ? s.wealthEntries.find((w) => w.month === month) : undefined;
@@ -38,7 +39,7 @@ export function WealthSheet({ s, month, onClose }: { s: DemoState; month: string
       handleResult(r);
       onClose();
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMsg(e));
     }
   }
 

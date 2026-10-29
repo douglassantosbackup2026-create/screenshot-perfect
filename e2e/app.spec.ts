@@ -5,6 +5,8 @@ import { ACTIVE, profileOf, signIn, transactionsOf } from "./fake-supabase";
 test("logada, o botão da landing abre o app sem apagar os dados", async ({ page }) => {
   const db = await signIn(page, makeSeed());
   await page.goto("/");
+  // O botão só troca para "Abrir o app" depois que a página liga no navegador (no dev, ~17 s nesta máquina).
+  await page.waitForLoadState("networkidle");
   const cta = page.getByRole("button", { name: "Abrir o app" }).first();
   await expect(cta).toBeVisible();
   await cta.click();
@@ -126,6 +128,8 @@ test("se a consulta da assinatura falha, não libera o app (falha fechado)", asy
     window.localStorage.setItem("mitikos_access_00000000-0000-4000-8000-0000000000e2", JSON.stringify({ tier: "pro", active: true, billingOff: false })),
   );
   await page.goto("/hoje");
+  // A trava roda no navegador: espera a página ligar antes de conferir para onde foi.
+  await page.waitForLoadState("networkidle");
   await expect(page).toHaveURL(/\/planos$/);
 });
 
