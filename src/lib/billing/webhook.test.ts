@@ -7,23 +7,23 @@ const REF = buildReference(USER, "inteligencia", "mensal");
 
 describe("pagamento", () => {
   it("aprovado, em reais e no valor do catálogo: credita", () => {
-    expect(decidePayment({ id: 9, status: "approved", transaction_amount: 29.9, currency_id: "BRL", external_reference: REF })).toEqual({
+    expect(decidePayment({ id: 9, status: "approved", transaction_amount: 39.9, currency_id: "BRL", external_reference: REF })).toEqual({
       action: "credit",
-      credit: { id: "mp_9", userId: USER, plan: "inteligencia", period: "mensal", cents: 2990 },
+      credit: { id: "mp_9", userId: USER, plan: "inteligencia", period: "mensal", cents: 3990 },
     });
   });
   it("valor diferente, outra moeda ou pendente: não credita", () => {
     expect(decidePayment({ id: 9, status: "approved", transaction_amount: 1, currency_id: "BRL", external_reference: REF }).action).toBe("ignore");
-    expect(decidePayment({ id: 9, status: "approved", transaction_amount: 29.9, currency_id: "USD", external_reference: REF }).action).toBe("ignore");
-    expect(decidePayment({ id: 9, status: "pending", transaction_amount: 29.9, currency_id: "BRL", external_reference: REF }).action).toBe("ignore");
+    expect(decidePayment({ id: 9, status: "approved", transaction_amount: 39.9, currency_id: "USD", external_reference: REF }).action).toBe("ignore");
+    expect(decidePayment({ id: 9, status: "pending", transaction_amount: 39.9, currency_id: "BRL", external_reference: REF }).action).toBe("ignore");
   });
 });
 
 describe("cobrança da assinatura", () => {
-  const ap = { id: 1, preapproval_id: "pre_1", transaction_amount: 29.9, currency_id: "BRL", payment: { id: 77, status: "approved" } };
+  const ap = { id: 1, preapproval_id: "pre_1", transaction_amount: 39.9, currency_id: "BRL", payment: { id: 77, status: "approved" } };
   it("usa o id do pagamento: a mesma cobrança notificada duas vezes credita uma vez só", () => {
     const viaSubscription = decideAuthorizedPayment({ ...ap, external_reference: REF });
-    const viaPayment = decidePayment({ id: 77, status: "approved", transaction_amount: 29.9, currency_id: "BRL", external_reference: REF });
+    const viaPayment = decidePayment({ id: 77, status: "approved", transaction_amount: 39.9, currency_id: "BRL", external_reference: REF });
     expect(viaSubscription).toEqual(viaPayment);
   });
   it("sem referência na cobrança, usa a da assinatura", () => {

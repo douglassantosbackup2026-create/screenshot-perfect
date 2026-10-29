@@ -91,8 +91,8 @@ function Index() {
       </h1>
       <p className="mt-4 text-lg text-muted-foreground">
         {JOURNEY_ENABLED
-          ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Sem vender nada para você: R$ 29,90 por mês, cancele quando quiser."
-          : "Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Sem vender nada para você: R$ 29,90 por mês, cancele quando quiser."}
+          ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Sem vender nada para você: R$ 39,90 por mês, cancele quando quiser."
+          : "Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Sem vender nada para você: R$ 39,90 por mês, cancele quando quiser."}
       </p>
       <div className="mt-6 flex flex-col gap-2">
         <Button onClick={start}>{signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}</Button>

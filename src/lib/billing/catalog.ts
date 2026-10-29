@@ -4,7 +4,7 @@ export type PaidPlan = "inteligencia" | "pro";
 export type BillingPeriod = "mensal" | "anual";
 
 export const PRICES_CENTS: Record<PaidPlan, Partial<Record<BillingPeriod, number>>> = {
-  inteligencia: { mensal: 2990, anual: 23990 },
+  inteligencia: { mensal: 3990, anual: 39900 },
   pro: { mensal: 5990 },
 };
 

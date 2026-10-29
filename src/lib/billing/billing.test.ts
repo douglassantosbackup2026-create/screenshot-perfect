@@ -5,11 +5,11 @@ import { buildManifest, hmacHex, verifyMercadoPagoSignature } from "./signature"
 const USER = "11111111-2222-3333-4444-555555555555";
 
 describe("preços cobrados", () => {
-  it("Inteligência mensal custa R$ 29,90", () => expect(priceCents("inteligencia", "mensal")).toBe(2990));
-  it("Inteligência anual custa R$ 239,90", () => expect(priceCents("inteligencia", "anual")).toBe(23990));
+  it("Inteligência mensal custa R$ 39,90", () => expect(priceCents("inteligencia", "mensal")).toBe(3990));
+  it("Inteligência anual custa R$ 399,00", () => expect(priceCents("inteligencia", "anual")).toBe(39900));
   it("Pro mensal custa R$ 59,90", () => expect(priceCents("pro", "mensal")).toBe(5990));
   it("não existe plano grátis para cobrar", () => expect(priceCents("free", "mensal")).toBeNull());
-  it("converte 29.9 em 2990 centavos", () => expect(toCents(29.9)).toBe(2990));
+  it("converte 39.9 em 3990 centavos", () => expect(toCents(39.9)).toBe(3990));
 });
 
 describe("referência do pagamento", () => {

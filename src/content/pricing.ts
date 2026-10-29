@@ -21,11 +21,11 @@ export const PLANS: PlanTier[] = [
   {
     slug: "inteligencia",
     name: "Inteligência",
-    price: "R$ 29,90",
+    price: "R$ 39,90",
     period: "/mês",
     tag: "Assinatura",
     highlight: true,
-    annualNote: "ou R$ 239,90 por ano (cerca de R$ 20 por mês)",
+    annualNote: "ou R$ 399,00 por ano (cerca de R$ 33 por mês)",
     waitlistSource: null,
     summary: "Orçamento, patrimônio e aposentadoria num app só.",
     features: [
