@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { verifyMercadoPagoSignature } from "@/lib/billing/signature";
+import { mpRequest, mpToken } from "@/lib/billing/mercadopago";
 import {
   decideAuthorizedPayment,
   decidePayment,
   decidePreapproval,
+  MpAuthorizedPaymentSchema,
+  MpPaymentSchema,
+  MpPreapprovalSchema,
   type Decision,
-  type MpAuthorizedPayment,
-  type MpPayment,
-  type MpPreapproval,
 } from "@/lib/billing/webhook";
 
 // Notificação do Mercado Pago. Só confia na assinatura e nos dados lidos direto da API.
 // Eventos: payment (cobranças), subscription_preapproval (status da assinatura) e
 // subscription_authorized_payment (cada cobrança recorrente). A decisão fica em src/lib/billing/webhook.ts.
-const MP = "https://api.mercadopago.com";
 const ID = /^[\w-]{1,64}$/;
 
 export const Route = createFileRoute("/api/public/mercadopago/webhook")({
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const secret = process.env["MERCADO_PAGO_WEBHOOK_SECRET"];
-        const token = process.env["MERCADO_PAGO_ACCESS_TOKEN"];
+        const token = mpToken();
         if (!secret || !token) return new Response("not configured", { status: 503 });
 
         const url = new URL(request.url);
@@ -36,29 +36,27 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
         if (!ok) return new Response("invalid signature", { status: 401 });
         if (!dataId || !ID.test(dataId)) return new Response("ignored");
 
-        const get = async <T,>(path: string): Promise<T | null> => {
-          const res = await fetch(`${MP}${path}`, { headers: { Authorization: `Bearer ${token}` } });
-          if (!res.ok) {
-            console.error(`Mercado Pago fetch ${path} failed [${res.status}]: ${await res.text()}`);
-            return null;
-          }
-          return (await res.json()) as T;
-        };
-
         const type = url.searchParams.get("type") ?? body.type;
+        // Falha ao ler do Mercado Pago responde 502: ele reenvia a notificação, e nenhuma cobrança se perde.
+        const upstreamError = () => new Response("upstream error", { status: 502 });
         let decision: Decision;
         if (type === "payment") {
-          const p = await get<MpPayment>(`/v1/payments/${dataId}`);
-          if (!p) return new Response("upstream error", { status: 502 }); // o Mercado Pago tenta de novo
+          const p = await mpRequest(token, `/v1/payments/${dataId}`, MpPaymentSchema);
+          if (!p) return upstreamError();
           decision = decidePayment(p);
         } else if (type === "subscription_authorized_payment") {
-          const ap = await get<MpAuthorizedPayment>(`/authorized_payments/${dataId}`);
-          if (!ap) return new Response("upstream error", { status: 502 });
-          const pre = ap.external_reference ? null : await get<MpPreapproval>(`/preapproval/${encodeURIComponent(ap.preapproval_id)}`);
-          decision = decideAuthorizedPayment(ap, pre?.external_reference);
+          const ap = await mpRequest(token, `/authorized_payments/${dataId}`, MpAuthorizedPaymentSchema);
+          if (!ap) return upstreamError();
+          let fallbackRef: string | null = null;
+          if (!ap.external_reference) {
+            const pre = await mpRequest(token, `/preapproval/${encodeURIComponent(ap.preapproval_id)}`, MpPreapprovalSchema);
+            if (!pre) return upstreamError();
+            fallbackRef = pre.external_reference ?? null;
+          }
+          decision = decideAuthorizedPayment(ap, fallbackRef);
         } else if (type === "subscription_preapproval") {
-          const pre = await get<MpPreapproval>(`/preapproval/${encodeURIComponent(dataId)}`);
-          if (!pre) return new Response("upstream error", { status: 502 });
+          const pre = await mpRequest(token, `/preapproval/${encodeURIComponent(dataId)}`, MpPreapprovalSchema);
+          if (!pre) return upstreamError();
           decision = decidePreapproval(pre);
         } else {
           return new Response("ignored");

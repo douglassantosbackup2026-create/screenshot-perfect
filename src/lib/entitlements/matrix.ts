@@ -2,6 +2,8 @@
 // a pessoa só vê a tela de Assinatura e o Perfil. O guard de src/routes/_authenticated lê daqui.
 // Com a cobrança desligada (VITE_BILLING_ENABLED ausente), todo mundo entra, como antes do lançamento.
 
+import { z } from "zod";
+
 export type Tier = "inteligencia" | "pro";
 export const TIER_ORDER: Tier[] = ["inteligencia", "pro"];
 
@@ -88,4 +90,28 @@ export function resolveAccess(opts: {
   const valid =
     !!e && isTier(e.plan) && new Date(e.validUntil).getTime() > (opts.now ?? new Date()).getTime();
   return { tier: valid ? (e.plan as Tier) : null, active: valid, billingOff: false };
+}
+
+/** Quanto tempo a última assinatura lida do banco vale quando a consulta falha. */
+export const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+const CachedEntitlement = z.object({
+  plan: z.string().max(32),
+  validUntil: z.string().datetime({ offset: true }),
+  checkedAt: z.number().int().positive(),
+});
+
+/**
+ * Lê a assinatura guardada no aparelho. Só vale se tiver o formato certo e tiver sido conferida no banco
+ * nas últimas 24 h; qualquer outra coisa (vazio, adulterado, velho) é tratada como "sem assinatura".
+ */
+export function entitlementFromCache(raw: string | null, now = Date.now()): Entitlement | null {
+  if (!raw) return null;
+  try {
+    const c = CachedEntitlement.parse(JSON.parse(raw));
+    if (c.checkedAt > now || now - c.checkedAt > CACHE_TTL_MS) return null;
+    return { plan: c.plan, validUntil: c.validUntil };
+  } catch {
+    return null;
+  }
 }

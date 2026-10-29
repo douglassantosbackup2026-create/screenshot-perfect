@@ -11,6 +11,8 @@ export type FakeDb = {
   admin: boolean;
   /** Assinatura em vigor; null = sem assinatura (não existe plano grátis). */
   entitlement: Entitlement | null;
+  /** A consulta da assinatura falha (banco fora do ar, requisição bloqueada). */
+  entitlementDown: boolean;
 };
 
 /** Assinatura válida até bem depois dos testes. */
@@ -32,6 +34,7 @@ export async function signIn(
     writes: 0,
     admin: !!opts.admin,
     entitlement: opts.entitlement === undefined ? ACTIVE : opts.entitlement,
+    entitlementDown: false,
   };
   const session = {
     access_token: "e2e-token",
@@ -49,8 +52,9 @@ export async function signIn(
     const path = url.pathname;
     if (path === "/auth/v1/user") return json(route, USER);
     if (path === "/auth/v1/logout") return route.fulfill({ status: 204 });
-    if (path === "/rest/v1/rpc/has_role") return json(route, db.admin);
+    if (path === "/rest/v1/rpc/is_admin") return json(route, db.admin);
     if (path === "/rest/v1/entitlements" || path === "/rest/v1/subscriptions") {
+      if (path === "/rest/v1/entitlements" && db.entitlementDown) return json(route, { message: "fora do ar" }, 503);
       const row = path === "/rest/v1/entitlements" ? db.entitlement : null;
       // maybeSingle pede um objeto; sem linha, o PostgREST responde 406 e o cliente devolve null.
       if (req.headers()["accept"]?.includes("vnd.pgrst.object")) {

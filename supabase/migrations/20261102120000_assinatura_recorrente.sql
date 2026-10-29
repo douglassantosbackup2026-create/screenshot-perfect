@@ -8,8 +8,8 @@ create table public.subscriptions (
   preapproval_id text not null unique check (length(preapproval_id) <= 64),
   plan text not null check (plan in ('inteligencia', 'pro')),
   period text not null check (period in ('mensal', 'anual')),
-  -- pending, authorized, paused ou cancelled, como o Mercado Pago informa.
-  status text not null check (length(status) <= 32),
+  -- Como o Mercado Pago informa (mesma lista de SUBSCRIPTION_STATUSES em src/lib/billing/webhook.ts).
+  status text not null check (status in ('pending', 'authorized', 'paused', 'cancelled')),
   updated_at timestamptz not null default now()
 );
 

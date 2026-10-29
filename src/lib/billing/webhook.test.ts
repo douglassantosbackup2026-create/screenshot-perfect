@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildReference } from "./catalog";
-import { decideAuthorizedPayment, decidePayment, decidePreapproval } from "./webhook";
+import { decideAuthorizedPayment, decidePayment, decidePreapproval, isMercadoPagoUrl, MpPaymentSchema, MpPreapprovalSchema } from "./webhook";
 
 const USER = "11111111-2222-3333-4444-555555555555";
 const REF = buildReference(USER, "inteligencia", "mensal");
@@ -49,5 +49,24 @@ describe("assinatura", () => {
   });
   it("referência inválida: ignora", () => {
     expect(decidePreapproval({ id: "pre_1", status: "authorized", external_reference: "x" }).action).toBe("ignore");
+  });
+});
+
+describe("respostas do Mercado Pago", () => {
+  it("assinatura com status desconhecido ou link fora do Mercado Pago é recusada", () => {
+    const base = { id: "pre_1", status: "authorized", external_reference: REF };
+    expect(MpPreapprovalSchema.safeParse(base).success).toBe(true);
+    expect(MpPreapprovalSchema.safeParse({ ...base, status: "aprovadissima" }).success).toBe(false);
+    expect(MpPreapprovalSchema.safeParse({ ...base, init_point: "https://www.mercadopago.com.br/subscriptions/checkout?x=1" }).success).toBe(true);
+    expect(MpPreapprovalSchema.safeParse({ ...base, init_point: "https://mercadopago.com.evil.io/x" }).success).toBe(false);
+    expect(MpPreapprovalSchema.safeParse({ ...base, init_point: "http://www.mercadopago.com.br/x" }).success).toBe(false);
+  });
+  it("pagamento sem valor numérico é recusado", () => {
+    expect(MpPaymentSchema.safeParse({ id: 1, status: "approved", transaction_amount: "39.9", currency_id: "BRL" }).success).toBe(false);
+  });
+  it("só mercadopago.com e mercadopago.com.br", () => {
+    expect(isMercadoPagoUrl("https://sandbox.mercadopago.com.br/x")).toBe(true);
+    expect(isMercadoPagoUrl("https://notmercadopago.com/x")).toBe(false);
+    expect(isMercadoPagoUrl("javascript:alert(1)")).toBe(false);
   });
 });

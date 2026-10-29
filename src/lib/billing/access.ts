@@ -2,7 +2,7 @@
 // resolveAccess. O guard de src/routes/_authenticated e as telas leem daqui.
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveAccess, type Access } from "@/lib/entitlements/matrix";
+import { entitlementFromCache, resolveAccess, type Access, type Entitlement } from "@/lib/entitlements/matrix";
 
 export const BILLING_ENABLED = import.meta.env["VITE_BILLING_ENABLED"] === "true";
 /** Só em desenvolvimento: localStorage "pi_tier_preview" = nenhum | inteligencia | pro simula a assinatura. */
@@ -25,38 +25,35 @@ function preview(): Access | null {
   return null;
 }
 
-const readCache = (userId: string): Access | null => {
+function readCache(userId: string): Entitlement | null {
   try {
-    const raw = window.localStorage.getItem(CACHE_KEY(userId));
-    return raw ? (JSON.parse(raw) as Access) : null;
+    return entitlementFromCache(window.localStorage.getItem(CACHE_KEY(userId)));
   } catch {
     return null;
   }
-};
+}
+
+function writeCache(userId: string, e: Entitlement | null) {
+  try {
+    if (e) window.localStorage.setItem(CACHE_KEY(userId), JSON.stringify({ ...e, checkedAt: Date.now() }));
+    else window.localStorage.removeItem(CACHE_KEY(userId));
+  } catch {
+    /* sem armazenamento: só não guarda */
+  }
+}
 
 /**
- * Busca a assinatura no banco. Sem internet, usa o último status salvo neste aparelho; se nunca houve
- * nenhum, deixa entrar: falta de conexão não é falta de pagamento (o banco continua a fonte da verdade).
+ * Busca a assinatura no banco. Se a consulta falhar, vale a última assinatura lida neste aparelho nas
+ * últimas 24 h (ainda conferindo a validade); sem ela, não entra. O banco continua a fonte da verdade.
  */
 export async function loadAccess(userId: string): Promise<Access> {
   const p = preview();
   if (p) return (set(p), p);
   if (!BILLING_ENABLED) return (set(OPEN), OPEN);
   const { data, error } = await supabase.from("entitlements").select("plan, valid_until").eq("user_id", userId).maybeSingle();
-  if (error) {
-    const cached = readCache(userId) ?? { tier: null, active: true, billingOff: false };
-    set(cached);
-    return cached;
-  }
-  const a = resolveAccess({
-    billingEnabled: true,
-    entitlement: data ? { plan: data.plan, validUntil: data.valid_until } : null,
-  });
-  try {
-    window.localStorage.setItem(CACHE_KEY(userId), JSON.stringify(a));
-  } catch {
-    /* sem armazenamento: só não guarda */
-  }
+  const entitlement = error ? readCache(userId) : data ? { plan: data.plan, validUntil: data.valid_until } : null;
+  if (!error) writeCache(userId, entitlement);
+  const a = resolveAccess({ billingEnabled: true, entitlement });
   set(a);
   return a;
 }

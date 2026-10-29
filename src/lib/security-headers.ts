@@ -2,8 +2,11 @@
 // A CSP completa vai primeiro em modo "Report-Only": o SSR injeta scripts inline, e impor `script-src`
 // sem nonce quebraria a hidratação. O que já pode ser imposto sem risco vai na CSP de verdade.
 
-/** Quem pode exibir o app num iframe: o próprio app e o editor do Lovable (preview). */
-const FRAME_ANCESTORS = "'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app";
+/**
+ * Quem pode exibir o app num iframe: o próprio app e o editor do Lovable (o preview roda dentro de lovable.dev).
+ * *.lovable.app fica de fora: qualquer pessoa publica um app lá, e ele poderia embutir o Mitikos (clickjacking).
+ */
+const FRAME_ANCESTORS = "'self' https://lovable.dev https://*.lovable.dev";
 
 export const ENFORCED_CSP = [`frame-ancestors ${FRAME_ANCESTORS}`, "object-src 'none'", "base-uri 'self'"].join("; ");
 

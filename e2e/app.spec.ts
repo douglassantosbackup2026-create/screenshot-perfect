@@ -118,6 +118,17 @@ test("conta nova: assina, a volta do Mercado Pago confirma e segue para o onboar
   await expect(page.getByRole("heading", { name: "Boas-vindas ao Mitikos" })).toBeVisible();
 });
 
+test("se a consulta da assinatura falha, não libera o app (falha fechado)", async ({ page }) => {
+  const db = await signIn(page, makeSeed());
+  db.entitlementDown = true;
+  // Mesmo com um status "ativo" forjado no aparelho.
+  await page.addInitScript(() =>
+    window.localStorage.setItem("mitikos_access_00000000-0000-4000-8000-0000000000e2", JSON.stringify({ tier: "pro", active: true, billingOff: false })),
+  );
+  await page.goto("/hoje");
+  await expect(page).toHaveURL(/\/planos$/);
+});
+
 test("admin entra sem assinatura", async ({ page }) => {
   await signIn(page, makeSeed(), { entitlement: null, admin: true });
   await page.goto("/hoje");
