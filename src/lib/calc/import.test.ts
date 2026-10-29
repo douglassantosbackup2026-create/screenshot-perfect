@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dedupe, parseBRNumber, parseCSV, parseDate, parseOFX, type ExistingTx, type ImportedTx } from './import';
+import { dedupe, IMPORT_LIMITS, parseBRNumber, parseCSV, parseDate, parseOFX, type ExistingTx, type ImportedTx } from './import';
 
 const OFX_SGML = `OFXHEADER:100
 DATA:OFXSGML
@@ -96,5 +96,18 @@ describe('duplicados', () => {
     const r = dedupe([imp(-500, '2026-10-03', 'Café'), imp(-500, '2026-10-03', 'Café')], existing);
     expect(r.duplicates).toHaveLength(1);
     expect(r.fresh).toHaveLength(1);
+  });
+});
+
+describe('limites de texto na importação', () => {
+  it('corta descrição e id longos (CSV e OFX), sem perder o lançamento', () => {
+    const long = 'X'.repeat(500);
+    const csv = parseCSV(`data;descricao;valor;id\n01/10/2026;${long};-10,00;${long}`).rows[0]!;
+    expect(csv.payee).toHaveLength(IMPORT_LIMITS.payee);
+    expect(csv.importedId).toHaveLength(IMPORT_LIMITS.importedId);
+    const ofx = parseOFX(`<STMTTRN><DTPOSTED>20261001<TRNAMT>-10.00<FITID>${long}<NAME>${long}<MEMO>${'M'.repeat(500)}</STMTTRN>`)[0]!;
+    expect(ofx.payee).toHaveLength(IMPORT_LIMITS.payee);
+    expect(ofx.memo).toHaveLength(IMPORT_LIMITS.memo);
+    expect(ofx.importedId).toHaveLength(IMPORT_LIMITS.importedId);
   });
 });

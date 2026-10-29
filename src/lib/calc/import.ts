@@ -52,6 +52,10 @@ const ofxTag = (block: string, tag: string) => {
 };
 
 /** Lê as transações de um OFX (SGML ou XML), o formato que os bancos brasileiros exportam. */
+/** Limites de texto de um lançamento importado (os mesmos da função import_transactions do banco). */
+export const IMPORT_LIMITS = { payee: 120, memo: 280, importedId: 64 } as const;
+const clip = (v: string, max: number) => v.trim().slice(0, max);
+
 export function parseOFX(text: string): ImportedTx[] {
   const out: ImportedTx[] = [];
   for (const block of text.split(/<STMTTRN>/i).slice(1)) {
@@ -61,11 +65,11 @@ export function parseOFX(text: string): ImportedTx[] {
     const name = ofxTag(block, 'NAME');
     const memo = ofxTag(block, 'MEMO');
     out.push({
-      importedId: ofxTag(block, 'FITID') || null,
+      importedId: clip(ofxTag(block, 'FITID') ?? '', IMPORT_LIMITS.importedId) || null,
       date,
       amount,
-      payee: name || memo || 'Sem descrição',
-      memo: name && memo && memo !== name ? memo : null,
+      payee: clip(name || memo || '', IMPORT_LIMITS.payee) || 'Sem descrição',
+      memo: name && memo && memo !== name ? clip(memo, IMPORT_LIMITS.memo) : null,
     });
   }
   return out;
@@ -128,10 +132,10 @@ export function parseCSV(text: string, invert = false): CsvResult {
       continue;
     }
     rows.push({
-      importedId: col.id >= 0 ? f[col.id] || null : null,
+      importedId: col.id >= 0 ? clip(f[col.id] ?? '', IMPORT_LIMITS.importedId) || null : null,
       date,
       amount: invert ? -amount : amount,
-      payee: (col.payee >= 0 ? f[col.payee] : '') || 'Sem descrição',
+      payee: clip(col.payee >= 0 ? (f[col.payee] ?? '') : '', IMPORT_LIMITS.payee) || 'Sem descrição',
       memo: null,
     });
   }
