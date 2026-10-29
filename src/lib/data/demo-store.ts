@@ -2,6 +2,7 @@
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
 import { useSyncExternalStore } from "react";
 import { repairState } from "./state-schema";
+import { deepFreeze, shareState } from "./share";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
 import { validateAsset, type AssetCategory } from "@/lib/calc/assets";
 import { snapshotFromAssets, type BreakdownItem } from "@/lib/calc/networth";
@@ -1019,6 +1020,10 @@ function load(): DemoState {
   return state;
 }
 function commit(next: DemoState) {
+  // O que a ação não mudou volta a ser o mesmo objeto (cache por fatia, seletores e React.memo dependem disso).
+  next = shareState(state, next);
+  // Em dev e nos testes, o estado vivo fica congelado: escrever nele fora de uma ação vira erro na hora.
+  if (import.meta.env.DEV) deepFreeze(next);
   state = next;
   if (cloudUser) {
     // A cópia local e a gravação saem juntas, 400 ms depois da última mudança: serializar o estado

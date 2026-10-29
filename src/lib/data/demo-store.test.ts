@@ -734,3 +734,55 @@ describe("cache de leitura", () => {
     expect(read()).toBe(2);
   });
 });
+
+describe("ações compartilham o que não mudaram", () => {
+  it("mudar o perfil não troca lançamentos, contas nem orçamento", async () => {
+    const { demo, useDemo } = await freshStore();
+    demo.reset();
+    const { result } = renderHook(() => useDemo());
+    const before = result.current;
+    act(() => demo.updateProfile({ displayName: "Bia" }));
+    const after = result.current;
+    expect(after).not.toBe(before);
+    expect(after.profile).not.toBe(before.profile);
+    expect(after.transactions).toBe(before.transactions);
+    expect(after.accounts).toBe(before.accounts);
+    expect(after.budget).toBe(before.budget);
+    expect(after.assets).toBe(before.assets);
+  });
+
+  it("um lançamento novo só troca a lista de lançamentos; os itens antigos continuam os mesmos", async () => {
+    const { demo, useDemo } = await freshStore();
+    demo.reset();
+    const { result } = renderHook(() => useDemo());
+    const before = result.current;
+    const account = before.accounts[0]!;
+    act(() => {
+      demo.addTransaction({ accountId: account.id, date: spDate(new Date()), amount: -1234, payee: "Padaria", categoryId: null });
+    });
+    const after = result.current;
+    expect(after.transactions).not.toBe(before.transactions);
+    expect(after.transactions.length).toBe(before.transactions.length + 1);
+    for (const t of before.transactions) expect(after.transactions.find((x) => x.id === t.id)).toBe(t);
+    expect(after.categories).toBe(before.categories);
+    expect(after.profile).toBe(before.profile);
+  });
+
+  it("ação que falha no meio não deixa nada no estado vivo", async () => {
+    const { demo, useDemo } = await freshStore();
+    demo.reset();
+    const { result } = renderHook(() => useDemo());
+    const before = result.current;
+    // Meta inválida: a categoria entra na cópia antes da validação, que lança erro.
+    expect(() => demo.saveReserveEnvelope(0, "2027-01-01")).toThrow();
+    expect(result.current).toBe(before);
+    expect(result.current.categories).toBe(before.categories);
+  });
+
+  it("o estado vivo é congelado nos testes: escrever fora de uma ação lança erro", async () => {
+    const { demo, useDemo } = await freshStore();
+    demo.reset();
+    const { result } = renderHook(() => useDemo());
+    expect(() => (result.current.transactions as unknown[]).push({})).toThrow();
+  });
+});
