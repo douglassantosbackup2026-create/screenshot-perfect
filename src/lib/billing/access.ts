@@ -42,17 +42,31 @@ function writeCache(userId: string, e: Entitlement | null) {
   }
 }
 
+/** Última leitura bem-sucedida do banco nesta aba. */
+let lastRead: { userId: string; at: number; entitlement: Entitlement | null } | null = null;
+const FRESH_MS = 5 * 60 * 1000;
+
 /**
- * Busca a assinatura no banco. Se a consulta falhar, vale a última assinatura lida neste aparelho nas
+ * Busca a assinatura no banco (`force` ignora a leitura recente: a volta do pagamento precisa disso). Se a consulta falhar, vale a última assinatura lida neste aparelho nas
  * últimas 24 h (ainda conferindo a validade); sem ela, não entra. O banco continua a fonte da verdade.
  */
-export async function loadAccess(userId: string): Promise<Access> {
+export async function loadAccess(userId: string, opts: { force?: boolean } = {}): Promise<Access> {
   const p = preview();
   if (p) return (set(p), p);
   if (!BILLING_ENABLED) return (set(OPEN), OPEN);
+  // Trocar de tela não consulta o banco de novo por alguns minutos; a validade é conferida sempre.
+  const fresh = lastRead?.userId === userId && Date.now() - lastRead.at < FRESH_MS;
+  if (fresh && !opts.force) {
+    const a = resolveAccess({ billingEnabled: true, entitlement: lastRead!.entitlement });
+    set(a);
+    return a;
+  }
   const { data, error } = await supabase.from("entitlements").select("plan, valid_until").eq("user_id", userId).maybeSingle();
   const entitlement = error ? readCache(userId) : data ? { plan: data.plan, validUntil: data.valid_until } : null;
-  if (!error) writeCache(userId, entitlement);
+  if (!error) {
+    writeCache(userId, entitlement);
+    lastRead = { userId, at: Date.now(), entitlement };
+  }
   const a = resolveAccess({ billingEnabled: true, entitlement });
   set(a);
   return a;

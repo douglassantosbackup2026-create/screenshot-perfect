@@ -199,6 +199,9 @@ export type LedgerRow = Transaction & { accountName: string; categoryName: strin
 
 /** Lançamentos do mês, com nomes de conta e categoria, agrupados por dia, mais o resumo e os gastos por categoria. */
 export function ledgerMonth(s: DemoState, month: string, accountId: string | null = null) {
+  return memoOnState(s, `ledgerMonth:${month}:${accountId ?? ""}`, () => ledgerMonthUncached(s, month, accountId));
+}
+function ledgerMonthUncached(s: DemoState, month: string, accountId: string | null) {
   const accounts = new Map(s.accounts.map((a) => [a.id, a.name]));
   const categories = new Map(s.categories.map((c) => [c.id, c.name]));
   const rules = new Map(s.recurring.map((r) => [r.id, r]));
@@ -243,6 +246,9 @@ const ACCOUNT_GROUP_LABEL: Record<AccountGroup, string> = {
 
 /** Contas com saldo, por grupo. Em cartões e dívidas, saldo negativo é o que se deve. */
 export function accountsOverview(s: DemoState) {
+  return memoOnState(s, "accountsOverview", () => accountsOverviewUncached(s));
+}
+function accountsOverviewUncached(s: DemoState) {
   const balances = accountBalances(s.accounts, s.transactions);
   const withBalance = s.accounts.map((a) => ({ ...a, balance: balances[a.id] ?? 0 }));
   const groups = (Object.keys(ACCOUNT_GROUP_LABEL) as AccountGroup[]).map((g) => {
@@ -312,6 +318,9 @@ export function budgetView(s: DemoState, month: string) {
 
 /** Contas fixas do mês (recorrências de saída): previsto, já lançado e a vencer. */
 export function billsOfMonth(s: DemoState, month: string, now = new Date()) {
+  return memoOnState(s, `billsOfMonth:${month}:${spDate(now)}`, () => billsOfMonthUncached(s, month, now));
+}
+function billsOfMonthUncached(s: DemoState, month: string, now: Date) {
   const today = spDate(now);
   const end = addDays(shiftMonth(month, 1), -1);
   const launched = handledOccurrences(s);
@@ -645,6 +654,9 @@ const ESSENTIAL_CATEGORIES = new Set(["cat-moradia", "cat-mercado", "cat-transpo
  * O guardado vem dos itens "Reserva de emergência" do Patrimônio; sem eles, do saldo das poupanças.
  */
 export function emergencyFundView(s: DemoState, now = new Date()) {
+  return memoOnState(s, `emergencyFundView:${spDate(now)}`, () => emergencyFundViewUncached(s, now));
+}
+function emergencyFundViewUncached(s: DemoState, now: Date) {
   const month = monthOf(spDate(now));
   const window = [shiftMonth(month, -3), shiftMonth(month, -2), shiftMonth(month, -1)];
   const essential = s.transactions.filter(
@@ -689,6 +701,9 @@ export function envelopeAfterExpense(s: DemoState, categoryId: string | null, da
 
 /** Limites de gasto com o quanto já foi usado no período atual de cada um. */
 export function limitsView(s: DemoState, now = new Date()) {
+  return memoOnState(s, `limitsView:${spDate(now)}`, () => limitsViewUncached(s, now));
+}
+function limitsViewUncached(s: DemoState, now: Date) {
   const today = spDate(now);
   const names = new Map(s.categories.map((c) => [c.id, c.name]));
   return (s.limits ?? [])

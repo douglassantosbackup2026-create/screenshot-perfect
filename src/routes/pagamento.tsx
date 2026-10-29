@@ -39,7 +39,7 @@ function Payment() {
         const { data } = await supabase.auth.getUser();
         if (stopped) return;
         if (!data.user) return setState("signed-out");
-        const a = await loadAccess(data.user.id);
+        const a = await loadAccess(data.user.id, { force: true });
         if (stopped) return;
         if (a.active) return setState("active");
       } catch {

@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { HideValuesToggle } from "@/components/HideValuesToggle";
@@ -227,17 +226,26 @@ function DebtLine({ d }: { d: ReturnType<typeof debtsView>[number] }) {
   return <span className={cn("mt-1 block text-xs", c.verdict === "quitar" ? "font-semibold text-destructive" : "text-muted-foreground")}>{text + payoff}</span>;
 }
 
-/** Tendência do item nos meses registrados; só aparece com dois valores ou mais. */
+/**
+ * Tendência do item nos meses registrados; só aparece com dois valores ou mais.
+ * SVG simples em vez de um gráfico do Recharts por linha: a lista pode ter dezenas de itens.
+ */
 function Sparkline({ points }: { points: HistoryPoint[] }) {
   if (points.length < 2) return null;
+  const values = points.slice(-12).map((p) => p.value);
+  const min = Math.min(...values);
+  const span = Math.max(...values) - min || 1;
+  const W = 64;
+  const H = 24;
+  const pad = 2;
+  const d = values
+    .map((v, i) => `${i ? "L" : "M"}${(pad + (i * (W - 2 * pad)) / (values.length - 1)).toFixed(1)},${(H - pad - ((v - min) * (H - 2 * pad)) / span).toFixed(1)}`)
+    .join("");
   return (
     <span className="block h-6 w-16" aria-hidden>
-      <ResponsiveContainer>
-        <LineChart data={points.slice(-12)} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-          <YAxis hide domain={["dataMin", "dataMax"]} />
-          <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={1.75} dot={false} isAnimationActive={false} />
-        </LineChart>
-      </ResponsiveContainer>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
+        <path d={d} fill="none" stroke="var(--primary)" strokeWidth={1.75} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      </svg>
     </span>
   );
 }

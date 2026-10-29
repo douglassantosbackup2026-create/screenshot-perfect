@@ -12,18 +12,40 @@ import { isAdmin } from "@/lib/auth/roles";
 /** Abrem sem assinatura: a própria Assinatura e o Perfil (exportar dados, excluir a conta, sair). */
 const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil"];
 
+/** Conta já conferida no servidor nesta aba, e se é admin; trocar de tela não repete essas consultas. */
+let verifiedUser: string | null = null;
+let adminOf: { userId: string; value: boolean } | null = null;
+
+/**
+ * Quem está conectado. Na primeira tela confere a sessão no servidor (conta excluída ou sessão revogada
+ * caem aqui); nas trocas de tela seguintes, basta a sessão local, sem ir à rede a cada clique.
+ */
+async function currentUserId(): Promise<string | null> {
+  const { data: local } = await supabase.auth.getSession();
+  const id = local.session?.user.id ?? null;
+  if (id && id === verifiedUser) return id;
+  const { data, error } = await supabase.auth.getUser();
+  // Sem internet não é o mesmo que sem sessão: mandar para o login esconderia o problema real.
+  if (error && isAuthRetryableFetchError(error)) throw new Error("Sem conexão. Confira a internet e tente de novo.");
+  verifiedUser = data.user?.id ?? null;
+  return verifiedUser;
+}
+
+async function cachedIsAdmin(userId: string): Promise<boolean> {
+  if (adminOf?.userId !== userId) adminOf = { userId, value: await isAdmin() };
+  return adminOf.value;
+}
+
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    // Sem internet não é o mesmo que sem sessão: mandar para o login esconderia o problema real.
-    if (error && isAuthRetryableFetchError(error)) throw new Error("Sem conexão. Confira a internet e tente de novo.");
-    if (!data.user) throw redirect({ to: "/entrar", search: { redirect: location.pathname } });
-    const s = await attachUser(data.user.id);
+    const userId = await currentUserId();
+    if (!userId) throw redirect({ to: "/entrar", search: { redirect: location.pathname } });
+    const s = await attachUser(userId);
     // Não existe plano grátis: sem assinatura, só a Assinatura e o Perfil. Admin entra sempre.
-    const access = await loadAccess(data.user.id);
+    const access = await loadAccess(userId);
     if (!access.active) {
-      if (await isAdmin()) grantAdminAccess();
+      if (await cachedIsAdmin(userId)) grantAdminAccess();
       else if (OPEN_WITHOUT_SUBSCRIPTION.some((p) => location.pathname.startsWith(p))) return;
       else throw redirect({ to: "/planos" });
     }

@@ -47,6 +47,17 @@ function Profile() {
   const s = useDemo();
   const navigate = useNavigate();
   const [delOpen, setDelOpen] = useState(false);
+  // O dia é digitado aqui e só vai para o store quando a pessoa para de digitar: "30" não passa pelo "3",
+  // e cada tecla não regrava (nem re-renderiza) o app inteiro.
+  const [reminderDay, setReminderDay] = useState<number | null>(s.profile.reminderDay);
+  useEffect(() => {
+    if (reminderDay == null || reminderDay === s.profile.reminderDay) return;
+    const t = setTimeout(() => {
+      if (Number.isInteger(reminderDay) && reminderDay >= 1 && reminderDay <= 28) demo.updateProfile({ reminderDay });
+      else toast.error("Escolha um dia entre 1 e 28: assim ele existe em todos os meses.");
+    }, 700);
+    return () => clearTimeout(t);
+  }, [reminderDay, s.profile.reminderDay]);
   const cancelAtMercadoPago = useServerFn(cancelSubscription);
   const [confirm, setConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -157,12 +168,8 @@ function Profile() {
         <div className="py-3">
           <NumberField
             label="Dia em que você recebe"
-            value={s.profile.reminderDay}
-            onChange={(v) => {
-              if (v == null) return;
-              if (Number.isInteger(v) && v >= 1 && v <= 28) demo.updateProfile({ reminderDay: v });
-              else toast.error("Escolha um dia entre 1 e 28: assim ele existe em todos os meses.");
-            }}
+            value={reminderDay}
+            onChange={setReminderDay}
             min={1}
             max={28}
             step={1}

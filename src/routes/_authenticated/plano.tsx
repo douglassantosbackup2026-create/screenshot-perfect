@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { JOURNEY_ENABLED } from "@/lib/features";
@@ -80,11 +80,14 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   }, [savedVersion]);
 
   const errors = validateInputs(draft);
-  const all = useMemo(() => (errors.length ? null : simulateAll(draft)), [draft, errors.length]);
+  // As simulações leem uma cópia adiada do rascunho: os campos respondem na hora e o gráfico vem logo depois.
+  const calc = useDeferredValue(draft);
+  const calcValid = useMemo(() => validateInputs(calc).length === 0, [calc]);
+  const all = useMemo(() => (calcValid && !errors.length ? simulateAll(calc) : null), [calc, calcValid, errors.length]);
   const hasInss = !!draft.inssEstimate && draft.inssEstimate > 0;
   const includeInss = withInss === "com" && hasInss;
   const r = all ? (includeInss ? all.comInss![scenario] : all.semInss[scenario]) : null;
-  const series = useMemo(() => (all ? projectSeries(draft, scenario, includeInss) : []), [all, draft, scenario, includeInss]);
+  const series = useMemo(() => (all ? projectSeries(calc, scenario, includeInss) : []), [all, calc, scenario, includeInss]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(s.plan?.inputs);
   const annualAvailable = s.plan ? planAgeDays(s.plan.createdAt) >= 180 : false;
 
@@ -114,9 +117,9 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const setRet = (k: ScenarioKey) => (v: number | null) => setDraft((d) => ({ ...d, returns: { ...d.returns, [k]: (v ?? 0) / 100 } }));
 
   const central = all?.semInss.central;
-  const sens = useMemo(() => (all ? sensitivity(draft, scenario, includeInss) : []), [all, draft, scenario, includeInss]);
+  const sens = useMemo(() => (all ? sensitivity(calc, scenario, includeInss) : []), [all, calc, scenario, includeInss]);
   const assetsForRetirement = s.assets.length ? summarizeAssets(s.assets).retirementTotal : null;
-  const review = sinceLastReview(s);
+  const review = useMemo(() => sinceLastReview(s), [s]);
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
@@ -398,7 +401,8 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         <LegalNote>{SIMULATION_FOOTER}</LegalNote>
       </footer>
 
-      {s.plan && (
+      {/* Montada só quando aberta: fechada, ela recalculava duas simulações a cada tecla do formulário. */}
+      {s.plan && whatIfOpen && (
         <WhatIfSheet base={s.plan.inputs} scenario={scenario} includeInss={includeInss} open={whatIfOpen} onOpenChange={setWhatIfOpen} onSave={saveWhatIf} />
       )}
 

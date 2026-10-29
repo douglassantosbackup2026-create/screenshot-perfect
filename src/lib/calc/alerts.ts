@@ -67,6 +67,13 @@ export type Anomaly = DuplicateCharge | PriceChange | AboveAverage;
 const dayDiff = (a: string, b: string) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
 const isPlainOutflow = (t: AnomalyTx) => t.amount < 0 && !t.transferId && !t.scheduled;
 
+/** Acrescenta ao grupo sem copiar a lista (copiar a cada item deixava o agrupamento quadrático). */
+function pushTo<T>(groups: Map<string, T[]>, key: string, item: T) {
+  const list = groups.get(key);
+  if (list) list.push(item);
+  else groups.set(key, [item]);
+}
+
 /**
  * Mesma saída lançada duas vezes: mesma conta, mesmo valor e mesma descrição em até `windowDays` dias.
  * Só olha lançamentos a partir de `since`. Recorrências e parcelas ficam de fora.
@@ -76,7 +83,7 @@ export function duplicateCharges(txs: AnomalyTx[], since: string, windowDays = 3
   for (const t of txs) {
     if (!isPlainOutflow(t) || t.date < since) continue;
     const k = `${t.accountId}|${t.amount}|${normalize(t.payee)}`;
-    groups.set(k, [...(groups.get(k) ?? []), t]);
+    pushTo(groups, k, t);
   }
   const out: DuplicateCharge[] = [];
   for (const list of groups.values()) {
@@ -101,12 +108,12 @@ export function priceChanges(txs: AnomalyTx[], since: string, minMonths = 3, tol
   for (const t of txs) {
     if (t.amount >= 0 || t.transferId) continue; // recorrências entram: é justamente onde o preço muda
     const k = normalize(t.payee);
-    if (k) byPayee.set(k, [...(byPayee.get(k) ?? []), t]);
+    if (k) pushTo(byPayee, k, t);
   }
   const out: PriceChange[] = [];
   for (const list of byPayee.values()) {
     const byMonth = new Map<string, AnomalyTx[]>();
-    for (const t of list) byMonth.set(t.date.slice(0, 7), [...(byMonth.get(t.date.slice(0, 7)) ?? []), t]);
+    for (const t of list) pushTo(byMonth, t.date.slice(0, 7), t);
     if ([...byMonth.values()].some((m) => m.length > 1)) continue; // mais de uma por mês: não é assinatura
     const months = [...byMonth.keys()].sort();
     // A sequência que termina no último mês precisa ser de meses seguidos.

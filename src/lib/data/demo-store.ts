@@ -1794,6 +1794,9 @@ export type MonthStepKey = "lancamentos" | "categorias" | "orcamento" | "aporte"
  * O orçamento conta como feito quando o mês foi planejado; o que ainda está sem destino aparece como dica.
  */
 export function monthCloseSteps(s: DemoState, now = new Date()) {
+  return memoOnState(s, `monthCloseSteps:${spDate(now)}`, () => monthCloseStepsUncached(s, now));
+}
+function monthCloseStepsUncached(s: DemoState, now: Date) {
   const month = monthOf(spDate(now));
   const usesLedger = s.accounts.length > 0;
   const inMonth = s.transactions.filter((t) => t.date.slice(0, 7) === month.slice(0, 7));
