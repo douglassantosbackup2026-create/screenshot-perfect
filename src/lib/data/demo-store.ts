@@ -1,6 +1,6 @@
 // Camada de dados em MODO DEMONSTRAÇÃO (sem login): guarda o estado só neste aparelho.
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { repairState } from "./state-schema";
 import { deepFreeze, shareState } from "./share";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
@@ -1100,15 +1100,35 @@ function mutate(fn: (s: DemoState, now: Date) => number): ActionResult {
 }
 
 let serverSeed: DemoState | null = null;
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+
+/** O estado inteiro: a tela renderiza de novo a cada ação. Para ler só um pedaço, use useDemoSelector. */
 export function useDemo(): DemoState {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    load,
-    () => (serverSeed ??= makeSeed()),
-  );
+  return useSyncExternalStore(subscribe, load, () => (serverSeed ??= makeSeed()));
+}
+
+/**
+ * Só o pedaço que o componente usa: ele só renderiza de novo quando esse pedaço muda
+ * (`isEqual`, por padrão o mesmo objeto; as fatias que a ação não mudou continuam as mesmas).
+ * Ex.: `useDemoSelector((s) => s.profile.hideValues)`.
+ */
+export function useDemoSelector<T>(select: (s: DemoState) => T, isEqual: (a: T, b: T) => boolean = Object.is): T {
+  const last = useRef<{ s: DemoState; select: (s: DemoState) => T; value: T } | null>(null);
+  const read = (s: DemoState) => {
+    const prev = last.current;
+    if (prev && prev.s === s && prev.select === select) return prev.value;
+    const value = select(s);
+    // Mesmo resultado: devolve o anterior, e o React não renderiza de novo.
+    const kept = prev && isEqual(prev.value, value) ? prev.value : value;
+    last.current = { s, select, value: kept };
+    return kept;
+  };
+  return useSyncExternalStore(subscribe, () => read(load()), () => read((serverSeed ??= makeSeed())));
 }
 
 // ---------- Operações (mesma forma das RPCs) ----------

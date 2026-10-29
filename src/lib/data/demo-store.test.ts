@@ -877,3 +877,41 @@ describe("rede de segurança do cache", () => {
     check("criar uma conta");
   });
 });
+
+describe("useDemoSelector", () => {
+  it("só renderiza de novo quando o pedaço lido muda", async () => {
+    const store = await freshStore();
+    store.demo.reset();
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders++;
+      return store.useDemoSelector((s) => s.profile.hideValues);
+    });
+    const full = renderHook(() => store.useDemo());
+    expect(result.current).toBe(true);
+    const before = renders;
+    act(() => {
+      store.demo.addTransaction({ accountId: full.result.current.accounts[0]!.id, date: spDate(new Date()), amount: -700, payee: "Pão", categoryId: null });
+    });
+    expect(renders).toBe(before); // lançamento não muda o perfil
+    act(() => store.demo.updateProfile({ hideValues: false }));
+    expect(result.current).toBe(false);
+    expect(renders).toBe(before + 1);
+  });
+
+  it("isEqual evita render quando o resultado novo é equivalente", async () => {
+    const store = await freshStore();
+    store.demo.reset();
+    let renders = 0;
+    renderHook(() => {
+      renders++;
+      return store.useDemoSelector(
+        (s) => s.accounts.map((a) => a.id),
+        (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+      );
+    });
+    const before = renders;
+    act(() => store.demo.updateProfile({ displayName: "Bia" }));
+    expect(renders).toBe(before);
+  });
+});

@@ -2,13 +2,12 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { QuickAdd } from "@/components/QuickAdd";
 import { SaveStatus } from "@/components/SaveStatus";
 import { AREAS, areaOf } from "@/components/nav/areas";
-import { useDemo } from "@/lib/data/demo-store";
+import { useDemoSelector } from "@/lib/data/demo-store";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/seo";
 
 function ProfileButton({ className }: { className?: string }) {
-  const s = useDemo();
-  const initial = (s.profile.displayName || "V").charAt(0).toUpperCase();
+  const initial = useDemoSelector((s) => (s.profile.displayName || "V").charAt(0).toUpperCase());
   return (
     <Link
       to="/perfil"

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { useDemo } from "@/lib/data/demo-store";
+import { useDemoSelector } from "@/lib/data/demo-store";
 import { formatMoney } from "@/lib/calc/format";
 import { maskMoney } from "@/lib/labels";
 
@@ -9,8 +9,8 @@ import { maskMoney } from "@/lib/labels";
  * que folhas e cards abertos nela sigam o mesmo olho.
  */
 export function useShowValues() {
-  const s = useDemo();
-  const [showValues, setShowValues] = useState(!s.profile.hideValues);
+  const hideByDefault = useDemoSelector((s) => s.profile.hideValues);
+  const [showValues, setShowValues] = useState(!hideByDefault);
   return { showValues, toggle: () => setShowValues((v) => !v) };
 }
 
@@ -24,8 +24,8 @@ export function ShowValuesProvider({ value, children }: { value: boolean; childr
 /** Mostrar valores aqui: o olho da tela, se houver; senão, a preferência do perfil. */
 export function useShowValuesHere(): boolean {
   const fromScreen = useContext(ShowValuesContext);
-  const s = useDemo();
-  return fromScreen ?? !s.profile.hideValues;
+  const hideByDefault = useDemoSelector((s) => s.profile.hideValues);
+  return fromScreen ?? !hideByDefault;
 }
 
 /** Formatador que respeita o olho: `useMoney()(1234)` dá "R$ 12,34" ou "R$ •••". */

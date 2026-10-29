@@ -3,12 +3,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { Landmark, Plus, Receipt, Wallet, type LucideIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TransactionSheet, type TxEditing } from "@/components/ledger/TransactionSheet";
-import { useDemo } from "@/lib/data/demo-store";
+import { useDemo, useDemoSelector, type DemoState } from "@/lib/data/demo-store";
 import { cn } from "@/lib/utils";
 
 /** Botão "+" amarelo com os atalhos de registro. O lançamento abre aqui mesmo, sem trocar de tela. */
 export function QuickAdd({ className }: { className?: string }) {
-  const s = useDemo();
+  // O botão fica sempre na tela: só precisa saber se há conta. O estado inteiro, só com a folha aberta.
+  const hasAccounts = useDemoSelector((s) => s.accounts.length > 0);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TxEditing>(null);
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export function QuickAdd({ className }: { className?: string }) {
       label: "Novo lançamento",
       hint: "Um gasto, uma receita ou uma transferência",
       icon: Receipt,
-      go: () => (s.accounts.length ? setEditing({ tx: null }) : navigate({ to: "/contas" })),
+      go: () => (hasAccounts ? setEditing({ tx: null }) : navigate({ to: "/contas" })),
     },
     {
       label: "Registrar aporte",
@@ -77,7 +78,13 @@ export function QuickAdd({ className }: { className?: string }) {
           </ul>
         </SheetContent>
       </Sheet>
-      <TransactionSheet s={s} editing={editing} onClose={() => setEditing(null)} />
+      {editing && <OpenTransactionSheet editing={editing} onClose={() => setEditing(null)} />}
     </>
   );
+}
+
+/** A folha de lançamento só assina o estado inteiro enquanto está aberta. */
+function OpenTransactionSheet(props: { editing: NonNullable<Parameters<typeof TransactionSheet>[0]["editing"]>; onClose: () => void }) {
+  const s: DemoState = useDemo();
+  return <TransactionSheet s={s} editing={props.editing} onClose={props.onClose} />;
 }
