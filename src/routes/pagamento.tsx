@@ -1,21 +1,12 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { APP_NAME } from "@/lib/seo";
+import { APP_NAME, pageHead } from "@/lib/seo";
 import { supabase } from "@/integrations/supabase/client";
 import { loadAccess } from "@/lib/billing/access";
 
 export const Route = createFileRoute("/pagamento")({
-  head: () => ({
-    meta: [
-      { title: `Assinatura — ${APP_NAME}` },
-      { name: "description", content: "Acompanhe a confirmação da sua assinatura." },
-      { property: "og:title", content: `Assinatura — ${APP_NAME}` },
-      { property: "og:description", content: "Confirmação da sua assinatura." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  head: () => pageHead("Assinatura", "Acompanhe a confirmação da sua assinatura.", "Confirmação da sua assinatura."),
   component: Payment,
 });
 

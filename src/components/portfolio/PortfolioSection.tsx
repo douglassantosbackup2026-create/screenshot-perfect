@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
-import { HIDDEN } from "@/lib/labels";
+import { HIDDEN, dayLabel } from "@/lib/labels";
 import { handleResult, xpToast } from "@/components/feedback";
 import { ASSET_CLASSES, assetClassLabel, holdsPositions, type AssetClass, type TradeType } from "@/lib/calc/portfolio";
 import { fromCents, toCents } from "@/lib/calc/ledger";
@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import { errMsg } from "@/lib/errors";
 
 type Position = ReturnType<typeof portfolioView>["positions"][number];
-const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 const qty = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 6 });
 const signedPct = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + formatPercent(Math.abs(v));
 

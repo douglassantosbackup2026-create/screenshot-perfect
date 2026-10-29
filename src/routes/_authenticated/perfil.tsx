@@ -15,19 +15,16 @@ import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 import { ChangePassword } from "@/components/auth/ChangePassword";
 import { JOURNEY_ENABLED } from "@/lib/features";
-import { APP_NAME } from "@/lib/seo";
+import { pageHead } from "@/lib/seo";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelSubscription } from "@/lib/billing/subscription.functions";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
-  head: () => ({
-    meta: [
-      { title: `Perfil — ${APP_NAME}` },
-      { name: "description", content: JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e preferências de privacidade." : "Sua rotina do mês e preferências de privacidade." },
-      { property: "og:title", content: `Perfil — ${APP_NAME}` },
-      { property: "og:description", content: JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e privacidade." : "Sua rotina e privacidade." },
-    ],
-  }),
+  head: () => pageHead(
+      "Perfil",
+      JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e preferências de privacidade." : "Sua rotina do mês e preferências de privacidade.",
+      JOURNEY_ENABLED ? "Seu nível, conquistas, lembretes e privacidade." : "Sua rotina e privacidade.",
+    ),
   component: Profile,
 });
 

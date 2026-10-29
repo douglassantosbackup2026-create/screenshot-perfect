@@ -12,13 +12,12 @@ import { handleResult, xpToast } from "@/components/feedback";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { AccountSelect, CategoryChips } from "@/components/ledger/fields";
 import { fromCents, isSavingsAccount, toCents } from "@/lib/calc/ledger";
-import { formatMoney } from "@/lib/calc/format";
 import { installmentSchedule, MAX_INSTALLMENTS, validateInstallments } from "@/lib/calc/installments";
 import { envelopeAfterExpense, quickEntryDraft } from "@/lib/data/selectors";
-import { HIDDEN } from "@/lib/labels";
 import { demo, type DemoState, type Destination, type Transaction } from "@/lib/data/demo-store";
 import { spDate } from "@/lib/gamification/rules";
 import { errMsg } from "@/lib/errors";
+import { useMoney } from "@/hooks/use-show-values";
 
 type Kind = "saida" | "entrada" | "transferencia";
 
@@ -104,12 +103,12 @@ export function TransactionSheet({ s, editing, onClose }: { s: DemoState; editin
     setCount(d?.installments ?? 2);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
+  const money = useMoney();
   if (!editing) return null;
 
   const to = s.accounts.find((a) => a.id === toId);
   const canContribute = kind === "transferencia" && !tx && !!to && isSavingsAccount(to.kind);
   const destination: Destination = to?.kind === "previdencia" ? "previdencia" : "investimentos";
-  const money = (cents: number) => (s.profile.hideValues ? HIDDEN : formatMoney(cents));
   const canSplit = !tx && kind === "saida";
   const splitting = canSplit && split;
   const totalCents = toCents(amount ?? 0);

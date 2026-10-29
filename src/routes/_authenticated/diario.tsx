@@ -4,7 +4,7 @@ import { pageHead } from "@/lib/seo";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { HideValuesToggle } from "@/components/HideValuesToggle";
-import { useShowValues } from "@/hooks/use-show-values";
+import { ShowValuesProvider, useShowValues } from "@/hooks/use-show-values";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,6 +74,7 @@ function Diary() {
   const currentLogged = s.contributions.some((c) => c.month === current);
 
   return (
+    <ShowValuesProvider value={showValues}>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <AreaTabs />
       <div className="flex items-center justify-between gap-3">
@@ -132,6 +133,7 @@ function Diary() {
       />
       <DetailSheet month={detail} items={detail ? s.contributions.filter((c) => c.month === detail) : []} onClose={() => setDetail(null)} />
     </main>
+    </ShowValuesProvider>
   );
 }
 

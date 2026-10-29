@@ -8,20 +8,11 @@ import { AuthShell, Field } from "@/components/auth/AuthShell";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage, passwordProblems, safePath } from "@/lib/auth/password";
 import { CALC_PREFILL_KEY } from "@/lib/data/demo-store";
-import { APP_NAME } from "@/lib/seo";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/cadastro")({
   validateSearch: z.object({ redirect: z.string().optional() }),
-  head: () => ({
-    meta: [
-      { title: `Criar conta — ${APP_NAME}` },
-      { name: "description", content: "Crie sua conta e assine para cuidar do orçamento, do patrimônio e da aposentadoria num app só." },
-      { property: "og:title", content: `Criar conta — ${APP_NAME}` },
-      { property: "og:description", content: "Crie sua conta e escolha seu plano." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  head: () => pageHead("Criar conta", "Crie sua conta e assine para cuidar do orçamento, do patrimônio e da aposentadoria num app só.", "Crie sua conta e escolha seu plano."),
   component: SignUp,
 });
 

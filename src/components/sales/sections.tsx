@@ -1,16 +1,15 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { supabase } from "@/integrations/supabase/client";
 import { LESSONS } from "@/content/program";
 import { UNITS } from "@/content/journey";
 import { PLANS, PRICING_NOTE, type PlanTier } from "@/content/pricing";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
 import { PillarCards } from "@/components/PillarCards";
+import { saveLead } from "@/lib/data/leads";
 
 export function ThreeInOne() {
   return (
@@ -229,14 +228,9 @@ export function Waitlist({ source, planName }: { source: string; planName: strin
     e.preventDefault();
     if (!consent) return;
     setSending(true);
-    const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source });
+    const ok = await saveLead(email, source);
     setSending(false);
-    // 23505: o e-mail já está na lista (um lead por e-mail). Para quem preenche, deu certo.
-    if (error && error.code !== "23505") {
-      toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
-      return;
-    }
-    setSent(true);
+    if (ok) setSent(true);
   }
 
   if (sent) {

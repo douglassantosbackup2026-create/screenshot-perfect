@@ -5,19 +5,10 @@ import { Button } from "@/components/ui/button";
 import { AuthShell, Field } from "@/components/auth/AuthShell";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage, passwordProblems } from "@/lib/auth/password";
-import { APP_NAME } from "@/lib/seo";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/redefinir-senha")({
-  head: () => ({
-    meta: [
-      { title: `Nova senha — ${APP_NAME}` },
-      { name: "description", content: "Crie uma nova senha para sua conta." },
-      { property: "og:title", content: `Nova senha — ${APP_NAME}` },
-      { property: "og:description", content: "Crie uma nova senha para sua conta." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  head: () => pageHead("Nova senha", "Crie uma nova senha para sua conta."),
   component: Reset,
 });
 

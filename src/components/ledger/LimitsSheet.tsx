@@ -15,14 +15,14 @@ import {
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
-import { HIDDEN } from "@/lib/labels";
-import { formatMoney, formatPercent } from "@/lib/calc/format";
+import { formatPercent } from "@/lib/calc/format";
 import { toCents } from "@/lib/calc/ledger";
 import { LIMIT_PERIODS, type LimitPeriod } from "@/lib/calc/limits";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import { limitsView } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
 import { errMsg } from "@/lib/errors";
+import { useMoney } from "@/hooks/use-show-values";
 
 const ALL = "todos";
 
@@ -38,7 +38,7 @@ export function LimitsSheet({
   const [categoryId, setCategoryId] = useState<string>(ALL);
   const [period, setPeriod] = useState<LimitPeriod>("semana");
   const [amount, setAmount] = useState<number | null>(null);
-  const money = (cents: number) => (s.profile.hideValues ? HIDDEN : formatMoney(cents));
+  const money = useMoney();
   // Só calcula com a folha aberta; fechada, ela fica montada mas não aparece.
   const limits = open ? limitsView(s) : [];
 

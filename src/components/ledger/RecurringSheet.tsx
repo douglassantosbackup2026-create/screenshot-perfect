@@ -12,10 +12,9 @@ import { FREQUENCIES, nextOccurrence, type Frequency, type WeekendRule } from "@
 import { formatMoney } from "@/lib/calc/format";
 import { demo, type DemoState, type RecurringRule } from "@/lib/data/demo-store";
 import { spDate } from "@/lib/gamification/rules";
-import { formatDate } from "@/lib/labels";
+import { dayLabel } from "@/lib/labels";
 import { errMsg } from "@/lib/errors";
 
-const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 const freqLabel = (r: RecurringRule) => {
   const unit = { semanal: "semanas", mensal: "meses", anual: "anos" }[r.frequency];
   return r.interval === 1 ? FREQUENCIES.find((f) => f.value === r.frequency)!.label : `A cada ${r.interval} ${unit}`;

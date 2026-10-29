@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { HideValuesToggle } from "@/components/HideValuesToggle";
-import { useShowValues } from "@/hooks/use-show-values";
+import { ShowValuesProvider, useShowValues } from "@/hooks/use-show-values";
 import { CardBoundary } from "@/components/ErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -104,6 +104,7 @@ function Wealth() {
   }
 
   return (
+    <ShowValuesProvider value={showValues}>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-4xl lg:px-8 lg:pb-12">
       <AreaTabs />
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -202,6 +203,7 @@ function Wealth() {
         onClose={() => setEditing(null)}
       />
     </main>
+    </ShowValuesProvider>
   );
 }
 

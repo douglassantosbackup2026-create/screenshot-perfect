@@ -7,7 +7,7 @@ import { Area, Bar, BarChart, CartesianGrid, ComposedChart, Line, ReferenceLine,
 import { AXIS_TICK, GRID, TOOLTIP_STYLE } from "@/components/chart-theme";
 import { Button } from "@/components/ui/button";
 import { HideValuesToggle } from "@/components/HideValuesToggle";
-import { useShowValues } from "@/hooks/use-show-values";
+import { ShowValuesProvider, useShowValues } from "@/hooks/use-show-values";
 import { CardBoundary } from "@/components/ErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -17,7 +17,7 @@ import { BottomSheetContent } from "@/components/BottomSheet";
 import { NumberField, Segmented } from "@/components/forms";
 import { handleResult, xpToast } from "@/components/feedback";
 import { ActivityList, ChartCard, ContributionsChart, DeltaChip, DestinationDonut, Gauge, GoalCard, StatCard } from "@/components/dashboard";
-import { HIDDEN } from "@/lib/labels";
+import { HIDDEN, dayLabel } from "@/lib/labels";
 import { ThreadStrip } from "@/components/ConstancyThread";
 import { WealthSheet } from "@/components/wealth/WealthSheet";
 import { ReportsSection } from "@/components/reports/ReportsSection";
@@ -32,7 +32,7 @@ import { unitProgress } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import { cn } from "@/lib/utils";
 import { JOURNEY_ENABLED } from "@/lib/features";
-import { formatDate, monthShort, monthYear } from "@/lib/labels";
+import { monthShort, monthYear } from "@/lib/labels";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 import { CHALLENGES } from "@/content/challenges";
 import { errMsg } from "@/lib/errors";
@@ -54,7 +54,6 @@ const PERIODS = [
 type Period = (typeof PERIODS)[number]["value"];
 
 const signed = (v: number, fmt: (n: number) => string) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v));
-const dayLabel = (day: string) => formatDate(`${day}T12:00:00Z`);
 
 function Evolution() {
   const s = useDemo();
@@ -90,6 +89,7 @@ function Evolution() {
   const unitsDone = UNITS.filter((u) => unitProgress(u, done).complete).length;
 
   return (
+    <ShowValuesProvider value={showValues}>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -298,6 +298,7 @@ function Evolution() {
       <WealthSheet s={s} month={wealthMonth} onClose={() => setWealthMonth(null)} />
       <GoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} />
     </main>
+    </ShowValuesProvider>
   );
 }
 

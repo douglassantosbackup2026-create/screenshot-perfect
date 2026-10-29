@@ -15,6 +15,9 @@ export const monthYear = (month: string) => {
 export const formatDate = (iso: string) =>
   new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" }).format(new Date(iso));
 
+/** Dia "2026-10-15" por extenso, sem escorregar de dia por fuso (meio-dia UTC). */
+export const dayLabel = (day: string) => formatDate(`${day}T12:00:00Z`);
+
 export const achievementInfo = (code: AchievementCode) => ACHIEVEMENTS.find((a) => a.code === code)!;
 
 export const WORK_TYPES = [

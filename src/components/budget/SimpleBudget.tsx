@@ -5,21 +5,21 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { Progress } from "@/components/ui/progress";
-import { HIDDEN } from "@/lib/labels";
 import { LimitsSheet } from "@/components/ledger/LimitsSheet";
-import { formatMoney, formatPercent } from "@/lib/calc/format";
+import { formatPercent } from "@/lib/calc/format";
 import type { DemoState } from "@/lib/data/demo-store";
 import { ledgerMonth, limitsView } from "@/lib/data/selectors";
 import { monthOf, spDate } from "@/lib/gamification/rules";
 import { monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { useMoney } from "@/hooks/use-show-values";
 
 export function SimpleBudget({ s }: { s: DemoState }) {
   const [limitsOpen, setLimitsOpen] = useState(false);
   const month = monthOf(spDate(new Date()));
   const m = ledgerMonth(s, month);
   const limits = limitsView(s);
-  const money = (cents: number) => (s.profile.hideValues ? HIDDEN : formatMoney(cents));
+  const money = useMoney();
 
   if (s.accounts.length === 0) {
     return (

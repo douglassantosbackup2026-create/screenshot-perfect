@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -10,8 +9,8 @@ import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/cal
 import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
 import { startOnboarding } from "@/lib/data/start-onboarding";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
-import { supabase } from "@/integrations/supabase/client";
 import { APP_NAME } from "@/lib/seo";
+import { saveLead } from "@/lib/data/leads";
 
 export const Route = createFileRoute("/calculadora")({
   head: () => ({
@@ -71,14 +70,9 @@ function Calculator() {
     e.preventDefault();
     if (!consent) return;
     setSending(true);
-    const { error } = await supabase.from("leads").insert({ email: email.trim(), consent_marketing: true, source: "calculadora" });
+    const ok = await saveLead(email, "calculadora");
     setSending(false);
-    // 23505: o e-mail já estava salvo (um lead por e-mail).
-    if (error && error.code !== "23505") {
-      toast.error("Não foi possível salvar o e-mail. Confira o endereço e tente de novo.");
-      return;
-    }
-    setSent(true);
+    if (ok) setSent(true);
   }
 
   return (

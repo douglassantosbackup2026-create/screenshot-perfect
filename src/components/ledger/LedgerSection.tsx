@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CardBoundary } from "@/components/ErrorBoundary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HIDDEN } from "@/lib/labels";
+import { HIDDEN, dayLabel } from "@/lib/labels";
 import { ImportSheet } from "@/components/ledger/ImportSheet";
 import { RecurringSheet } from "@/components/ledger/RecurringSheet";
 import { TransactionSheet, type TxEditing } from "@/components/ledger/TransactionSheet";
@@ -18,11 +18,10 @@ import { formatMoney } from "@/lib/calc/format";
 import type { DemoState } from "@/lib/data/demo-store";
 import { ledgerMonth, upcomingRecurring } from "@/lib/data/selectors";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
-import { formatDate, monthYear } from "@/lib/labels";
+import { monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 const ALL = "todas";
-const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 
 export function LedgerSection({
   s,

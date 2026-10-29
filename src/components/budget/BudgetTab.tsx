@@ -19,12 +19,11 @@ import { BUDGET_MONTHS_AHEAD, demo, type DemoState } from "@/lib/data/demo-store
 import { billsOfMonth, budgetView } from "@/lib/data/selectors";
 import { ReserveCard } from "@/components/ledger/DayToDay";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
-import { formatDate, monthYear } from "@/lib/labels";
+import { monthYear, dayLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { errMsg } from "@/lib/errors";
 
 type Envelope = ReturnType<typeof budgetView>["spending"][number];
-const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 
 const templateLabel = (t: BudgetTemplate) =>
   t.kind === "fixo"

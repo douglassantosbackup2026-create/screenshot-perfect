@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { runAction } from "@/components/feedback";
 import { Progress } from "@/components/ui/progress";
-import { HIDDEN } from "@/lib/labels";
+import { HIDDEN, dayLabel } from "@/lib/labels";
 import { formatMoney, formatPercent } from "@/lib/calc/format";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import {
@@ -20,11 +20,10 @@ import {
 } from "@/lib/data/selectors";
 import { addDays } from "@/lib/calc/recurring";
 import { spDate } from "@/lib/gamification/rules";
-import { formatDate, monthShort } from "@/lib/labels";
+import { monthShort } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { errMsg } from "@/lib/errors";
 
-const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`);
 const useMoney = (showValues: boolean) => (cents: number) =>
   showValues ? formatMoney(cents) : HIDDEN;
 

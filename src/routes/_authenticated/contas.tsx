@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { EmptyState } from "@/components/EmptyState";
 import { HideValuesToggle } from "@/components/HideValuesToggle";
-import { useShowValues } from "@/hooks/use-show-values";
+import { ShowValuesProvider, useShowValues } from "@/hooks/use-show-values";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -38,6 +38,7 @@ function Accounts() {
   const money = (cents: number) => (showValues ? formatMoney(cents) : HIDDEN);
 
   return (
+    <ShowValuesProvider value={showValues}>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-4xl lg:px-8 lg:pb-12">
       <AreaTabs />
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -100,6 +101,7 @@ function Accounts() {
       <Rules s={s} />
       <AccountSheet editing={editing} onClose={() => setEditing(null)} />
     </main>
+    </ShowValuesProvider>
   );
 }
 

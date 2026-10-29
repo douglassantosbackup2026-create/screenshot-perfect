@@ -17,23 +17,15 @@ import { XP } from "@/lib/gamification/rules";
 import type { DailyKind } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
 import { JOURNEY_ENABLED } from "@/lib/features";
-import { APP_NAME } from "@/lib/seo";
+import { pageHead } from "@/lib/seo";
 import { errMsg } from "@/lib/errors";
 
-const TITLE = JOURNEY_ENABLED ? `Jornada — ${APP_NAME}` : `Início — ${APP_NAME}`;
 const DESCRIPTION = JOURNEY_ENABLED
   ? "Sua trilha de aprendizado, a missão do dia e o seu próximo passo."
   : "O fechamento do mês, a sugestão de aporte e o seu próximo passo.";
 
 export const Route = createFileRoute("/_authenticated/hoje")({
-  head: () => ({
-    meta: [
-      { title: TITLE },
-      { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: TITLE },
-      { property: "og:description", content: DESCRIPTION },
-    ],
-  }),
+  head: () => pageHead(JOURNEY_ENABLED ? "Jornada" : "Início", DESCRIPTION),
   component: JourneyPage,
 });
 
