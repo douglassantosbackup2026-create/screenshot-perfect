@@ -199,7 +199,7 @@ export type LedgerRow = Transaction & { accountName: string; categoryName: strin
 
 /** Lançamentos do mês, com nomes de conta e categoria, agrupados por dia, mais o resumo e os gastos por categoria. */
 export function ledgerMonth(s: DemoState, month: string, accountId: string | null = null) {
-  return memoOnState(s, `ledgerMonth:${month}:${accountId ?? ""}`, () => ledgerMonthUncached(s, month, accountId));
+  return memoOnState(s, `ledgerMonth:${month}:${accountId ?? ""}`, (t) => ledgerMonthUncached(t, month, accountId));
 }
 function ledgerMonthUncached(s: DemoState, month: string, accountId: string | null) {
   const accounts = new Map(s.accounts.map((a) => [a.id, a.name]));
@@ -225,9 +225,9 @@ function ledgerMonthUncached(s: DemoState, month: string, accountId: string | nu
 
 /** Ocorrências já resolvidas ("regra|data nominal"): lançadas ou excluídas pela pessoa. */
 function handledOccurrences(s: DemoState) {
-  return memoOnState(s, "handledOccurrences", () => new Set([
-    ...s.transactions.flatMap((t) => (t.recurringId && t.occurrenceDate ? [`${t.recurringId}|${t.occurrenceDate}`] : [])),
-    ...s.recurring.flatMap((r) => (r.skipped ?? []).map((d) => `${r.id}|${d}`)),
+  return memoOnState(s, "handledOccurrences", (st) => new Set([
+    ...st.transactions.flatMap((t) => (t.recurringId && t.occurrenceDate ? [`${t.recurringId}|${t.occurrenceDate}`] : [])),
+    ...st.recurring.flatMap((r) => (r.skipped ?? []).map((d) => `${r.id}|${d}`)),
   ]));
 }
 
@@ -246,7 +246,7 @@ const ACCOUNT_GROUP_LABEL: Record<AccountGroup, string> = {
 
 /** Contas com saldo, por grupo. Em cartões e dívidas, saldo negativo é o que se deve. */
 export function accountsOverview(s: DemoState) {
-  return memoOnState(s, "accountsOverview", () => accountsOverviewUncached(s));
+  return memoOnState(s, "accountsOverview", (t) => accountsOverviewUncached(t));
 }
 function accountsOverviewUncached(s: DemoState) {
   const balances = accountBalances(s.accounts, s.transactions);
@@ -318,7 +318,7 @@ export function budgetView(s: DemoState, month: string) {
 
 /** Contas fixas do mês (recorrências de saída): previsto, já lançado e a vencer. */
 export function billsOfMonth(s: DemoState, month: string, now = new Date()) {
-  return memoOnState(s, `billsOfMonth:${month}:${spDate(now)}`, () => billsOfMonthUncached(s, month, now));
+  return memoOnState(s, `billsOfMonth:${month}:${spDate(now)}`, (t) => billsOfMonthUncached(t, month, now));
 }
 function billsOfMonthUncached(s: DemoState, month: string, now: Date) {
   const today = spDate(now);
@@ -344,7 +344,7 @@ function billsOfMonthUncached(s: DemoState, month: string, now: Date) {
 // ---------- Relatórios ----------
 /** Fluxo de caixa, gastos por categoria e patrimônio por grupo nos últimos `count` meses, terminando no atual. */
 export function reportsView(s: DemoState, count: number, now = new Date()) {
-  return memoOnState(s, `reportsView:${count}:${spDate(now)}`, () => reportsViewUncached(s, count, now));
+  return memoOnState(s, `reportsView:${count}:${spDate(now)}`, (t) => reportsViewUncached(t, count, now));
 }
 function reportsViewUncached(s: DemoState, count: number, now = new Date()) {
   const end = monthOf(spDate(now));
@@ -382,7 +382,7 @@ const STALE_PRICE_DAYS = 31;
  * (itens sem posições entram pela categoria) e a rentabilidade anual (XIRR) das posições.
  */
 export function portfolioView(s: DemoState, now = new Date()) {
-  return memoOnState(s, `portfolioView:${spDate(now)}`, () => portfolioViewUncached(s, now));
+  return memoOnState(s, `portfolioView:${spDate(now)}`, (t) => portfolioViewUncached(t, now));
 }
 function portfolioViewUncached(s: DemoState, now = new Date()) {
   const today = spDate(now);
@@ -541,7 +541,7 @@ export type DailyAlert =
  * e gasto acima da média. Os que a pessoa ignorou não voltam; os de orçamento valem só para o mês corrente.
  */
 export function dailyAlerts(s: DemoState, now = new Date()) {
-  return memoOnState(s, `dailyAlerts:${spDate(now)}`, () => dailyAlertsUncached(s, now));
+  return memoOnState(s, `dailyAlerts:${spDate(now)}`, (t) => dailyAlertsUncached(t, now));
 }
 function dailyAlertsUncached(s: DemoState, now = new Date()): DailyAlert[] {
   const today = spDate(now);
@@ -605,7 +605,7 @@ function scheduledFlows(s: DemoState, from: string, until: string, rules: Recurr
 
 /** Fim do mês nas contas do dia a dia (inclusive cartão): saldo de hoje + o que está agendado até o último dia. */
 export function monthProjection(s: DemoState, now = new Date()) {
-  return memoOnState(s, `monthProjection:${spDate(now)}`, () => monthProjectionUncached(s, now));
+  return memoOnState(s, `monthProjection:${spDate(now)}`, (t) => monthProjectionUncached(t, now));
 }
 function monthProjectionUncached(s: DemoState, now = new Date()) {
   const today = spDate(now);
@@ -621,7 +621,7 @@ function monthProjectionUncached(s: DemoState, now = new Date()) {
 
 /** Compras parceladas em andamento e quanto delas ainda cai em cada um dos próximos meses. */
 export function installmentsView(s: DemoState, now = new Date(), months = 6) {
-  return memoOnState(s, `installmentsView:${months}:${spDate(now)}`, () => installmentsViewUncached(s, now, months));
+  return memoOnState(s, `installmentsView:${months}:${spDate(now)}`, (t) => installmentsViewUncached(t, now, months));
 }
 function installmentsViewUncached(s: DemoState, now = new Date(), months = 6) {
   const today = spDate(now);
@@ -654,7 +654,7 @@ const ESSENTIAL_CATEGORIES = new Set(["cat-moradia", "cat-mercado", "cat-transpo
  * O guardado vem dos itens "Reserva de emergência" do Patrimônio; sem eles, do saldo das poupanças.
  */
 export function emergencyFundView(s: DemoState, now = new Date()) {
-  return memoOnState(s, `emergencyFundView:${spDate(now)}`, () => emergencyFundViewUncached(s, now));
+  return memoOnState(s, `emergencyFundView:${spDate(now)}`, (t) => emergencyFundViewUncached(t, now));
 }
 function emergencyFundViewUncached(s: DemoState, now: Date) {
   const month = monthOf(spDate(now));
@@ -701,7 +701,7 @@ export function envelopeAfterExpense(s: DemoState, categoryId: string | null, da
 
 /** Limites de gasto com o quanto já foi usado no período atual de cada um. */
 export function limitsView(s: DemoState, now = new Date()) {
-  return memoOnState(s, `limitsView:${spDate(now)}`, () => limitsViewUncached(s, now));
+  return memoOnState(s, `limitsView:${spDate(now)}`, (t) => limitsViewUncached(t, now));
 }
 function limitsViewUncached(s: DemoState, now: Date) {
   const today = spDate(now);

@@ -721,17 +721,57 @@ describe("cache de leitura", () => {
     expect(read()).toBe(2);
   });
 
-  it("o estado gravado é calculado uma vez e recalculado depois de cada mudança", async () => {
+  it("recalcula só quando muda uma parte que o cálculo leu", async () => {
     const { demo, memoOnState, useDemo } = await freshStore();
-    demo.startFresh();
+    demo.reset();
     const { result } = renderHook(() => useDemo());
     let runs = 0;
-    const read = () => memoOnState(result.current, "k", () => ++runs);
-    expect(read()).toBe(1);
-    expect(read()).toBe(1);
+    // Lê o perfil: refaz quando o perfil muda.
+    const readProfile = () => memoOnState(result.current, "perfil", (st) => (runs++, st.profile.displayName));
+    expect(readProfile()).toBe("Ana");
+    expect(readProfile()).toBe("Ana");
+    expect(runs).toBe(1);
     act(() => demo.updateProfile({ displayName: "Bia" }));
-    expect(read()).toBe(2);
-    expect(read()).toBe(2);
+    expect(readProfile()).toBe("Bia");
+    expect(runs).toBe(2);
+    // Lê só as contas: mudar o perfil não refaz.
+    let accRuns = 0;
+    const readAccounts = () => memoOnState(result.current, "contas", (st) => (accRuns++, st.accounts.length));
+    readAccounts();
+    act(() => demo.updateProfile({ displayName: "Caio" }));
+    readAccounts();
+    expect(accRuns).toBe(1);
+  });
+
+  it("um cálculo em cache dentro de outro passa as leituras adiante", async () => {
+    const { demo, memoOnState, useDemo } = await freshStore();
+    demo.reset();
+    const { result } = renderHook(() => useDemo());
+    const inner = (st: typeof result.current) => memoOnState(st, "dentro", (x) => x.profile.displayName);
+    let outerRuns = 0;
+    const outer = () => memoOnState(result.current, "fora", (st) => (outerRuns++, inner(st)));
+    inner(result.current); // o de dentro já está em cache antes do de fora
+    expect(outer()).toBe("Ana");
+    act(() => demo.updateProfile({ displayName: "Bia" }));
+    expect(outer()).toBe("Bia"); // o de fora sabe que depende do perfil, mesmo pegando o de dentro do cache
+    expect(outerRuns).toBe(2);
+  });
+
+  it("seletores reais: lançar um gasto refaz o mês; mudar o perfil não", async () => {
+    const store = await freshStore();
+    const { ledgerMonth } = await import("./selectors");
+    store.demo.reset();
+    const { result } = renderHook(() => store.useDemo());
+    const month = monthOf(spDate(new Date()));
+    const first = ledgerMonth(result.current, month);
+    act(() => store.demo.updateProfile({ displayName: "Bia" }));
+    expect(ledgerMonth(result.current, month)).toBe(first);
+    act(() => {
+      store.demo.addTransaction({ accountId: result.current.accounts[0]!.id, date: spDate(new Date()), amount: -500, payee: "Café", categoryId: null });
+    });
+    const after = ledgerMonth(result.current, month);
+    expect(after).not.toBe(first);
+    expect(after).toEqual(ledgerMonth(structuredClone(result.current), month)); // igual a calcular do zero
   });
 });
 
@@ -784,5 +824,56 @@ describe("ações compartilham o que não mudaram", () => {
     demo.reset();
     const { result } = renderHook(() => useDemo());
     expect(() => (result.current.transactions as unknown[]).push({})).toThrow();
+  });
+});
+
+describe("rede de segurança do cache", () => {
+  it("depois de ações em partes diferentes, todo seletor em cache bate com o cálculo do zero", async () => {
+    const store = await freshStore();
+    const sel = await import("./selectors");
+    store.demo.reset();
+    const { result } = renderHook(() => store.useDemo());
+    const now = new Date();
+    const month = monthOf(spDate(now));
+    // Cada leitura passa duas vezes pelo cache (para garantir que vem de lá) e é comparada com um clone,
+    // que nunca usa o cache.
+    const views: [string, (s: typeof result.current) => unknown][] = [
+      ["ledgerMonth", (s) => sel.ledgerMonth(s, month)],
+      ["accountsOverview", (s) => sel.accountsOverview(s)],
+      ["billsOfMonth", (s) => sel.billsOfMonth(s, month, now)],
+      ["reportsView", (s) => sel.reportsView(s, 6, now)],
+      ["portfolioView", (s) => sel.portfolioView(s, now)],
+      ["dailyAlerts", (s) => sel.dailyAlerts(s, now)],
+      ["monthProjection", (s) => sel.monthProjection(s, now)],
+      ["installmentsView", (s) => sel.installmentsView(s, now)],
+      ["emergencyFundView", (s) => sel.emergencyFundView(s, now)],
+      ["limitsView", (s) => sel.limitsView(s, now)],
+      ["monthCloseSteps", (s) => store.monthCloseSteps(s, now)],
+      ["budgetMonths", (s) => store.budgetMonths(s, month)],
+    ];
+    const check = (when: string) => {
+      for (const [name, read] of views) {
+        read(result.current);
+        const cached = read(result.current);
+        const fresh = read(structuredClone(result.current));
+        expect(JSON.parse(JSON.stringify(cached)), `${name} depois de ${when}`).toEqual(JSON.parse(JSON.stringify(fresh)));
+      }
+    };
+    const account = () => result.current.accounts[0]!;
+    check("abrir");
+    act(() => store.demo.updateProfile({ displayName: "Bia", hideValues: false }));
+    check("mudar o perfil");
+    act(() => {
+      store.demo.addTransaction({ accountId: account().id, date: spDate(now), amount: -12345, payee: "Mercado", categoryId: null });
+    });
+    check("lançar um gasto");
+    act(() => {
+      store.demo.saveLimit({ categoryId: null, period: "mes", amount: 1000 });
+    });
+    check("criar um limite");
+    act(() => {
+      store.demo.saveAccount({ name: "Poupança nova", kind: "poupanca", openingBalance: 50000 });
+    });
+    check("criar uma conta");
   });
 });

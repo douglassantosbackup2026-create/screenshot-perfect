@@ -749,20 +749,60 @@ function migrate(input: unknown): DemoState {
 // ---------- Store ----------
 let state: DemoState | null = null;
 
-// Cache de leitura: contas pesadas (orçamento, carteira, avisos) rodam uma vez por estado gravado,
-// não a cada render. Só vale para o estado atual: um rascunho dentro de `mutate` nunca entra no
-// cache, e qualquer troca de estado (gravação, login, conflito) o descarta.
-let memoFor: DemoState | null = null;
-const memo = new Map<string, unknown>();
-export function memoOnState<T>(s: DemoState, key: string, compute: () => T): T {
-  if (s !== state) return compute();
-  if (memoFor !== state) {
-    memo.clear();
-    memoFor = state;
+// Cache de leitura: contas pesadas (orçamento, carteira, avisos) rodam uma vez enquanto as partes do
+// estado que elas leem não mudarem. As partes lidas são anotadas sozinhas: o cálculo recebe o estado por
+// um Proxy que registra cada chave de topo acessada, então não há lista de dependências para esquecer.
+// Com o commit reaproveitando as fatias iguais, mudar o perfil não refaz o orçamento, por exemplo.
+// Só vale para o estado atual: um rascunho dentro de `mutate` nunca entra no cache.
+type MemoEntry = { reads: [keyof DemoState, unknown][]; all: boolean; value: unknown };
+const memo = new Map<string, MemoEntry>();
+const MEMO_MAX = 300;
+/** Quem está calculando agora (cálculos em cache podem chamar outros): as leituras sobem para todos. */
+const tracking: { reads: Set<keyof DemoState>; all: boolean }[] = [];
+const tracked = new WeakMap<object, DemoState>();
+
+function noteReads(keys: Iterable<keyof DemoState>, all: boolean) {
+  for (const t of tracking) {
+    for (const k of keys) t.reads.add(k);
+    if (all) t.all = true;
   }
-  if (memo.has(key)) return memo.get(key) as T;
-  const value = compute();
-  memo.set(key, value);
+}
+
+export function memoOnState<T>(s: DemoState, key: string, compute: (s: DemoState) => T): T {
+  const real = tracked.get(s) ?? s;
+  if (real !== state) return compute(s);
+  const hit = memo.get(key);
+  if (hit && !hit.all && hit.reads.every(([k, v]) => real[k] === v)) {
+    noteReads(hit.reads.map(([k]) => k), false);
+    return hit.value as T;
+  }
+  const frame = { reads: new Set<keyof DemoState>(), all: false };
+  const proxy = new Proxy(real, {
+    get(target, k, receiver) {
+      if (typeof k === "string") frame.reads.add(k as keyof DemoState);
+      return Reflect.get(target, k, receiver);
+    },
+    has(target, k) {
+      if (typeof k === "string") frame.reads.add(k as keyof DemoState);
+      return Reflect.has(target, k);
+    },
+    // Percorrer todas as chaves (espalhar, Object.keys) depende do estado inteiro.
+    ownKeys(target) {
+      frame.all = true;
+      return Reflect.ownKeys(target);
+    },
+  });
+  tracked.set(proxy, real);
+  tracking.push(frame);
+  let value: T;
+  try {
+    value = compute(proxy);
+  } finally {
+    tracking.pop();
+  }
+  noteReads(frame.reads, frame.all);
+  if (memo.size >= MEMO_MAX) memo.clear();
+  memo.set(key, { reads: [...frame.reads].map((k) => [k, real[k]]), all: frame.all, value });
   return value;
 }
 const listeners = new Set<() => void>();
@@ -1799,7 +1839,7 @@ export type MonthStepKey = "lancamentos" | "categorias" | "orcamento" | "aporte"
  * O orçamento conta como feito quando o mês foi planejado; o que ainda está sem destino aparece como dica.
  */
 export function monthCloseSteps(s: DemoState, now = new Date()) {
-  return memoOnState(s, `monthCloseSteps:${spDate(now)}`, () => monthCloseStepsUncached(s, now));
+  return memoOnState(s, `monthCloseSteps:${spDate(now)}`, (t) => monthCloseStepsUncached(t, now));
 }
 function monthCloseStepsUncached(s: DemoState, now: Date) {
   const month = monthOf(spDate(now));
@@ -1906,7 +1946,7 @@ export function budgetEnvelopeIds(s: DemoState): string[] {
 
 /** O orçamento de cada mês, do primeiro mês com movimento ou distribuição até `month`. */
 export function budgetMonths(s: DemoState, month: string) {
-  return memoOnState(s, `budgetMonths:${month}`, () => computeBudgetMonths(s, month));
+  return memoOnState(s, `budgetMonths:${month}`, (t) => computeBudgetMonths(t, month));
 }
 function computeBudgetMonths(s: DemoState, month: string) {
   const activity = budgetActivity(budgetTxInputs(s));
