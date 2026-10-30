@@ -2,6 +2,7 @@
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
 import { useRef, useSyncExternalStore } from "react";
 import { repairState } from "./state-schema";
+import { merge3 } from "./merge";
 import { deepFreeze, shareState } from "./share";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
 import { validateAsset, type AssetCategory } from "@/lib/calc/assets";
@@ -870,18 +871,25 @@ let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let retries = 0;
 let saving: Promise<boolean> | null = null;
 let dirty = false;
+/** A versão do banco de onde o estado atual partiu (para juntar as mudanças num conflito). */
+let cloudBase: DemoState | null = null;
 const FRESH_PENDING = "pi_fresh_pending";
 /** Cópia local do que ainda não chegou ao banco (aba fechada, sem internet, erro). */
 const PENDING = "pi_pending_cloud";
+/** Última versão lida ou gravada no banco: abre o app sem internet. */
+const CLOUD_CACHE = "pi_cloud_cache";
+/** Conflitos seguidos numa gravação antes de desistir (outro aparelho gravando sem parar). */
+const MAX_REBASES = 3;
 const RETRY_MS = [2000, 5000, 15000, 30000];
 
 /**
  * "conflict": outra aba ou aparelho gravou antes; a versão do banco foi recarregada.
  * "too-large": os dados passaram do limite do banco (2 MB); tentar de novo não resolve.
  * "blocked": o banco recusou porque não há assinatura válida; tentar de novo não resolve.
- * Nos dois últimos, os dados continuam guardados neste aparelho.
+ * "offline": sem internet; o que mudar fica neste aparelho e vai para o banco quando a conexão voltar.
+ * Nos três últimos, os dados continuam guardados neste aparelho.
  */
-export type SaveStatus = "saved" | "saving" | "error" | "conflict" | "too-large" | "blocked";
+export type SaveStatus = "saved" | "saving" | "error" | "conflict" | "too-large" | "blocked" | "offline";
 let saveStatus: SaveStatus = "saved";
 const saveListeners = new Set<() => void>();
 function setSaveStatus(next: SaveStatus) {
@@ -917,6 +925,25 @@ function readPending(user: string): Pending | null {
     return null;
   }
 }
+type CloudCache = { user: string; version: string; data: DemoState };
+function writeCloudCache(version: string, data: DemoState) {
+  if (!cloudUser) return;
+  try {
+    window.localStorage.setItem(CLOUD_CACHE, JSON.stringify({ user: cloudUser, version, data } satisfies CloudCache));
+  } catch {
+    /* armazenamento indisponível ou cheio: só não abre offline */
+  }
+}
+function readCloudCache(user: string): CloudCache | null {
+  try {
+    const c = JSON.parse(window.localStorage.getItem(CLOUD_CACHE) ?? "null") as CloudCache | null;
+    return c?.user === user ? c : null;
+  } catch {
+    return null;
+  }
+}
+const isOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
+
 function clearPending() {
   try {
     window.localStorage.removeItem(PENDING);
@@ -935,8 +962,9 @@ function saveCloud(): Promise<boolean> {
   // "não salvo" com nova tentativa, nunca uma falha silenciosa.
   saving = runSave()
     .catch((e: unknown) => {
-      console.error("Falha ao salvar no banco", e);
       writePending();
+      if (isOffline()) return (setSaveStatus("offline"), false);
+      console.error("Falha ao salvar no banco", e);
       setSaveStatus("error");
       scheduleRetry();
       return false;
@@ -947,6 +975,7 @@ function saveCloud(): Promise<boolean> {
 
 async function runSave(): Promise<boolean> {
   const { supabase } = await import("@/integrations/supabase/client");
+  let rebases = 0;
   do {
     dirty = false;
     const user = cloudUser;
@@ -968,8 +997,10 @@ async function runSave(): Promise<boolean> {
           .select("updated_at");
     if (user !== cloudUser) return true;
     if (res.error && res.error.code !== "23505") {
-      console.error("Falha ao salvar no banco", res.error.message);
       writePending();
+      // Sem internet: espera a conexão voltar (evento online), sem gastar as novas tentativas.
+      if (isOffline()) return (setSaveStatus("offline"), false);
+      console.error("Falha ao salvar no banco", res.error.message);
       // 23514: passou do limite de tamanho (check do banco); 42501: RLS recusou (sem assinatura).
       // Repetir a mesma gravação daria o mesmo erro, então não agenda nova tentativa.
       if (res.error.code === "23514") return (setSaveStatus("too-large"), false);
@@ -978,13 +1009,45 @@ async function runSave(): Promise<boolean> {
       scheduleRetry();
       return false;
     }
-    if (res.error || !res.data?.length) return reloadAfterConflict();
+    if (res.error || !res.data?.length) {
+      // Outro aparelho (ou o WhatsApp) gravou antes: junta as mudanças e grava de novo.
+      if (rebases++ < MAX_REBASES && (await rebaseAfterConflict())) {
+        dirty = true;
+        continue;
+      }
+      return reloadAfterConflict();
+    }
     cloudVersion = res.data[0]!.updated_at;
+    cloudBase = data;
     retries = 0;
+    writeCloudCache(cloudVersion, data);
     if (state === data) clearPending();
     else writePending();
   } while (dirty);
   setSaveStatus("saved");
+  return true;
+}
+
+/**
+ * Conflito na gravação: lê o banco e junta as mudanças deste aparelho com as de lá (merge3), a partir
+ * da versão de onde este aparelho partiu. Sem essa versão, devolve false e quem chama recarrega o
+ * banco como antes. Mudança dos dois lados no mesmo valor simples fica com o banco e mostra o aviso.
+ */
+async function rebaseAfterConflict(): Promise<boolean> {
+  const user = cloudUser;
+  const base = cloudBase;
+  if (!user || !base || !state) return false;
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { data, error } = await supabase.from("user_state").select("data, updated_at").eq("user_id", user).maybeSingle();
+  if (user !== cloudUser || error || !data) return false;
+  const remote = migrate(data.data);
+  const merged = merge3(base, state, remote);
+  state = migrate(merged.value);
+  cloudVersion = data.updated_at;
+  cloudBase = remote;
+  writePending();
+  listeners.forEach((l) => l());
+  if (merged.lost.length) setSaveStatus("conflict");
   return true;
 }
 
@@ -1001,6 +1064,7 @@ async function reloadAfterConflict(): Promise<boolean> {
   }
   state = migrate(data.data);
   cloudVersion = data.updated_at;
+  cloudBase = state;
   clearPending();
   listeners.forEach((l) => l());
   setSaveStatus("conflict");
@@ -1014,7 +1078,7 @@ async function reloadAfterConflict(): Promise<boolean> {
 let lastRefresh = 0;
 export async function refreshFromCloud(now = Date.now()): Promise<boolean> {
   const user = cloudUser;
-  if (!user || saving || saveTimer || saveStatus === "error" || now - lastRefresh < 15_000) return false;
+  if (!user || saving || saveTimer || saveStatus === "error" || saveStatus === "offline" || now - lastRefresh < 15_000) return false;
   lastRefresh = now;
   const { supabase } = await import("@/integrations/supabase/client");
   const head = await supabase.from("user_state").select("updated_at").eq("user_id", user).maybeSingle();
@@ -1024,6 +1088,8 @@ export async function refreshFromCloud(now = Date.now()): Promise<boolean> {
   if (error || !data || user !== cloudUser || saving || saveTimer) return false;
   state = migrate(data.data);
   cloudVersion = data.updated_at;
+  cloudBase = state;
+  writeCloudCache(cloudVersion, state);
   listeners.forEach((l) => l());
   return true;
 }
@@ -1077,7 +1143,15 @@ if (typeof window !== "undefined") {
     if (document.visibilityState === "hidden") flushNow();
     else void refreshFromCloud();
   });
-  window.addEventListener("online", () => saveStatus === "error" && void retrySave());
+  window.addEventListener("online", () => {
+    if (!cloudUser) return;
+    if (saveStatus !== "error" && saveStatus !== "offline") return;
+    // Nada mudou enquanto estava sem internet: só confere se o banco mudou.
+    if (state === cloudBase && !saveTimer) {
+      setSaveStatus("saved");
+      void refreshFromCloud();
+    } else void retrySave();
+  });
 }
 
 /** Carrega os dados da pessoa conectada. Sem dados ainda, aproveita o que ela começou antes de entrar. */
@@ -1085,17 +1159,25 @@ export async function attachUser(userId: string): Promise<DemoState> {
   if (cloudUser === userId && state) return state;
   const { supabase } = await import("@/integrations/supabase/client");
   const { data, error } = await supabase.from("user_state").select("data, updated_at").eq("user_id", userId).maybeSingle();
-  if (error) throw new Error("Não foi possível carregar seus dados.");
+  if (error) return attachOffline(userId);
   cloudUser = userId;
   cloudVersion = data?.updated_at ?? null;
-  // O que ficou sem gravar da última vez só vale se o banco não mudou desde então.
+  const remote = data?.data ? migrate(data.data) : null;
+  // O que ficou sem gravar da última vez: se o banco não mudou desde então, vale como está; se mudou e
+  // ainda temos a versão de onde partiu, junta as duas. Sem essa versão, vale o banco.
   const pending = readPending(userId);
+  const cache = readCloudCache(userId);
+  cloudBase = remote;
+  if (remote && cloudVersion) writeCloudCache(cloudVersion, remote);
   if (pending && pending.base === cloudVersion) {
     state = migrate(pending.data);
     void saveCloud();
-  } else if (data?.data) {
+  } else if (pending && remote && cache && cache.version === pending.base) {
+    state = migrate(merge3(migrate(cache.data), migrate(pending.data), remote).value);
+    void saveCloud();
+  } else if (remote) {
     clearPending();
-    state = migrate(data.data);
+    state = remote;
   } else {
     clearPending();
     const startedHere = window.localStorage.getItem(FRESH_PENDING) === "1";
@@ -1109,6 +1191,30 @@ export async function attachUser(userId: string): Promise<DemoState> {
   return state!;
 }
 
+/**
+ * Sem conexão com o banco ao abrir: usa o que ficou neste aparelho (o pendente, senão a última cópia
+ * do banco). Sem nenhum dos dois, não há como abrir.
+ */
+function attachOffline(userId: string): DemoState {
+  const pending = readPending(userId);
+  const cache = readCloudCache(userId);
+  if (!pending && !cache) throw new Error("Não foi possível carregar seus dados. Confira a internet e tente de novo.");
+  cloudUser = userId;
+  if (pending) {
+    cloudVersion = pending.base;
+    cloudBase = cache && cache.version === pending.base ? migrate(cache.data) : null;
+    state = migrate(pending.data);
+  } else {
+    cloudVersion = cache!.version;
+    cloudBase = migrate(cache!.data);
+    state = cloudBase;
+  }
+  setSaveStatus(isOffline() ? "offline" : "error");
+  if (!isOffline()) scheduleRetry();
+  listeners.forEach((l) => l());
+  return state;
+}
+
 export function detachUser() {
   if (saveTimer) clearTimeout(saveTimer);
   if (retryTimer) clearTimeout(retryTimer);
@@ -1116,9 +1222,11 @@ export function detachUser() {
   retries = 0;
   cloudUser = null;
   cloudVersion = null;
+  cloudBase = null;
   state = null;
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(KEY);
+    window.localStorage.removeItem(CLOUD_CACHE);
     clearPending();
   }
   setSaveStatus("saved");

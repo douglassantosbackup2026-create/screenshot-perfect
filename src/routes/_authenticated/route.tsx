@@ -26,7 +26,12 @@ async function currentUserId(): Promise<string | null> {
   if (id && id === verifiedUser) return id;
   const { data, error } = await supabase.auth.getUser();
   // Sem internet não é o mesmo que sem sessão: mandar para o login esconderia o problema real.
-  if (error && isAuthRetryableFetchError(error)) throw new Error("Sem conexão. Confira a internet e tente de novo.");
+  // Com sessão neste aparelho, abre com os dados guardados aqui (o banco confere tudo quando a conexão
+  // voltar); sem sessão, não há o que abrir.
+  if (error && isAuthRetryableFetchError(error)) {
+    if (id) return id;
+    throw new Error("Sem conexão. Confira a internet e tente de novo.");
+  }
   verifiedUser = data.user?.id ?? null;
   return verifiedUser;
 }

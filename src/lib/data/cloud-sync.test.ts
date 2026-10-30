@@ -68,17 +68,35 @@ describe("sincronização com o banco", () => {
     expect(name()).toBe("Bia");
   });
 
-  it("não sobrescreve o que outra aba gravou: recarrega a versão do banco", async () => {
+  it("outra aba mudou o mesmo campo antes: fica o do banco, com aviso, e o resto desta aba é gravado", async () => {
     const store = await freshStore();
     await store.attachUser("u1");
     const other = structuredClone(row().data) as { profile: { displayName: string } };
     other.profile.displayName = "Outra aba";
     Object.assign(row(), { data: other, updated_at: stamp() });
 
-    store.demo.updateProfile({ displayName: "Esta aba" });
-    expect(await store.flushSave()).toBe(false);
+    store.demo.updateProfile({ displayName: "Esta aba", reminderDay: 12 });
+    expect(await store.flushSave()).toBe(true);
     expect(name()).toBe("Outra aba");
+    expect((row().data as { profile: { reminderDay: number } }).profile.reminderDay).toBe(12);
     expect(store.demo.exportData().profile.displayName).toBe("Outra aba");
+  });
+
+  it("lançamento feito aqui e outro feito por fora na mesma versão: os dois ficam", async () => {
+    const store = await freshStore();
+    await store.attachUser("u1");
+    store.demo.saveAccount({ name: "Conta", kind: "corrente", openingBalance: 0 });
+    expect(await store.flushSave()).toBe(true);
+    const acc = store.demo.exportData().accounts[0]!.id;
+    const other = structuredClone(row().data) as { transactions: unknown[] };
+    other.transactions.push({ id: "whats-1", accountId: acc, date: "2026-10-30", amount: -3000, payee: "Farmácia", categoryId: null, note: null, transferId: null, importedId: null, source: "manual", recurringId: null, occurrenceDate: null, contributionId: null, createdAt: "2026-10-30T12:00:00Z" });
+    Object.assign(row(), { data: other, updated_at: stamp() });
+
+    store.demo.addTransaction({ accountId: acc, date: "2026-10-30", amount: -5000, payee: "Mercado" });
+    expect(await store.flushSave()).toBe(true);
+    const saved = (row().data as { transactions: { id: string; payee: string }[] }).transactions.map((t) => t.payee);
+    expect(saved).toContain("Farmácia");
+    expect(saved).toContain("Mercado");
   });
 
   it("sem internet guarda uma cópia local e a recupera ao entrar de novo", async () => {
@@ -95,6 +113,35 @@ describe("sincronização com o banco", () => {
     await vi.runAllTimersAsync();
     expect(name()).toBe("Offline");
     expect(window.localStorage.getItem("pi_pending_cloud")).toBeNull();
+  });
+
+  it("abre sem internet com a última cópia do banco e grava quando a conexão volta", async () => {
+    let store = await freshStore();
+    await store.attachUser("u1");
+    store.demo.updateProfile({ displayName: "Antes" });
+    expect(await store.flushSave()).toBe(true);
+
+    db.fail = true;
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    store = await freshStore();
+    const s = await store.attachUser("u1");
+    expect(s.profile.displayName).toBe("Antes");
+    store.demo.updateProfile({ displayName: "Sem internet" });
+    expect(await store.flushSave()).toBe(false);
+    expect(row().data).toMatchObject({ profile: { displayName: "Antes" } });
+
+    db.fail = false;
+    online.mockReturnValue(true);
+    window.dispatchEvent(new Event("online"));
+    await vi.runAllTimersAsync();
+    expect(name()).toBe("Sem internet");
+    online.mockRestore();
+  });
+
+  it("sem internet e sem nada guardado neste aparelho, não abre", async () => {
+    db.fail = true;
+    const store = await freshStore();
+    await expect(store.attachUser("u1")).rejects.toThrow("Confira a internet");
   });
 
   it("ao sair, nada mais é gravado e a cópia local some", async () => {

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CloudOff, Loader2 } from "lucide-react";
+import { CloudOff, Loader2, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { consumeRepairNotice, retrySave, useSaveStatus } from "@/lib/data/demo-store";
 
@@ -12,6 +12,14 @@ export function SaveStatus() {
       <span role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Loader2 size={14} className="animate-spin" aria-hidden />
         Salvando…
+      </span>
+    );
+  }
+  if (status === "offline") {
+    return (
+      <span role="status" className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+        <WifiOff size={14} aria-hidden />
+        Sem internet · salvo neste aparelho
       </span>
     );
   }
@@ -32,7 +40,7 @@ export function SaveStatus() {
 }
 
 const NOTICES: Partial<Record<ReturnType<typeof useSaveStatus>, string>> = {
-  conflict: "Seus dados mudaram em outra aba ou aparelho. Carregamos a versão mais recente; confira sua última alteração.",
+  conflict: "Seus dados mudaram em outra aba ou aparelho ao mesmo tempo. Juntamos as duas versões; onde as duas mudaram o mesmo campo, ficou a mais recente. Confira sua última alteração.",
   "too-large":
     "Seus dados passaram do limite de armazenamento e a última alteração não foi salva no servidor. Ela continua guardada neste aparelho. Exporte seus dados no Perfil e fale com o suporte.",
   blocked: "Não foi possível salvar: sua assinatura não está ativa. Suas alterações continuam guardadas neste aparelho.",
