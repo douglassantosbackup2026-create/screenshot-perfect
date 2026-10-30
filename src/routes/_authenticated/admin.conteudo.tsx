@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { isAdmin } from "@/lib/auth/roles";
@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Segmented } from "@/components/forms";
-import { LESSONS, PROGRAM, type ActionKey, type LessonQuestion } from "@/content/program";
-import { MISSIONS, type Mission } from "@/content/missions";
+import { PROGRAM, type ActionKey, type LessonQuestion } from "@/content/program";
 import { publishBlockers, type ContentStatus } from "@/lib/content-rules";
+import { deleteMission, loadContent, saveLesson, saveMissions, type EditLesson, type EditMission, type LoadedContent } from "@/lib/admin/content";
+import { errMsg } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/conteudo")({
@@ -22,49 +23,90 @@ export const Route = createFileRoute("/_authenticated/admin/conteudo")({
   component: Admin,
 });
 
-type EditLesson = {
-  day: number;
-  title: string;
-  objective: string;
-  keyPoints: string[];
-  bodyMd: string;
-  actionKey: ActionKey | null;
-  sources: { label: string; url: string }[];
-  reviewedBy: string;
-  reviewedAt: string;
-  status: ContentStatus;
-  questions: LessonQuestion[];
-};
-type EditMission = Mission & { status: ContentStatus };
-
 const STATUS_LABEL: Record<ContentStatus, string> = { rascunho: "Rascunho", revisada: "Revisada", publicada: "Publicada" };
 
 function Admin() {
-  const [lessons, setLessons] = useState<EditLesson[]>(() =>
-    LESSONS.map((l) => ({
-      day: l.day,
-      title: l.title,
-      objective: l.objective,
-      keyPoints: [...l.keyPoints],
-      bodyMd: "",
-      actionKey: l.actionKey,
-      sources: l.sources.map((s) => ({ ...s })),
-      reviewedBy: "",
-      reviewedAt: "",
-      status: "rascunho",
-      questions: l.questions.map((q) => ({ ...q, options: q.options.map((o) => ({ ...o })) })),
-    })),
-  );
-  const [missions, setMissions] = useState<EditMission[]>(() => MISSIONS.map((m) => ({ ...m, status: "rascunho" })));
+  const [loaded, setLoaded] = useState<LoadedContent | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [lessons, setLessons] = useState<EditLesson[]>([]);
+  const [missions, setMissions] = useState<EditMission[]>([]);
+  // Dias com mudança ainda não salva (e as missões, que salvam juntas).
+  const [dirty, setDirty] = useState<Set<number>>(new Set());
+  const [missionsDirty, setMissionsDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
 
+  useEffect(() => {
+    loadContent()
+      .then((c) => {
+        setLoaded(c);
+        setLessons(c.lessons);
+        setMissions(c.missions);
+      })
+      .catch(() => setFailed(true));
+  }, []);
+
   const lesson = sel != null ? (lessons.find((l) => l.day === sel) ?? null) : null;
-  const update = (patch: Partial<EditLesson>) => setLessons((ls) => ls.map((l) => (l.day === sel ? { ...l, ...patch } : l)));
+  const update = (patch: Partial<EditLesson>) => {
+    setLessons((ls) => ls.map((l) => (l.day === sel ? { ...l, ...patch } : l)));
+    if (sel != null) setDirty((d) => new Set(d).add(sel));
+  };
+
+  async function run(task: () => Promise<void>, ok: string) {
+    setBusy(true);
+    try {
+      await task();
+      toast.success(ok);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const saveOne = (l: EditLesson) =>
+    run(async () => {
+      await saveLesson(l);
+      setDirty((d) => {
+        const n = new Set(d);
+        n.delete(l.day);
+        return n;
+      });
+    }, `Dia ${l.day} salvo.`);
+
+  const importAll = () =>
+    run(async () => {
+      for (const l of lessons) await saveLesson(l);
+      await saveMissions(missions);
+      setDirty(new Set());
+      setMissionsDirty(false);
+      setLoaded((c) => (c ? { ...c, fromDb: { lessons: true, missions: true } } : c));
+    }, "Conteúdo do arquivo gravado no banco como rascunho.");
+
+  const saveAllMissions = () =>
+    run(async () => {
+      await saveMissions(missions);
+      setMissionsDirty(false);
+      setLoaded((c) => (c ? { ...c, fromDb: { ...c.fromDb, missions: true } } : c));
+    }, "Missões salvas.");
+
+  if (failed) return <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8"><h1>Conteúdo</h1><p className="mt-2 text-sm text-muted-foreground">Não foi possível carregar o conteúdo do banco. Tente de novo em instantes.</p></main>;
+  if (!loaded) return <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8"><h1>Conteúdo</h1><p className="mt-2 text-sm text-muted-foreground">Carregando…</p></main>;
 
   return (
     <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
       <h1>Conteúdo</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Acesso só para administradores. Em modo demonstração, as mudanças não são salvas.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Acesso só para administradores. As mudanças ficam no banco; o app das pessoas ainda usa o texto do arquivo até a jornada voltar.
+      </p>
+      {!loaded.fromDb.lessons && (
+        <div className="mt-4 rounded-2xl bg-card p-4 shadow-card">
+          <p className="text-sm">O banco ainda não tem as lições. Grave as {lessons.length} lições e as missões do arquivo como rascunho para começar a revisão.</p>
+          <Button className="mt-3" disabled={busy} onClick={importAll}>
+            Importar do arquivo
+          </Button>
+        </div>
+      )}
 
       <Tabs defaultValue="licoes" className="mt-6">
         <TabsList>
@@ -83,6 +125,7 @@ function Admin() {
                       <span>
                         <span className="text-muted-foreground">Dia {l.day} · </span>
                         {l.title}
+                        {dirty.has(l.day) && <span className="ml-2 text-xs text-primary">não salvo</span>}
                       </span>
                       <StatusChip status={l.status} />
                     </button>
@@ -91,12 +134,22 @@ function Admin() {
               </ul>
             </section>
           ) : (
-            <LessonForm lesson={lesson} update={update} back={() => setSel(null)} />
+            <LessonForm lesson={lesson} update={update} back={() => setSel(null)} dirty={dirty.has(lesson.day)} busy={busy} onSave={() => saveOne(lesson)} />
           )}
         </TabsContent>
 
         <TabsContent value="missoes">
-          <MissionsEditor missions={missions} setMissions={setMissions} />
+          <MissionsEditor
+            missions={missions}
+            setMissions={(fn) => {
+              setMissions(fn);
+              setMissionsDirty(true);
+            }}
+            onDelete={(slug) => run(() => deleteMission(slug), "Missão excluída.")}
+          />
+          <Button className="mt-4 w-full" disabled={busy || !missionsDirty} onClick={saveAllMissions}>
+            {missionsDirty ? "Salvar missões" : "Missões salvas"}
+          </Button>
         </TabsContent>
       </Tabs>
     </main>
@@ -120,7 +173,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function LessonForm({ lesson, update, back }: { lesson: EditLesson; update: (p: Partial<EditLesson>) => void; back: () => void }) {
+function LessonForm({
+  lesson,
+  update,
+  back,
+  dirty,
+  busy,
+  onSave,
+}: {
+  lesson: EditLesson;
+  update: (p: Partial<EditLesson>) => void;
+  back: () => void;
+  dirty: boolean;
+  busy: boolean;
+  onSave: () => void;
+}) {
   const [preview, setPreview] = useState(false);
   const blockers = publishBlockers({ reviewedBy: lesson.reviewedBy, reviewedAt: lesson.reviewedAt || null, sources: lesson.sources });
 
@@ -264,11 +331,22 @@ function LessonForm({ lesson, update, back }: { lesson: EditLesson; update: (p: 
         </div>
         {blockers.length > 0 && <p className="mt-2 text-sm text-muted-foreground">Para publicar: {blockers.join(" ")}</p>}
       </div>
+      <Button className="w-full" disabled={busy || !dirty} onClick={onSave}>
+        {dirty ? "Salvar lição" : "Lição salva"}
+      </Button>
     </section>
   );
 }
 
-function MissionsEditor({ missions, setMissions }: { missions: EditMission[]; setMissions: (fn: (m: EditMission[]) => EditMission[]) => void }) {
+function MissionsEditor({
+  missions,
+  setMissions,
+  onDelete,
+}: {
+  missions: EditMission[];
+  setMissions: (fn: (m: EditMission[]) => EditMission[]) => void;
+  onDelete: (slug: string) => void;
+}) {
   const upd = (slug: string, patch: Partial<EditMission>) => setMissions((ms) => ms.map((m) => (m.slug === slug ? { ...m, ...patch } : m)));
   return (
     <section className="mt-4 space-y-3">
@@ -289,7 +367,10 @@ function MissionsEditor({ missions, setMissions }: { missions: EditMission[]; se
                   {STATUS_LABEL[s]}
                 </Button>
               ))}
-              <Button size="sm" variant="ghost" aria-label="Excluir missão" onClick={() => setMissions((ms) => ms.filter((x) => x.slug !== m.slug))}>
+              <Button size="sm" variant="ghost" aria-label="Excluir missão" onClick={() => {
+                  setMissions((ms) => ms.filter((x) => x.slug !== m.slug));
+                  onDelete(m.slug);
+                }}>
                 <Trash2 strokeWidth={1.75} />
               </Button>
             </div>
@@ -300,7 +381,7 @@ function MissionsEditor({ missions, setMissions }: { missions: EditMission[]; se
         onClick={() =>
           setMissions((ms) => [
             ...ms,
-            { order: ms.length + 1, slug: `nova-${ms.length + 1}`, title: "Nova missão", description: "", hint: "reflection", status: "rascunho" },
+            { order: ms.length + 1, slug: `nova-${Date.now().toString(36)}`, title: "Nova missão", description: "", hint: "reflection", status: "rascunho" },
           ])
         }
       >

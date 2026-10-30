@@ -202,6 +202,7 @@ function Profile() {
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
+        {admin && <Link to="/admin/usuarios" className="min-h-11 py-3">Admin de usuários</Link>}
         <ChangePassword />
         <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
           Sair

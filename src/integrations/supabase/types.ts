@@ -1566,6 +1566,27 @@ export type Database = {
         }
         Returns: string
       }
+      admin_find_users: {
+        Args: { p_query: string }
+        Returns: {
+          created_at: string
+          display_name: string | null
+          email: string
+          last_sign_in_at: string | null
+          payments: Json
+          plan: string | null
+          preapproval_id: string | null
+          subscription_period: string | null
+          subscription_status: string | null
+          subscription_updated_at: string | null
+          user_id: string
+          valid_until: string | null
+        }[]
+      }
+      admin_save_lesson: {
+        Args: { p_lesson: Json; p_program_slug: string }
+        Returns: string
+      }
       _award_xp: {
         Args: {
           p_action: Database["public"]["Enums"]["xp_action"]

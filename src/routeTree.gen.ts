@@ -32,6 +32,7 @@ import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
+import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 import { Route as ApiPublicClientErrorRouteImport } from './routes/api/public/client-error'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
@@ -152,6 +153,12 @@ const AuthenticatedAdminConteudoRoute =
     path: '/admin/conteudo',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminUsuariosRoute =
+  AuthenticatedAdminUsuariosRouteImport.update({
+    id: '/admin/usuarios',
+    path: '/admin/usuarios',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProgramaDiaRoute =
   AuthenticatedProgramaDiaRouteImport.update({
     id: '/programa/$dia',
@@ -199,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -227,6 +235,7 @@ export interface FileRoutesByTo {
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -257,6 +266,7 @@ export interface FileRoutesById {
   '/_authenticated/planos': typeof AuthenticatedPlanosRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/planos'
     | '/revisao'
     | '/admin/conteudo'
+    | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/planos'
     | '/revisao'
     | '/admin/conteudo'
+    | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
@@ -344,6 +356,7 @@ export interface FileRouteTypes {
     | '/_authenticated/planos'
     | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
+    | '/_authenticated/admin/usuarios'
     | '/_authenticated/programa/$dia'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
@@ -529,6 +542,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminConteudoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/usuarios': {
+      id: '/_authenticated/admin/usuarios'
+      path: '/admin/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/programa/$dia': {
       id: '/_authenticated/programa/$dia'
       path: '/programa/$dia'
@@ -574,6 +594,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
   AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
+  AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
 }
 
@@ -591,6 +612,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
+  AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
   AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
 }
 
