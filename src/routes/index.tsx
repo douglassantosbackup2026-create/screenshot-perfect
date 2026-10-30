@@ -11,6 +11,7 @@ import { SIMULATION_FOOTER } from "@/lib/labels";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { ThreeInOne, Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 import { APP_NAME, APP_TAGLINE } from "@/lib/seo";
+import { openConsentPreferences, track } from "@/lib/analytics/analytics";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -68,6 +69,7 @@ function Index() {
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    track("landing_view");
   }, []);
 
   return (
@@ -149,6 +151,14 @@ function Index() {
           <Link to="/sobre" className="underline">
             Sobre o app
           </Link>
+          {" · "}
+          <Link to="/privacidade" className="underline">
+            Privacidade
+          </Link>
+          {" · "}
+          <button type="button" className="underline" onClick={openConsentPreferences}>
+            Preferências de privacidade
+          </button>
         </LegalNote>
       </footer>
     </main>

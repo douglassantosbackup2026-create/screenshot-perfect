@@ -73,6 +73,45 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          anon_id: string | null
+          at: string
+          id: string
+          name: string
+          path: string | null
+          props: Json
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          anon_id?: string | null
+          at?: string
+          id?: string
+          name: string
+          path?: string | null
+          props?: Json
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          anon_id?: string | null
+          at?: string
+          id?: string
+          name?: string
+          path?: string | null
+          props?: Json
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       allocation_targets: {
         Row: {
           asset_class: Database["public"]["Enums"]["asset_class"]
@@ -1583,9 +1622,21 @@ export type Database = {
           valid_until: string | null
         }[]
       }
+      admin_funnel: {
+        Args: { p_from: string; p_to: string }
+        Returns: { people: number; source: string; step: string }[]
+      }
       admin_save_lesson: {
         Args: { p_lesson: Json; p_program_slug: string }
         Returns: string
+      }
+      record_consent: {
+        Args: { p_anon: string | null; p_choice: string; p_version: string }
+        Returns: undefined
+      }
+      track_event: {
+        Args: { p_anon: string; p_name: string; p_path?: string | null; p_props?: Json; p_utm?: Json }
+        Returns: undefined
       }
       _award_xp: {
         Args: {

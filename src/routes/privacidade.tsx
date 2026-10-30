@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
+import { Button } from "@/components/ui/button";
+import { openConsentPreferences } from "@/lib/analytics/analytics";
 
 export const Route = createFileRoute("/privacidade")({
   head: () => pageHead("Privacidade", "Quais dados o app guarda, para quê, e como exportar ou apagar tudo.", "Quais dados o app guarda e como exportar ou apagar tudo."),
@@ -21,6 +23,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "Com conta, seus dados ficam no nosso banco de dados, ligados só à sua conta, para você usar o app em qualquer aparelho. Cada pessoa só tem acesso aos próprios dados.",
       "Sem conta, o que você testa fica apenas neste navegador.",
       "Usamos os dados para fazer as contas do app e mostrar sua evolução. Os cálculos são feitos com o que você informa; não acessamos sua conta bancária.",
+    ],
+  },
+  {
+    title: "Medição de uso (só se você aceitar)",
+    body: [
+      "Se você aceitar no aviso de privacidade, contamos etapas do uso: visitar a página inicial, usar a calculadora, deixar o e-mail, criar a conta, abrir o pagamento e assinar.",
+      "Junto vão a página, a origem da visita (como utm_source de um anúncio) e um código aleatório deste navegador. Nunca vão valores, lançamentos ou o que você digita.",
+      "Fica no nosso próprio banco, sem empresas de anúncio ou de métricas. Só a equipe do app vê os números, sempre somados.",
+      "Se recusar, nada é medido e nenhum código é criado. Dá para mudar a escolha quando quiser em “Preferências de privacidade”, aqui embaixo ou no Perfil.",
     ],
   },
   {
@@ -55,6 +66,9 @@ function Privacy() {
           </ul>
         </section>
       ))}
+      <Button variant="outline" className="mt-8 w-full" onClick={openConsentPreferences}>
+        Preferências de privacidade
+      </Button>
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,7 @@ import { startOnboarding } from "@/lib/data/start-onboarding";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { APP_NAME } from "@/lib/seo";
 import { saveLead } from "@/lib/data/leads";
+import { track } from "@/lib/analytics/analytics";
 
 export const Route = createFileRoute("/calculadora")({
   head: () => ({
@@ -57,6 +58,17 @@ function Calculator() {
     return { errors: [] as string[], i, sem: simulate(i, "central", false), com: i.inssEstimate ? simulate(i, "central", true) : null };
   }, [age, retire, income, wealth, monthly, inss]);
 
+  // Funil: conta uma vez por visita, quando a pessoa mexe nos números e o resultado aparece.
+  const counted = useRef<"mount" | "waiting" | "done">("mount");
+  const valid = calc.errors.length === 0;
+  useEffect(() => {
+    if (counted.current === "mount") counted.current = "waiting";
+    else if (counted.current === "waiting" && valid) {
+      counted.current = "done";
+      track("calculator_used", { comInss: !!inss });
+    }
+  }, [age, retire, income, wealth, monthly, inss, valid]);
+
   // Leva tudo o que foi digitado para o onboarding, que já abre preenchido (antes ia para um login desativado).
   function start() {
     const prefill =
@@ -70,7 +82,7 @@ function Calculator() {
     e.preventDefault();
     if (!consent) return;
     setSending(true);
-    const ok = await saveLead(email, "calculadora");
+    const ok = await saveLead(email, "calculadora", calc.errors.length ? null : { age, retire, income, wealth, monthly, inss });
     setSending(false);
     if (ok) setSent(true);
   }

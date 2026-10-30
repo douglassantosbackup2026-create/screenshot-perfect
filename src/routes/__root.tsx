@@ -12,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { AchievementSheet } from "@/components/feedback";
+import { ConsentBanner } from "@/components/ConsentBanner";
+import { captureUtm, linkConsentToUser } from "@/lib/analytics/analytics";
+import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { APP_NAME, APP_TAGLINE } from "@/lib/seo";
@@ -130,6 +133,16 @@ function RootComponent() {
 
   // Só para poder instalar o app; fora do preview do editor (iframe) e do ambiente de desenvolvimento.
   useEffect(() => installClientErrorReporting(), []);
+  // Analytics: UTMs da página de entrada e, depois do login, a escolha do banner vai para a conta.
+  useEffect(() => {
+    captureUtm(window.location.search);
+    const { data } = supabase.auth.onAuthStateChange((_e, session) => {
+      // Fora do callback: chamar o Supabase dentro dele pode travar o cliente de auth.
+      const id = session?.user.id;
+      if (id) setTimeout(() => void linkConsentToUser(id), 0);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
   useEffect(() => {
     if (import.meta.env.PROD && window.self === window.top && "serviceWorker" in navigator) {
       void navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -142,6 +155,7 @@ function RootComponent() {
       <Outlet />
       <Toaster position="top-center" />
       <AchievementSheet />
+      <ConsentBanner />
     </QueryClientProvider>
   );
 }

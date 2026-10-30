@@ -32,6 +32,7 @@ import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
+import { Route as AuthenticatedAdminFunilRouteImport } from './routes/_authenticated/admin.funil'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 import { Route as ApiPublicClientErrorRouteImport } from './routes/api/public/client-error'
@@ -153,6 +154,11 @@ const AuthenticatedAdminConteudoRoute =
     path: '/admin/conteudo',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminFunilRoute = AuthenticatedAdminFunilRouteImport.update({
+  id: '/admin/funil',
+  path: '/admin/funil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminUsuariosRoute =
   AuthenticatedAdminUsuariosRouteImport.update({
     id: '/admin/usuarios',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/planos': typeof AuthenticatedPlanosRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/_authenticated/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/planos'
     | '/revisao'
     | '/admin/conteudo'
+    | '/admin/funil'
     | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/public/client-error'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/planos'
     | '/revisao'
     | '/admin/conteudo'
+    | '/admin/funil'
     | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/public/client-error'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
     | '/_authenticated/planos'
     | '/_authenticated/revisao'
     | '/_authenticated/admin/conteudo'
+    | '/_authenticated/admin/funil'
     | '/_authenticated/admin/usuarios'
     | '/_authenticated/programa/$dia'
     | '/api/public/client-error'
@@ -542,6 +554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminConteudoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/funil': {
+      id: '/_authenticated/admin/funil'
+      path: '/admin/funil'
+      fullPath: '/admin/funil'
+      preLoaderRoute: typeof AuthenticatedAdminFunilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/usuarios': {
       id: '/_authenticated/admin/usuarios'
       path: '/admin/usuarios'
@@ -594,6 +613,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
   AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
+  AuthenticatedAdminFunilRoute: typeof AuthenticatedAdminFunilRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
 }
@@ -612,6 +632,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
+  AuthenticatedAdminFunilRoute: AuthenticatedAdminFunilRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
   AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
 }

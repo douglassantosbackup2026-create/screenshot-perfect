@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage, passwordProblems, safePath } from "@/lib/auth/password";
 import { CALC_PREFILL_KEY } from "@/lib/data/demo-store";
 import { pageHead } from "@/lib/seo";
+import { track } from "@/lib/analytics/analytics";
 
 export const Route = createFileRoute("/cadastro")({
   validateSearch: z.object({ redirect: z.string().optional() }),
@@ -43,6 +44,7 @@ function SignUp() {
     });
     setBusy(false);
     if (error) return void toast.error(authErrorMessage(error.message));
+    track("signup_completed", { confirmEmail: !data.session });
     if (!data.session) {
       toast("Conta criada. Confirme pelo link que enviamos para o seu e-mail e depois entre.");
       return void navigate({ to: "/entrar", search: { redirect: next }, replace: true });

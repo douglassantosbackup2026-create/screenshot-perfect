@@ -96,6 +96,16 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
           console.error("subscription upsert failed", error.message);
           return new Response("db error", { status: 500 });
         }
+        // Funil: só de quem aceitou o analytics (a escolha do banner fica no perfil). Falha aqui não muda a resposta.
+        if (decision.status === "authorized") {
+          const { data: profile } = await supabaseAdmin.from("profiles").select("analytics_consent").eq("id", decision.userId).maybeSingle();
+          if (profile?.analytics_consent) {
+            const tracked = await supabaseAdmin
+              .from("analytics_events")
+              .insert({ user_id: decision.userId, name: "subscription_authorized", props: { period: decision.period } });
+            if (tracked.error) console.error("analytics insert failed", tracked.error.message);
+          }
+        }
         return new Response("ok");
       },
     },

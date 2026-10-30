@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { createSubscription } from "@/lib/billing/subscription.functions";
 import { PRICES_CENTS, type BillingPeriod } from "@/lib/billing/catalog";
+import { track } from "@/lib/analytics/analytics";
 
 const formatCents = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -15,7 +16,10 @@ export function SubscribeButtons() {
     setBusy(period);
     try {
       const r = await subscribe({ data: { plan: "inteligencia", period } });
-      if (r.url) window.location.href = r.url;
+      if (r.url) {
+        track("checkout_started", { period });
+        window.location.href = r.url;
+      }
       else toast.error(r.error ?? "Não foi possível abrir a assinatura.");
     } catch {
       toast.error("Não foi possível abrir a assinatura. Tente de novo.");

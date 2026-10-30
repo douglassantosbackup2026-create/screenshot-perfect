@@ -1,6 +1,42 @@
 import { expect, test } from "@playwright/test";
 import { makeSeed } from "../src/lib/data/demo-store";
 import { ACTIVE, profileOf, signIn, transactionsOf } from "./fake-supabase";
+import { POLICY_VERSION } from "../src/lib/analytics/analytics";
+
+// O aviso de privacidade cobre o rodapé da tela: os testes começam com a escolha feita (recusado),
+// menos os que testam o próprio aviso.
+test.beforeEach(async ({ page }, info) => {
+  if (info.title.startsWith("aviso de privacidade")) return;
+  await page.addInitScript((v) => window.localStorage.setItem("mk_consent", JSON.stringify({ choice: "recusado", version: v, at: "2026-01-01T00:00:00Z" })), POLICY_VERSION);
+});
+
+test("aviso de privacidade: aparece na primeira visita, guarda a escolha e reabre pelas preferências", async ({ page }) => {
+  const consents: unknown[] = [];
+  await page.route("**/rest/v1/rpc/record_consent", async (route) => {
+    consents.push(route.request().postDataJSON());
+    await route.fulfill({ status: 204 });
+  });
+  await page.route("**/rest/v1/rpc/track_event", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/privacidade");
+  const banner = page.getByRole("dialog", { name: "Privacidade" });
+  await expect(banner).toBeVisible();
+  await banner.getByRole("button", { name: "Aceitar" }).click();
+  await expect(banner).toBeHidden();
+  await expect.poll(() => consents.length).toBe(1);
+  expect(consents[0]).toMatchObject({ p_choice: "aceito", p_version: POLICY_VERSION });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Privacidade" })).toBeVisible();
+  await expect(banner).toBeHidden();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Preferências de privacidade" }).click();
+  await banner.getByRole("button", { name: "Recusar" }).click();
+  await expect.poll(() => consents.length).toBe(2);
+  // Revogar registra o mesmo id que tinha aceitado (para a auditoria) e apaga o id do navegador.
+  const first = consents[0] as { p_anon: string };
+  expect(consents[1]).toMatchObject({ p_anon: first.p_anon, p_choice: "recusado" });
+  expect(await page.evaluate(() => window.localStorage.getItem("mk_anon"))).toBeNull();
+});
 
 test("logada, o botão da landing abre o app sem apagar os dados", async ({ page }) => {
   const db = await signIn(page, makeSeed());
