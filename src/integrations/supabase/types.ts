@@ -511,6 +511,69 @@ export type Database = {
           },
         ]
       }
+      whatsapp_links: {
+        Row: {
+          discreet: boolean
+          last_tx_id: string | null
+          phone: string
+          proactive_opt_in: boolean
+          updated_at: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          discreet?: boolean
+          last_tx_id?: string | null
+          phone: string
+          proactive_opt_in?: boolean
+          updated_at?: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          discreet?: boolean
+          last_tx_id?: string | null
+          phone?: string
+          proactive_opt_in?: boolean
+          updated_at?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_link_codes: {
+        Row: {
+          code: string
+          expires_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          expires_at: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          expires_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          id: string
+          received_at: string
+        }
+        Insert: {
+          id: string
+          received_at?: string
+        }
+        Update: {
+          id?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           consent_marketing: boolean

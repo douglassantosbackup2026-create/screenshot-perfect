@@ -970,6 +970,27 @@ async function reloadAfterConflict(): Promise<boolean> {
   return false;
 }
 
+/**
+ * Ao voltar para a aba, confere se o banco mudou por fora (um lançamento pelo WhatsApp, outro aparelho) e,
+ * se mudou, carrega a versão nova. Só quando não há nada desta aba esperando para gravar; no máximo a cada 15 s.
+ */
+let lastRefresh = 0;
+export async function refreshFromCloud(now = Date.now()): Promise<boolean> {
+  const user = cloudUser;
+  if (!user || saving || saveTimer || saveStatus === "error" || now - lastRefresh < 15_000) return false;
+  lastRefresh = now;
+  const { supabase } = await import("@/integrations/supabase/client");
+  const head = await supabase.from("user_state").select("updated_at").eq("user_id", user).maybeSingle();
+  if (head.error || !head.data || head.data.updated_at === cloudVersion) return false;
+  const { data, error } = await supabase.from("user_state").select("data, updated_at").eq("user_id", user).maybeSingle();
+  // Algo desta aba entrou no meio: ela grava primeiro, e o conflito (se houver) é tratado na gravação.
+  if (error || !data || user !== cloudUser || saving || saveTimer) return false;
+  state = migrate(data.data);
+  cloudVersion = data.updated_at;
+  listeners.forEach((l) => l());
+  return true;
+}
+
 function scheduleRetry() {
   if (retryTimer || retries >= RETRY_MS.length) return;
   retryTimer = setTimeout(() => {
@@ -1015,7 +1036,10 @@ if (typeof window !== "undefined") {
     void flushSave();
   };
   window.addEventListener("pagehide", flushNow);
-  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && flushNow());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushNow();
+    else void refreshFromCloud();
+  });
   window.addEventListener("online", () => saveStatus === "error" && void retrySave());
 }
 
@@ -1629,50 +1653,22 @@ export const demo = {
    * Lança uma entrada ou saída. Sem categoria, as regras escolhem uma.
    * `remember` cria a regra "favorecido igual a … → esta categoria" para os próximos.
    */
-  addTransaction(input: { accountId: string; date: string; amount: number; payee: string; categoryId?: string | null; note?: string | null; remember?: boolean }) {
+  addTransaction(input: NewTxInput) {
     const s = structuredClone(load());
-    const t = validTx(s, input);
-    const withRule = applyRules(s.categoryRules, { ...t, categoryId: input.categoryId ?? null });
-    const created = newTransaction({ ...withRule, note: input.note ?? null }, new Date());
-    s.transactions.push(created);
-    if (input.remember) rememberRule(s, t.payee, input.categoryId ?? null);
-    s.lastAction = undoEntry("Lançamento", { addedTxIds: [created.id] });
+    const created = addTransactionTo(s, input, new Date());
     commit(s);
     return created;
   },
   /** Edita um lançamento. Numa transferência, valor, data e nota mudam nas duas pernas. */
-  updateTransaction(id: string, patch: { date?: string; amount?: number; payee?: string; categoryId?: string | null; note?: string | null; remember?: boolean }) {
+  updateTransaction(id: string, patch: TxPatch) {
     const s = structuredClone(load());
-    const t = s.transactions.find((x) => x.id === id);
-    if (!t) throw new Error("Lançamento não encontrado.");
-    const before = s.transactions.filter((x) => x.id === id || x.id === t.transferId);
-    const next = { ...t, ...validTx(s, { ...t, ...patch }), note: patch.note === undefined ? t.note : patch.note };
-    if (t.transferId) {
-      next.categoryId = null;
-      if (next.amount * t.amount < 0) throw new Error("Numa transferência, troque a direção excluindo e lançando de novo.");
-      s.transactions = s.transactions.map((x) =>
-        x.id === t.transferId ? { ...x, date: next.date, amount: -next.amount, note: next.note } : x.id === id ? next : x,
-      );
-    } else {
-      next.categoryId = patch.categoryId === undefined ? t.categoryId : patch.categoryId;
-      s.transactions = s.transactions.map((x) => (x.id === id ? next : x));
-      if (patch.remember) rememberRule(s, next.payee, next.categoryId);
-    }
-    s.lastAction = undoEntry("Edição", { restoreTxs: structuredClone(before) });
+    updateTransactionIn(s, id, patch);
     commit(s);
   },
   /** Exclui o lançamento e, se for transferência, a outra perna. O aporte do Diário, se houver, continua lá. */
   deleteTransaction(id: string) {
     const s = structuredClone(load());
-    const t = s.transactions.find((x) => x.id === id);
-    const removed = s.transactions.filter((x) => x.id === id || x.id === t?.transferId);
-    s.transactions = s.transactions.filter((x) => x.id !== id && x.id !== t?.transferId);
-    // Ocorrência de recorrência ou parcela excluída não volta na próxima vez que as recorrências rodarem.
-    if (t?.recurringId && t.occurrenceDate) {
-      const date = t.occurrenceDate;
-      s.recurring = s.recurring.map((r) => (r.id === t.recurringId ? { ...r, skipped: [...new Set([...(r.skipped ?? []), date])] } : r));
-    }
-    s.lastAction = undoEntry("Exclusão", { restoreTxs: removed });
+    deleteTransactionIn(s, id);
     commit(s);
   },
   /**
@@ -1992,6 +1988,71 @@ function computeBudgetMonths(s: DemoState, month: string) {
 }
 
 /** Confere conta, data, valor e favorecido de um lançamento. */
+export type NewTxInput = {
+  accountId: string;
+  date: string;
+  amount: number;
+  payee: string;
+  categoryId?: string | null;
+  note?: string | null;
+  remember?: boolean;
+};
+
+/**
+ * Lança na cópia `s` (edita o objeto recebido) e devolve o lançamento criado. É a regra de `demo.addTransaction`,
+ * separada para o servidor aplicar a mesma coisa num estado lido do banco (src/lib/whatsapp).
+ */
+export function addTransactionTo(s: DemoState, input: NewTxInput, now: Date): Transaction {
+  const t = validTx(s, input);
+  const withRule = applyRules(s.categoryRules, { ...t, categoryId: input.categoryId ?? null });
+  const created = newTransaction({ ...withRule, note: input.note ?? null }, now);
+  s.transactions.push(created);
+  if (input.remember) rememberRule(s, t.payee, input.categoryId ?? null);
+  s.lastAction = undoEntry("Lançamento", { addedTxIds: [created.id] });
+  return created;
+}
+
+export type TxPatch = { date?: string; amount?: number; payee?: string; categoryId?: string | null; note?: string | null; remember?: boolean };
+
+/** Edita na cópia `s` um lançamento. Numa transferência, valor, data e nota mudam nas duas pernas. */
+export function updateTransactionIn(s: DemoState, id: string, patch: TxPatch): void {
+  const t = s.transactions.find((x) => x.id === id);
+  if (!t) throw new Error("Lançamento não encontrado.");
+  const before = s.transactions.filter((x) => x.id === id || x.id === t.transferId);
+  const next = { ...t, ...validTx(s, { ...t, ...patch }), note: patch.note === undefined ? t.note : patch.note };
+  if (t.transferId) {
+    next.categoryId = null;
+    if (next.amount * t.amount < 0) throw new Error("Numa transferência, troque a direção excluindo e lançando de novo.");
+    s.transactions = s.transactions.map((x) =>
+      x.id === t.transferId ? { ...x, date: next.date, amount: -next.amount, note: next.note } : x.id === id ? next : x,
+    );
+  } else {
+    next.categoryId = patch.categoryId === undefined ? t.categoryId : patch.categoryId;
+    s.transactions = s.transactions.map((x) => (x.id === id ? next : x));
+    if (patch.remember) rememberRule(s, next.payee, next.categoryId);
+  }
+  s.lastAction = undoEntry("Edição", { restoreTxs: structuredClone(before) });
+}
+
+/** Exclui da cópia `s` o lançamento (e a outra perna, se for transferência). Devolve se achou. */
+export function deleteTransactionIn(s: DemoState, id: string): boolean {
+  const t = s.transactions.find((x) => x.id === id);
+  const removed = s.transactions.filter((x) => x.id === id || x.id === t?.transferId);
+  s.transactions = s.transactions.filter((x) => x.id !== id && x.id !== t?.transferId);
+  // Ocorrência de recorrência ou parcela excluída não volta na próxima vez que as recorrências rodarem.
+  if (t?.recurringId && t.occurrenceDate) {
+    const date = t.occurrenceDate;
+    s.recurring = s.recurring.map((r) => (r.id === t.recurringId ? { ...r, skipped: [...new Set([...(r.skipped ?? []), date])] } : r));
+  }
+  s.lastAction = undoEntry("Exclusão", { restoreTxs: removed });
+  return removed.length > 0;
+}
+
+/** Estado salvo (de user_state ou do aparelho) consertado e no formato atual. */
+export function parseStoredState(raw: unknown): DemoState {
+  return migrate(raw);
+}
+
 function validTx(s: DemoState, t: { accountId: string; date: string; amount: number; payee: string }) {
   if (!s.accounts.some((a) => a.id === t.accountId)) throw new Error("Conta não encontrada.");
   if (!isDate(t.date)) throw new Error("Data inválida.");

@@ -18,6 +18,7 @@ import { JOURNEY_ENABLED } from "@/lib/features";
 import { pageHead } from "@/lib/seo";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelSubscription } from "@/lib/billing/subscription.functions";
+import { WHATSAPP_ENABLED, WhatsAppSection } from "@/components/WhatsAppSection";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => pageHead(
@@ -174,6 +175,8 @@ function Profile() {
           />
         </div>
       </section>
+
+      {WHATSAPP_ENABLED && <WhatsAppSection />}
 
       <section className="mt-10 divide-y divide-border">
         <h2 className="pb-2 text-lg">Privacidade</h2>

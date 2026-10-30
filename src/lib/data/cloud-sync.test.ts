@@ -141,3 +141,29 @@ describe("falhas inesperadas ao salvar", () => {
     expect(name()).toBe("Depois do erro");
   });
 });
+
+describe("mudança feita por fora (WhatsApp, outro aparelho)", () => {
+  it("ao voltar para a aba, carrega a versão nova do banco", async () => {
+    const store = await freshStore();
+    await store.attachUser("u1");
+    await store.flushSave();
+    // O servidor (webhook do WhatsApp) grava direto no banco.
+    const other = structuredClone(row().data) as { profile: { displayName: string } };
+    other.profile.displayName = "Pelo WhatsApp";
+    Object.assign(row(), { data: other, updated_at: stamp() });
+
+    expect(await store.refreshFromCloud(Date.now() + 60_000)).toBe(true);
+    expect(store.demo.exportData().profile.displayName).toBe("Pelo WhatsApp");
+    // Sem mudança nova, não recarrega.
+    expect(await store.refreshFromCloud(Date.now() + 120_000)).toBe(false);
+  });
+
+  it("com alteração desta aba esperando para gravar, não sobrescreve", async () => {
+    const store = await freshStore();
+    await store.attachUser("u1");
+    Object.assign(row(), { updated_at: stamp() });
+    store.demo.updateProfile({ displayName: "Desta aba" });
+    expect(await store.refreshFromCloud(Date.now() + 60_000)).toBe(false);
+    expect(store.demo.exportData().profile.displayName).toBe("Desta aba");
+  });
+});
