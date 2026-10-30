@@ -5,8 +5,8 @@
 alter table public.goals
   add column template text not null default 'outro'
     check (template in ('reserva', 'viagem', 'imovel', 'outro')),
-  add column asset_ids uuid[] not null default '{}',
-  add column account_ids uuid[] not null default '{}',
+  add column asset_ids text[] not null default '{}',
+  add column account_ids text[] not null default '{}',
   add column monthly_contribution numeric(14,2) check (monthly_contribution is null or monthly_contribution >= 0),
   add column expected_return numeric(6,4) check (expected_return is null or expected_return between -0.5 and 0.5);
 

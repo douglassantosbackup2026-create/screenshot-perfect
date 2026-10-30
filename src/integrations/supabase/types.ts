@@ -222,6 +222,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_connections: {
+        Row: {
+          consent_expires_at: string | null
+          created_at: string
+          id: string
+          institution: string | null
+          item_id: string
+          last_synced_at: string | null
+          provider: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          consent_expires_at?: string | null
+          created_at?: string
+          id?: string
+          institution?: string | null
+          item_id: string
+          last_synced_at?: string | null
+          provider: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          consent_expires_at?: string | null
+          created_at?: string
+          id?: string
+          institution?: string | null
+          item_id?: string
+          last_synced_at?: string | null
+          provider?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       budget_assignments: {
         Row: {
           amount: number

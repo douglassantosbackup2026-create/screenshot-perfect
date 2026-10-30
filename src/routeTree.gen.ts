@@ -38,6 +38,7 @@ import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenti
 import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
 import { Route as ApiPublicClientErrorRouteImport } from './routes/api/public/client-error'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
+import { Route as ApiPublicOpenfinanceWebhookRouteImport } from './routes/api/public/openfinance/webhook'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -188,6 +189,12 @@ const ApiPublicMercadopagoWebhookRoute =
     path: '/api/public/mercadopago/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOpenfinanceWebhookRoute =
+  ApiPublicOpenfinanceWebhookRouteImport.update({
+    id: '/api/public/openfinance/webhook',
+    path: '/api/public/openfinance/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWhatsappWebhookRoute =
   ApiPublicWhatsappWebhookRouteImport.update({
     id: '/api/public/whatsapp/webhook',
@@ -224,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
+  '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -255,6 +263,7 @@ export interface FileRoutesByTo {
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
+  '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesById {
@@ -288,6 +297,7 @@ export interface FileRoutesById {
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
+  '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRouteTypes {
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
+    | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
+    | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
   id:
     | '__root__'
@@ -384,6 +396,7 @@ export interface FileRouteTypes {
     | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
+    | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -401,6 +414,7 @@ export interface RootRouteChildren {
   ApiCronLembretesRoute: typeof ApiCronLembretesRoute
   ApiPublicClientErrorRoute: typeof ApiPublicClientErrorRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
+  ApiPublicOpenfinanceWebhookRoute: typeof ApiPublicOpenfinanceWebhookRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
 }
 
@@ -609,6 +623,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMercadopagoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/openfinance/webhook': {
+      id: '/api/public/openfinance/webhook'
+      path: '/api/public/openfinance/webhook'
+      fullPath: '/api/public/openfinance/webhook'
+      preLoaderRoute: typeof ApiPublicOpenfinanceWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/whatsapp/webhook': {
       id: '/api/public/whatsapp/webhook'
       path: '/api/public/whatsapp/webhook'
@@ -674,6 +695,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronLembretesRoute: ApiCronLembretesRoute,
   ApiPublicClientErrorRoute: ApiPublicClientErrorRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
+  ApiPublicOpenfinanceWebhookRoute: ApiPublicOpenfinanceWebhookRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
 }
 export const routeTree = rootRouteImport

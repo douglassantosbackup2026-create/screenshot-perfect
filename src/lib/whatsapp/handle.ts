@@ -1,17 +1,18 @@
 // Executa uma mensagem do WhatsApp: quem é, se pode usar, o plano do pipeline e a gravação no estado da pessoa.
 // Só no servidor (usa o service_role). A decisão fica em pipeline.ts; aqui é só ler, gravar e responder.
-import { addTransactionTo, deleteTransactionIn, parseStoredState, updateTransactionIn, type DemoState } from "@/lib/data/demo-store";
+import { addTransactionTo, deleteTransactionIn, parseStoredState, updateTransactionIn } from "@/lib/data/demo-store";
+import { readState, updateState as updateStateIn, type Admin } from "@/lib/data/server-state";
 import { resolveAccess } from "@/lib/entitlements/matrix";
 import { APP_NAME } from "@/lib/seo";
 import type { Inbound } from "./inbound";
 import type { Outbound } from "./outbound";
 import { addedReply, categoryChangedReply, deletedReply, help, planReply, planText, type Ctx, type Plan } from "./pipeline";
 
-type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 type Link = { user_id: string; discreet: boolean; last_tx_id: string | null };
 
 const BILLING_ENABLED = import.meta.env["VITE_BILLING_ENABLED"] === "true";
-const SAVE_ATTEMPTS = 3;
+const BUSY = "Seus dados estavam sendo salvos ao mesmo tempo no app. Mande de novo, por favor.";
+const updateState = <T,>(db: Admin, userId: string, change: Parameters<typeof updateStateIn<T>>[2]) => updateStateIn(db, userId, change, BUSY);
 
 const text = (t: string): Outbound => ({ kind: "text", text: t });
 
@@ -99,41 +100,6 @@ async function hasAccess(db: Admin, userId: string, now: Date): Promise<boolean>
   if (!BILLING_ENABLED) return true;
   const { data } = await db.from("entitlements").select("plan, valid_until").eq("user_id", userId).maybeSingle();
   return resolveAccess({ billingEnabled: true, entitlement: data ? { plan: data.plan, validUntil: data.valid_until } : null, now }).active;
-}
-
-async function readState(db: Admin, userId: string): Promise<{ state: DemoState; version: string } | null> {
-  const { data, error } = await db.from("user_state").select("data, updated_at").eq("user_id", userId).maybeSingle();
-  if (error) throw new Error(`user_state: ${error.message}`);
-  return data ? { state: parseStoredState(data.data), version: data.updated_at } : null;
-}
-
-type Updated<T> = { ok: true; result: T; state: DemoState } | { ok: false; message: string };
-
-/**
- * Aplica `change` numa cópia do estado salvo e grava só se ninguém gravou no meio (mesma conferência de
- * updated_at do app). Se o app gravou antes, lê de novo e reaplica. Erro de regra (ex.: conta removida) volta como mensagem.
- */
-async function updateState<T>(db: Admin, userId: string, change: (draft: DemoState) => T): Promise<Updated<T>> {
-  for (let attempt = 0; attempt < SAVE_ATTEMPTS; attempt++) {
-    const loaded = await readState(db, userId);
-    if (!loaded) return { ok: false, message: "Não encontrei seus dados. Abra o app uma vez e tente de novo." };
-    const draft = structuredClone(loaded.state);
-    let result: T;
-    try {
-      result = change(draft);
-    } catch (e) {
-      return { ok: false, message: e instanceof Error ? e.message : "Não foi possível fazer isso agora." };
-    }
-    const { data, error } = await db
-      .from("user_state")
-      .update({ data: draft as never, updated_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .eq("updated_at", loaded.version)
-      .select("updated_at");
-    if (error) throw new Error(`user_state update: ${error.message}`);
-    if (data.length) return { ok: true, result, state: draft };
-  }
-  return { ok: false, message: "Seus dados estavam sendo salvos ao mesmo tempo no app. Mande de novo, por favor." };
 }
 
 // Estado vazio só para reconhecer o código de conexão antes de saber de quem é o número.

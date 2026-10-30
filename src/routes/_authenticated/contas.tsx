@@ -22,6 +22,7 @@ import { demo, useDemo, type Account, type CategoryKind, type DemoState } from "
 import { accountsOverview } from "@/lib/data/selectors";
 import { cn } from "@/lib/utils";
 import { errMsg } from "@/lib/errors";
+import { BankConnections, OPEN_FINANCE_ENABLED } from "@/components/BankConnections";
 
 export const Route = createFileRoute("/_authenticated/contas")({
   head: () => pageHead("Contas", "Suas contas, cartões e categorias, e as regras que categorizam os lançamentos sozinhas."),
@@ -82,7 +83,10 @@ function Accounts() {
                       >
                         <span>
                           <span className="block font-semibold">{a.name}</span>
-                          <span className="block text-xs text-muted-foreground">{accountKindLabel(a.kind)}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {accountKindLabel(a.kind)}
+                            {a.connectionId ? " · conectada ao banco" : ""}
+                          </span>
                         </span>
                         <span className={cn("money shrink-0 whitespace-nowrap text-sm", a.balance < 0 && "text-destructive")}>{money(a.balance)}</span>
                       </button>
@@ -97,6 +101,7 @@ function Accounts() {
         Estes saldos são do livro-caixa. O Patrimônio continua sendo a foto que você informa para o plano de aposentadoria; os dois não se somam.
       </p>
 
+      {OPEN_FINANCE_ENABLED && <BankConnections />}
       <Categories s={s} />
       <Rules s={s} />
       <AccountSheet editing={editing} onClose={() => setEditing(null)} />

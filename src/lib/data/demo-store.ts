@@ -155,7 +155,16 @@ export type Asset = {
 export type AssetValuation = { assetId: string; month: string; value: number; at: string };
 
 // ---------- Livro-caixa (valores em centavos, com sinal) ----------
-export type Account = { id: string; name: string; kind: AccountKind; openingBalance: number; createdAt: string };
+export type Account = {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  openingBalance: number;
+  createdAt: string;
+  /** Conta ligada a um banco por Open Finance: a conexão (bank_connections.id) e o id da conta no provedor. */
+  connectionId?: string | null;
+  externalId?: string | null;
+};
 export type CategoryKind = "receita" | "despesa";
 export type Category = { id: string; name: string; kind: CategoryKind };
 export type TxSource = "manual" | "importado" | "recorrente";
@@ -1094,6 +1103,16 @@ export async function refreshFromCloud(now = Date.now()): Promise<boolean> {
   return true;
 }
 
+/**
+ * Depois de uma mudança feita pelo servidor a pedido desta tela (sincronizar o banco): grava o que esta aba
+ * tinha e carrega a versão nova do banco já, sem esperar a volta para a aba.
+ */
+export async function reloadFromCloudNow(): Promise<boolean> {
+  if (!(await flushSave())) return false;
+  lastRefresh = 0;
+  return refreshFromCloud();
+}
+
 function scheduleRetry() {
   if (retryTimer || retries >= RETRY_MS.length) return;
   retryTimer = setTimeout(() => {
@@ -1982,25 +2001,9 @@ export const demo = {
   importTransactions(accountId: string, rows: ImportedTx[]) {
     let counts = { added: 0, matched: 0, duplicates: 0 };
     const result = mutate((s, now) => {
-      if (!s.accounts.some((a) => a.id === accountId)) throw new Error("Conta não encontrada.");
-      const existing = s.transactions
-        .filter((t) => t.accountId === accountId && !t.transferId)
-        .map((t) => ({ id: t.id, date: t.date, amount: t.amount, payee: t.payee, importedId: t.importedId, imported: t.source === "importado" }));
-      const r = dedupe(rows, existing);
-      // O lançamento manual fica (com a categoria da pessoa) e passa a carregar o identificador do banco.
-      const link = new Map(r.matched.map((m) => [m.existingId, m.tx.importedId]));
-      s.transactions = s.transactions.map((t) => (link.has(t.id) ? { ...t, importedId: link.get(t.id) ?? t.importedId } : t));
-      for (const row of r.fresh) {
-        const t = applyRules(s.categoryRules, { accountId, date: row.date, amount: row.amount, payee: row.payee.slice(0, 120), categoryId: null as string | null });
-        s.transactions.push(newTransaction({ ...t, note: row.memo, importedId: row.importedId, source: "importado" }, now));
-      }
-      counts = { added: r.fresh.length, matched: r.matched.length, duplicates: r.duplicates.length };
-      if (!r.fresh.length) return 0;
-      // XP pelo hábito de trazer o extrato, uma vez por mês; quantos lançamentos vieram não conta.
-      const a = awardXp(s.xpEvents, "statement_imported", "M:" + spDate(now).slice(0, 7), now.toISOString());
-      s.xpEvents = a.events;
-      markActive(s, now);
-      return a.awarded;
+      const r = importTransactionsInto(s, accountId, rows, now);
+      counts = { added: r.added, matched: r.matched, duplicates: r.duplicates };
+      return r.xp;
     });
     return { ...result, ...counts };
   },
@@ -2179,6 +2182,57 @@ export function addTransactionTo(s: DemoState, input: NewTxInput, now: Date): Tr
   s.transactions.push(created);
   if (input.remember) rememberRule(s, t.payee, input.categoryId ?? null);
   s.lastAction = undoEntry("Lançamento", { addedTxIds: [created.id] });
+  return created;
+}
+
+/**
+ * Importa um extrato na cópia `s` (edita o objeto recebido): separa novos, vinculados e duplicados (dedupe),
+ * aplica as regras de categoria e dá o XP do mês. É a regra de `demo.importTransactions`, separada para o
+ * servidor aplicar a mesma coisa (sincronização do banco por Open Finance, src/lib/openfinance).
+ */
+export function importTransactionsInto(s: DemoState, accountId: string, rows: ImportedTx[], now: Date) {
+  if (!s.accounts.some((a) => a.id === accountId)) throw new Error("Conta não encontrada.");
+  const existing = s.transactions
+    .filter((t) => t.accountId === accountId && !t.transferId)
+    .map((t) => ({ id: t.id, date: t.date, amount: t.amount, payee: t.payee, importedId: t.importedId, imported: t.source === "importado" }));
+  const r = dedupe(rows, existing);
+  // O lançamento manual fica (com a categoria da pessoa) e passa a carregar o identificador do banco.
+  const link = new Map(r.matched.map((m) => [m.existingId, m.tx.importedId]));
+  s.transactions = s.transactions.map((t) => (link.has(t.id) ? { ...t, importedId: link.get(t.id) ?? t.importedId } : t));
+  for (const row of r.fresh) {
+    const t = applyRules(s.categoryRules, { accountId, date: row.date, amount: row.amount, payee: row.payee.slice(0, 120), categoryId: null as string | null });
+    s.transactions.push(newTransaction({ ...t, note: row.memo, importedId: row.importedId, source: "importado" }, now));
+  }
+  const counts = { added: r.fresh.length, matched: r.matched.length, duplicates: r.duplicates.length };
+  if (!r.fresh.length) return { ...counts, xp: 0 };
+  // XP pelo hábito de trazer o extrato, uma vez por mês; quantos lançamentos vieram não conta.
+  const a = awardXp(s.xpEvents, "statement_imported", "M:" + spDate(now).slice(0, 7), now.toISOString());
+  s.xpEvents = a.events;
+  markActive(s, now);
+  return { ...counts, xp: a.awarded };
+}
+
+/**
+ * Conta do app ligada a uma conta do banco (Open Finance), na cópia `s`: devolve a existente ou cria uma
+ * com o saldo inicial dado. Usado pela sincronização no servidor.
+ */
+export function connectedAccountIn(
+  s: DemoState,
+  input: { connectionId: string; externalId: string; name: string; kind: AccountKind; openingBalance: number },
+  now: Date,
+): Account {
+  const found = s.accounts.find((a) => a.connectionId === input.connectionId && a.externalId === input.externalId);
+  if (found) return found;
+  const created: Account = {
+    id: newId(),
+    name: input.name.trim().slice(0, 60) || "Conta do banco",
+    kind: input.kind,
+    openingBalance: input.openingBalance,
+    createdAt: now.toISOString(),
+    connectionId: input.connectionId,
+    externalId: input.externalId,
+  };
+  s.accounts.push(created);
   return created;
 }
 
