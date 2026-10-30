@@ -11,6 +11,7 @@ test.beforeEach(async ({ page }, info) => {
 });
 
 test("aviso de privacidade: aparece na primeira visita, guarda a escolha e reabre pelas preferências", async ({ page }) => {
+  test.setTimeout(120_000);
   const consents: unknown[] = [];
   await page.route("**/rest/v1/rpc/record_consent", async (route) => {
     consents.push(route.request().postDataJSON());
@@ -19,7 +20,8 @@ test("aviso de privacidade: aparece na primeira visita, guarda a escolha e reabr
   await page.route("**/rest/v1/rpc/track_event", (route) => route.fulfill({ status: 204 }));
   await page.goto("/privacidade");
   const banner = page.getByRole("dialog", { name: "Privacidade" });
-  await expect(banner).toBeVisible();
+  // Primeiro teste da lista: com o servidor de desenvolvimento ainda frio, a página demora a hidratar.
+  await expect(banner).toBeVisible({ timeout: 60_000 });
   await banner.getByRole("button", { name: "Aceitar" }).click();
   await expect(banner).toBeHidden();
   await expect.poll(() => consents.length).toBe(1);

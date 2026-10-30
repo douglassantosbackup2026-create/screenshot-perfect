@@ -35,6 +35,7 @@ import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminFunilRouteImport } from './routes/_authenticated/admin.funil'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
+import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
 import { Route as ApiPublicClientErrorRouteImport } from './routes/api/public/client-error'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
@@ -171,6 +172,11 @@ const AuthenticatedProgramaDiaRoute =
     path: '/programa/$dia',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiCronLembretesRoute = ApiCronLembretesRouteImport.update({
+  id: '/api/cron/lembretes',
+  path: '/api/cron/lembretes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicClientErrorRoute = ApiPublicClientErrorRouteImport.update({
   id: '/api/public/client-error',
   path: '/api/public/client-error',
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -245,6 +252,7 @@ export interface FileRoutesByTo {
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
+  '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/admin/funil'
     | '/admin/usuarios'
     | '/programa/$dia'
+    | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
     | '/api/public/whatsapp/webhook'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/admin/funil'
     | '/admin/usuarios'
     | '/programa/$dia'
+    | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
     | '/api/public/whatsapp/webhook'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/funil'
     | '/_authenticated/admin/usuarios'
     | '/_authenticated/programa/$dia'
+    | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/mercadopago/webhook'
     | '/api/public/whatsapp/webhook'
@@ -386,6 +398,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SobreRoute: typeof SobreRoute
+  ApiCronLembretesRoute: typeof ApiCronLembretesRoute
   ApiPublicClientErrorRoute: typeof ApiPublicClientErrorRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
@@ -575,6 +588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProgramaDiaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/cron/lembretes': {
+      id: '/api/cron/lembretes'
+      path: '/api/cron/lembretes'
+      fullPath: '/api/cron/lembretes'
+      preLoaderRoute: typeof ApiCronLembretesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/client-error': {
       id: '/api/public/client-error'
       path: '/api/public/client-error'
@@ -651,6 +671,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SobreRoute: SobreRoute,
+  ApiCronLembretesRoute: ApiCronLembretesRoute,
   ApiPublicClientErrorRoute: ApiPublicClientErrorRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,

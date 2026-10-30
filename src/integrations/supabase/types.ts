@@ -1072,6 +1072,33 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reminder_log: {
         Row: {
           kind: string
@@ -1779,6 +1806,10 @@ export type Database = {
           p_reason: Database["public"]["Enums"]["snapshot_reason"]
         }
         Returns: Json
+      }
+      push_recipients: {
+        Args: never
+        Returns: { reminder_day: number; user_id: string }[]
       }
       reminder_recipients: {
         Args: never

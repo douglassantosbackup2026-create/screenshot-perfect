@@ -19,7 +19,8 @@ import { pageHead } from "@/lib/seo";
 import { useServerFn } from "@tanstack/react-start";
 import { cancelSubscription } from "@/lib/billing/subscription.functions";
 import { WHATSAPP_ENABLED, WhatsAppSection } from "@/components/WhatsAppSection";
-import { openConsentPreferences } from "@/lib/analytics/analytics";
+import { CONSENT_EVENTS, getConsent, setConsent } from "@/lib/analytics/analytics";
+import { PushToggle } from "@/components/PushToggle";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => pageHead(
@@ -62,6 +63,17 @@ function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [admin, setAdmin] = useState(false);
   useEffect(() => void isAdmin().then(setAdmin), []);
+  // Mesma escolha do aviso de privacidade (src/lib/analytics): mudar aqui ou lá vale para os dois.
+  const [consent, setConsentState] = useState(getConsent);
+  useEffect(() => {
+    const sync = () => setConsentState(getConsent());
+    window.addEventListener(CONSENT_EVENTS.changed, sync);
+    return () => window.removeEventListener(CONSENT_EVENTS.changed, sync);
+  }, []);
+  function changeConsent(on: boolean) {
+    void setConsent(on ? "aceito" : "recusado");
+    demo.updateProfile({ analyticsConsent: on });
+  }
   async function signOut() {
     if (!(await flushSave())) {
       toast.error("Sua última alteração ainda não foi salva. Confira a internet e tente sair de novo.");
@@ -163,7 +175,7 @@ function Profile() {
             onCheckedChange={(v) => handleResult(demo.setEmergencyFund(v))}
           />
         </Row>
-        {/* Lembretes por notificação ou e-mail ainda não existem: só o aviso dentro do app usa este dia. */}
+        {/* O dia vale para o aviso no Início e para a notificação do fechamento (se ligada abaixo). */}
         <div className="py-3">
           <NumberField
             label="Dia em que você recebe"
@@ -175,6 +187,7 @@ function Profile() {
             hint="A partir desse dia, o Início lembra de registrar o aporte e o patrimônio do mês."
           />
         </div>
+        <PushToggle />
       </section>
 
       {WHATSAPP_ENABLED && <WhatsAppSection />}
@@ -184,8 +197,8 @@ function Profile() {
         <Row label="Ocultar valores por padrão" hint="Lançamentos, Patrimônio e Progresso abrem com os valores escondidos.">
           <Switch checked={s.profile.hideValues} onCheckedChange={(v) => demo.updateProfile({ hideValues: v })} />
         </Row>
-        <Row label="Permitir dados de uso anônimos" hint="Nunca inclui valores financeiros.">
-          <Switch checked={s.profile.analyticsConsent} onCheckedChange={(v) => demo.updateProfile({ analyticsConsent: v })} />
+        <Row label="Permitir medir o uso do app" hint="Só etapas como cadastro e assinatura, no nosso próprio banco. Nunca inclui valores.">
+          <Switch checked={consent === "aceito"} onCheckedChange={(v) => changeConsent(v)} />
         </Row>
         <div className="flex flex-col gap-2 pt-4">
           <Button variant="outline" onClick={exportData}>
@@ -201,9 +214,6 @@ function Profile() {
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
         <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Sua assinatura</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
-        <button type="button" className="min-h-11 py-3 text-left" onClick={openConsentPreferences}>
-          Preferências de privacidade
-        </button>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
         {admin && <Link to="/admin/usuarios" className="min-h-11 py-3">Admin de usuários</Link>}
