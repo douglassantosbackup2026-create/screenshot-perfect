@@ -749,60 +749,77 @@ function migrate(input: unknown): DemoState {
 // ---------- Store ----------
 let state: DemoState | null = null;
 
-// Cache de leitura: contas pesadas (orçamento, carteira, avisos) rodam uma vez enquanto as partes do
-// estado que elas leem não mudarem. As partes lidas são anotadas sozinhas: o cálculo recebe o estado por
-// um Proxy que registra cada chave de topo acessada, então não há lista de dependências para esquecer.
-// Com o commit reaproveitando as fatias iguais, mudar o perfil não refaz o orçamento, por exemplo.
-// Só vale para o estado atual: um rascunho dentro de `mutate` nunca entra no cache.
+// Leitura rastreada: um Proxy do estado que anota cada chave de topo lida (transactions, profile…).
+// Usado pelo cache de seletores (memoOnState) e pelo memo de componentes (memoBySlices): o que foi lido
+// é a dependência, então não há lista para escrever nem para esquecer. Percorrer todas as chaves
+// (espalhar, Object.keys) conta como depender do estado inteiro ("*").
+type ReadKey = keyof DemoState | "*";
+type Tracked = { real: DemoState; onRead: (k: ReadKey) => void };
+const trackedStates = new WeakMap<object, Tracked>();
+
+/** O estado de verdade por trás de um estado rastreado (ou ele mesmo). */
+export function unwrapState(s: DemoState): DemoState {
+  return trackedStates.get(s)?.real ?? s;
+}
+
+/**
+ * Embrulha `real` anotando as leituras. Com `followLive`, lê sempre o estado mais recente (para quem guarda o
+ * objeto e lê depois, num clique). O alvo do Proxy é um objeto vazio: o estado vivo é congelado em dev, e um
+ * Proxy sobre objeto congelado não pode devolver outro valor.
+ */
+export function trackState(real: DemoState, onRead: (k: ReadKey) => void, opts: { followLive?: boolean } = {}): DemoState {
+  const follow = !!opts.followLive && real === state;
+  const source = () => (follow && state ? state : real);
+  const proxy = new Proxy({} as DemoState, {
+    get(_, k) {
+      if (typeof k === "string") onRead(k as keyof DemoState);
+      return Reflect.get(source(), k);
+    },
+    has(_, k) {
+      if (typeof k === "string") onRead(k as keyof DemoState);
+      return Reflect.has(source(), k);
+    },
+    ownKeys() {
+      onRead("*");
+      return Reflect.ownKeys(source());
+    },
+    getOwnPropertyDescriptor(_, k) {
+      const d = Reflect.getOwnPropertyDescriptor(source(), k);
+      return d ? { ...d, configurable: true } : undefined;
+    },
+  });
+  trackedStates.set(proxy, { real, onRead });
+  return proxy;
+}
+
+// Cache de leitura: contas pesadas (orçamento, carteira, avisos) rodam uma vez enquanto as partes do estado
+// que elas leem não mudarem. Com o commit reaproveitando as fatias iguais, mudar o perfil não refaz o
+// orçamento, por exemplo. Só vale para o estado atual: um rascunho dentro de `mutate` nunca entra no cache.
 type MemoEntry = { reads: [keyof DemoState, unknown][]; all: boolean; value: unknown };
 const memo = new Map<string, MemoEntry>();
 const MEMO_MAX = 300;
-/** Quem está calculando agora (cálculos em cache podem chamar outros): as leituras sobem para todos. */
-const tracking: { reads: Set<keyof DemoState>; all: boolean }[] = [];
-const tracked = new WeakMap<object, DemoState>();
-
-function noteReads(keys: Iterable<keyof DemoState>, all: boolean) {
-  for (const t of tracking) {
-    for (const k of keys) t.reads.add(k);
-    if (all) t.all = true;
-  }
-}
 
 export function memoOnState<T>(s: DemoState, key: string, compute: (s: DemoState) => T): T {
-  const real = tracked.get(s) ?? s;
+  // Quem chamou pode estar rastreando (outro cálculo em cache, um componente): as leituras sobem para ele.
+  const outer = trackedStates.get(s);
+  const real = outer?.real ?? s;
   if (real !== state) return compute(s);
   const hit = memo.get(key);
   if (hit && !hit.all && hit.reads.every(([k, v]) => real[k] === v)) {
-    noteReads(hit.reads.map(([k]) => k), false);
+    if (outer) for (const [k] of hit.reads) outer.onRead(k);
     return hit.value as T;
   }
-  const frame = { reads: new Set<keyof DemoState>(), all: false };
-  const proxy = new Proxy(real, {
-    get(target, k, receiver) {
-      if (typeof k === "string") frame.reads.add(k as keyof DemoState);
-      return Reflect.get(target, k, receiver);
-    },
-    has(target, k) {
-      if (typeof k === "string") frame.reads.add(k as keyof DemoState);
-      return Reflect.has(target, k);
-    },
-    // Percorrer todas as chaves (espalhar, Object.keys) depende do estado inteiro.
-    ownKeys(target) {
-      frame.all = true;
-      return Reflect.ownKeys(target);
-    },
-  });
-  tracked.set(proxy, real);
-  tracking.push(frame);
-  let value: T;
-  try {
-    value = compute(proxy);
-  } finally {
-    tracking.pop();
-  }
-  noteReads(frame.reads, frame.all);
+  const reads = new Set<keyof DemoState>();
+  let all = false;
+  const value = compute(
+    trackState(real, (k) => {
+      if (k === "*") all = true;
+      else reads.add(k);
+      outer?.onRead(k);
+    }),
+  );
   if (memo.size >= MEMO_MAX) memo.clear();
-  memo.set(key, { reads: [...frame.reads].map((k) => [k, real[k]]), all: frame.all, value });
+  memo.set(key, { reads: [...reads].map((k) => [k, real[k]]), all, value });
   return value;
 }
 const listeners = new Set<() => void>();
