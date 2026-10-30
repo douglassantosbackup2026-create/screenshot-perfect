@@ -91,6 +91,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          billing_enforced: boolean
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          billing_enforced?: boolean
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          billing_enforced?: boolean
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       asset_valuations: {
         Row: {
           asset_id: string
@@ -416,33 +434,6 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valid_until?: string
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          period: string
-          plan: string
-          preapproval_id: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          period: string
-          plan: string
-          preapproval_id: string
-          status: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          period?: string
-          plan?: string
-          preapproval_id?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -1063,6 +1054,33 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          period: string
+          plan: string
+          preapproval_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          period: string
+          plan: string
+          preapproval_id: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          period?: string
+          plan?: string
+          preapproval_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           created_at: string
@@ -1572,6 +1590,7 @@ export type Database = {
         }[]
       }
       get_my_progress: { Args: never; Returns: Json }
+      has_active_entitlement: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
