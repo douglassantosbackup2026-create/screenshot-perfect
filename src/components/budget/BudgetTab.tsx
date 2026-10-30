@@ -1,6 +1,6 @@
 // Orçamento, na área Dinheiro: "a distribuir", o envelope Aposentadoria ligado ao plano, os envelopes de gasto e as contas fixas.
 // Só exibe; as contas vêm de src/lib/calc/budget.ts por src/lib/data/selectors.ts.
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Repeat, Sparkles, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -136,7 +136,7 @@ export function BudgetTab({ s }: { s: DemoState }) {
           </div>
           <ul className="mt-1 divide-y divide-border">
             {v.spending.map((e) => (
-              <EnvelopeRow key={e.id} e={e} month={month} onEdit={() => setEditing(e)} onMove={() => setMoving(e)} />
+              <EnvelopeRowMemo key={e.id} e={e} month={month} onEdit={setEditing} onMove={setMoving} />
             ))}
           </ul>
         </section>
@@ -221,11 +221,11 @@ function AssignInput({ month, envelopeId, value, label }: { month: string; envel
   );
 }
 
-function EnvelopeRow({ e, month, onEdit, onMove }: { e: Envelope; month: string; onEdit: () => void; onMove: () => void }) {
+function EnvelopeRow({ e, month, onEdit, onMove }: { e: Envelope; month: string; onEdit: (e: Envelope) => void; onMove: (e: Envelope) => void }) {
   return (
     <li className="grid grid-cols-[1fr_7rem] items-center gap-x-3 gap-y-1 py-3 sm:grid-cols-[1fr_8rem_7rem_7rem]">
       <div className="min-w-0">
-        <button type="button" onClick={onEdit} className="truncate text-left font-semibold hover:text-primary">
+        <button type="button" onClick={() => onEdit(e)} className="truncate text-left font-semibold hover:text-primary">
           {e.name}
         </button>
         <p className="truncate text-xs text-muted-foreground">
@@ -236,7 +236,7 @@ function EnvelopeRow({ e, month, onEdit, onMove }: { e: Envelope; month: string;
               {e.suggested !== null && e.suggested !== e.assigned && ` · pede ${formatMoney(e.suggested)}`}
             </>
           ) : (
-            <button type="button" onClick={onEdit} className="hover:text-foreground">
+            <button type="button" onClick={() => onEdit(e)} className="hover:text-foreground">
               Definir meta
             </button>
           )}
@@ -260,7 +260,7 @@ function EnvelopeRow({ e, month, onEdit, onMove }: { e: Envelope; month: string;
       <span className="money hidden text-right text-sm text-muted-foreground sm:block">{formatMoney(-e.activity)}</span>
       <button
         type="button"
-        onClick={onMove}
+        onClick={() => onMove(e)}
         aria-label={`Disponível em ${e.name}: ${formatMoney(e.balance)}. Mover dinheiro`}
         className={cn(
           "money col-start-2 justify-self-end whitespace-nowrap rounded-full px-3 py-1 text-sm font-semibold sm:col-start-auto",
@@ -479,4 +479,14 @@ function MoveSheet({ s, v, month, from, onClose }: { s: DemoState; v: ReturnType
       </BottomSheetContent>
     </Sheet>
   );
+}
+
+// A lista de envelopes é refeita a cada mudança: a linha só redesenha se algum valor dela mudou.
+const EnvelopeRowMemo = memo(EnvelopeRow, (a, b) => a.month === b.month && a.onEdit === b.onEdit && a.onMove === b.onMove && sameFields(a.e, b.e));
+
+/** Mesmos campos de primeiro nível (objetos aninhados contam como mudança, o que só redesenha a mais). */
+function sameFields(a: object, b: object) {
+  const ka = Object.keys(a);
+  if (ka.length !== Object.keys(b).length) return false;
+  return ka.every((k) => Object.is((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
 }

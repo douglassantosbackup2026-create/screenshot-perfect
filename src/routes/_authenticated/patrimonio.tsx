@@ -23,6 +23,7 @@ import type { HistoryPoint } from "@/lib/calc/networth";
 import { demo, useDemo, valuedByHoldings, type Asset } from "@/lib/data/demo-store";
 import { PortfolioSection } from "@/components/portfolio/PortfolioSection";
 import { XrayCard } from "@/components/portfolio/Xray";
+import { memoBySlices } from "@/lib/data/memo-by-slices";
 import { AreaTabs } from "@/components/nav/areas";
 import { assetHistories, debtsView } from "@/lib/data/selectors";
 import { WealthSheet } from "@/components/wealth/WealthSheet";
@@ -186,9 +187,9 @@ function Wealth() {
         </div>
       )}
 
-      <CardBoundary><XrayCard s={s} /></CardBoundary>
+      <CardBoundary><XrayCardMemo s={s} /></CardBoundary>
 
-      <CardBoundary><PortfolioSection s={s} showValues={showValues} /></CardBoundary>
+      <CardBoundary><PortfolioSectionMemo s={s} showValues={showValues} /></CardBoundary>
 
       <p className="mt-6 text-xs leading-5 text-muted-foreground">
         Crescimento do patrimônio informado não é o mesmo que rendimento: aportes, retiradas, valorização e atualização dos dados mexem no total de
@@ -411,3 +412,7 @@ function AssetSheet({
     </Sheet>
   );
 }
+
+// Carteira e raio-X só redesenham quando muda uma parte do estado que eles leem.
+const XrayCardMemo = memoBySlices(XrayCard);
+const PortfolioSectionMemo = memoBySlices(PortfolioSection);

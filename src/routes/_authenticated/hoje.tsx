@@ -13,6 +13,7 @@ import { formatMonthly, formatPercent } from "@/lib/calc/format";
 import { cn } from "@/lib/utils";
 import { dataWarnings, firstSteps, journeyHome, missionOfWeek, monthHero, nextStep } from "@/lib/data/selectors";
 import { DailyAlertsCard } from "@/components/ledger/DayToDay";
+import { memoBySlices } from "@/lib/data/memo-by-slices";
 import { XP } from "@/lib/gamification/rules";
 import type { DailyKind } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
@@ -94,14 +95,14 @@ function JourneyPage() {
 
           {JOURNEY_ENABLED && <DailyMissionCard mission={j.mission} done={j.missionDone} />}
 
-          <CardBoundary><MonthHeroCard s={s} /></CardBoundary>
-          <CardBoundary><NextStepCard s={s} /></CardBoundary>
-          <FirstStepsCard s={s} />
-          <MonthCloseCard s={s} />
+          <CardBoundary><MonthHeroCardMemo s={s} /></CardBoundary>
+          <CardBoundary><NextStepCardMemo s={s} /></CardBoundary>
+          <FirstStepsCardMemo s={s} />
+          <MonthCloseCardMemo s={s} />
 
-          {s.plan && <CardBoundary><SuggestionCard s={s} showValues={!s.profile.hideValues} compact /></CardBoundary>}
+          {s.plan && <CardBoundary><SuggestionCardMemo s={s} showValues={!s.profile.hideValues} compact /></CardBoundary>}
 
-          <CardBoundary><DailyAlertsCard s={s} showValues={!s.profile.hideValues} /></CardBoundary>
+          <CardBoundary><DailyAlertsCardMemo s={s} showValues={!s.profile.hideValues} /></CardBoundary>
 
           {warnings.length > 0 && (
             <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Dados para completar">
@@ -342,3 +343,11 @@ function DailyMissionCard({ mission, done }: { mission: ReturnType<typeof journe
     </section>
   );
 }
+
+// Cards do Início só redesenham quando muda uma parte do estado que eles leem (src/lib/data/memo-by-slices.tsx).
+const MonthHeroCardMemo = memoBySlices(MonthHeroCard);
+const NextStepCardMemo = memoBySlices(NextStepCard);
+const FirstStepsCardMemo = memoBySlices(FirstStepsCard);
+const MonthCloseCardMemo = memoBySlices(MonthCloseCard);
+const SuggestionCardMemo = memoBySlices(SuggestionCard);
+const DailyAlertsCardMemo = memoBySlices(DailyAlertsCard);

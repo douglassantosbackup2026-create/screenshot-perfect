@@ -1,6 +1,6 @@
 // Lançamentos do mês (rota /diario): resumo, gastos por categoria, próximas recorrências e a lista por dia.
 // Só exibe; as contas vêm de src/lib/calc e src/lib/data/selectors.
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeftRight, ChevronLeft, ChevronRight, FileUp, Gauge, MoreHorizontal, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -203,31 +203,7 @@ export function LedgerSection({
                 </div>
                 <ul className="mt-2 divide-y divide-border">
                   {d.items.map((t) => (
-                    <li key={t.id}>
-                      <button
-                        type="button"
-                        onClick={() => setEditing({ tx: t })}
-                        className="flex w-full items-center justify-between gap-4 rounded-xl px-1 py-2.5 text-left hover:bg-muted"
-                      >
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 truncate font-semibold">
-                            {t.transferId && <ArrowLeftRight size={14} className="shrink-0 text-muted-foreground" aria-label="Transferência" />}
-                            {t.recurringId && <Repeat size={14} className="shrink-0 text-muted-foreground" aria-label="Recorrente" />}
-                            <span className="truncate">{t.payee}</span>
-                            {t.installment && (
-                              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                                {t.installment.number}/{t.installment.count}
-                              </span>
-                            )}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {t.transferId ? "Transferência" : (t.categoryName ?? "Sem categoria")} · {t.accountName}
-                            {t.contributionId ? " · aporte do mês" : ""}
-                          </span>
-                        </span>
-                        <span className={cn("money shrink-0 whitespace-nowrap text-sm", t.amount > 0 && "text-primary")}>{money(t.amount)}</span>
-                      </button>
-                    </li>
+                    <TxRow key={t.id} t={t} money={money} showValues={showValues} onEdit={setEditing} />
                   ))}
                 </ul>
               </div>
@@ -243,3 +219,58 @@ export function LedgerSection({
     </section>
   );
 }
+
+type LedgerRow = ReturnType<typeof ledgerMonth>["days"][number]["items"][number];
+
+/**
+ * Uma linha da lista. Só redesenha quando muda o que ela mostra: editar um lançamento não redesenha os outros
+ * do mês (a lista é refeita a cada mudança, então a comparação é pelo conteúdo, não pelo objeto).
+ */
+const TxRow = memo(
+  function TxRow({ t, money, onEdit }: { t: LedgerRow; money: (cents: number) => string; showValues: boolean; onEdit: (e: TxEditing) => void }) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => onEdit({ tx: t })}
+          className="flex w-full items-center justify-between gap-4 rounded-xl px-1 py-2.5 text-left hover:bg-muted"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 truncate font-semibold">
+              {t.transferId && <ArrowLeftRight size={14} className="shrink-0 text-muted-foreground" aria-label="Transferência" />}
+              {t.recurringId && <Repeat size={14} className="shrink-0 text-muted-foreground" aria-label="Recorrente" />}
+              <span className="truncate">{t.payee}</span>
+              {t.installment && (
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                  {t.installment.number}/{t.installment.count}
+                </span>
+              )}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {t.transferId ? "Transferência" : (t.categoryName ?? "Sem categoria")} · {t.accountName}
+              {t.contributionId ? " · aporte do mês" : ""}
+            </span>
+          </span>
+          <span className={cn("money shrink-0 whitespace-nowrap text-sm", t.amount > 0 && "text-primary")}>{money(t.amount)}</span>
+        </button>
+      </li>
+    );
+  },
+  // `money` é refeito a cada render, mas só depende do olho (showValues), que é comparado.
+  (a, b) =>
+    a.showValues === b.showValues &&
+    a.onEdit === b.onEdit &&
+    sameRow(a.t, b.t),
+);
+
+const sameRow = (a: LedgerRow, b: LedgerRow) =>
+  a.id === b.id &&
+  a.payee === b.payee &&
+  a.amount === b.amount &&
+  a.categoryName === b.categoryName &&
+  a.accountName === b.accountName &&
+  a.transferId === b.transferId &&
+  a.recurringId === b.recurringId &&
+  a.contributionId === b.contributionId &&
+  a.installment?.number === b.installment?.number &&
+  a.installment?.count === b.installment?.count;

@@ -1,6 +1,6 @@
 // Peças do painel (Início e Progresso): indicadores, gráficos, medidor e listas.
 // Só exibem números; toda conta vem de src/lib/calc.
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDownRight,
@@ -118,7 +118,7 @@ function ChartError({ onRetry }: { onRetry: () => void }) {
 const compact = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : v >= 1e3 ? `${Math.round(v / 1e3)} mil` : String(Math.round(v)));
 
 /** Barras de aporte por mês com a meta do plano tracejada. O mês atual fica em amarelo cheio. */
-export function ContributionsChart({ series, target, showValues }: { series: MonthlyAmount[]; target: number | null; showValues: boolean }) {
+function ContributionsChartView({ series, target, showValues }: { series: MonthlyAmount[]; target: number | null; showValues: boolean }) {
   const data = series.map((p) => ({ label: monthShort(p.month), amount: p.amount }));
   const top = Math.max(...series.map((p) => p.amount), target ?? 0, 1) * 1.15;
   return (
@@ -175,7 +175,7 @@ const DEST_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(
 const destinationLabel = (d: string | null) => DESTINATIONS.find((x) => x.value === d)?.label ?? "Não informado";
 
 /** Rosca com a divisão dos aportes por destino. */
-export function DestinationDonut({ data, showValues }: { data: DestinationShare[]; showValues: boolean }) {
+function DestinationDonutView({ data, showValues }: { data: DestinationShare[]; showValues: boolean }) {
   if (data.length === 0) {
     return <p className="text-sm text-muted-foreground">Informe o valor e o destino ao registrar um aporte para ver a divisão aqui.</p>;
   }
@@ -369,3 +369,7 @@ export function GoalCard({
     </li>
   );
 }
+
+// Gráficos só redesenham quando os dados mudam (a página passa séries memoizadas).
+export const ContributionsChart = memo(ContributionsChartView);
+export const DestinationDonut = memo(DestinationDonutView);

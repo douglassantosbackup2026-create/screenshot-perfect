@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { BookOpen, Check, Landmark, Mountain, Star, Wallet } from "lucide-react";
@@ -25,6 +25,7 @@ import { ProjectedVsReal } from "@/components/plan/Tracking";
 import { activeChallenges, completedDays, demo, MAX_ACTIVE_CHALLENGES, useDemo, type DemoState, type GoalKind } from "@/lib/data/demo-store";
 import { activeGoals, currentWealth, milestones, planSummary, recentActivity, wealthGrowth } from "@/lib/data/selectors";
 import { lastMonths } from "@/lib/data/thread";
+import { memoBySlices } from "@/lib/data/memo-by-slices";
 import { contributionsByDestination, fiProgress, monthlyContributionSeries, projectMonthlyPath, selfComparison, wealthTimeline } from "@/lib/calc/progress";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { levelFromXp } from "@/lib/gamification/rules";
@@ -87,6 +88,11 @@ function Evolution() {
   const lvl = levelFromXp(s.stats.totalXp);
   const done = completedDays(s);
   const unitsDone = UNITS.filter((u) => unitProgress(u, done).complete).length;
+  // Séries dos gráficos: refeitas só quando os aportes (ou o período) mudam, para os gráficos memoizados.
+  const contributionSeries = useMemo(() => monthlyContributionSeries(s.contributions, current, months), [s.contributions, current, months]);
+  const destinations = useMemo(() => contributionsByDestination(s.contributions), [s.contributions]);
+  const thread = useMemo(() => lastMonths(s.contributions, 6, new Date()), [s.contributions]);
+  const openGoal = useCallback(() => setGoalOpen(true), []);
 
   return (
     <ShowValuesProvider value={showValues}>
@@ -221,7 +227,7 @@ function Evolution() {
               </p>
             </div>
           )}
-          <TimelineChart s={s} showValues={showValues} />
+          <TimelineChartMemo s={s} showValues={showValues} />
         </ChartCard>
       </div>
 
@@ -232,9 +238,9 @@ function Evolution() {
           <TabsTrigger value="historico" className="flex-1">Histórico</TabsTrigger>
         </TabsList>
         <TabsContent value="evolucao" className="mt-4 grid gap-4 lg:grid-cols-12">
-        <CardBoundary><ProjectedVsReal s={s} showValues={showValues} /></CardBoundary>
+        <CardBoundary><ProjectedVsRealMemo s={s} showValues={showValues} /></CardBoundary>
 
-        <CardBoundary><GrowthCard s={s} showValues={showValues} /></CardBoundary>
+        <CardBoundary><GrowthCardMemo s={s} showValues={showValues} /></CardBoundary>
 
         <ChartCard
           title="Aportes x meta"
@@ -256,23 +262,23 @@ function Evolution() {
             </div>
           }
         >
-          <ContributionsChart series={monthlyContributionSeries(s.contributions, current, months)} target={plan?.required ?? null} showValues={showValues} />
+          <ContributionsChart series={contributionSeries} target={plan?.required ?? null} showValues={showValues} />
         </ChartCard>
 
         <ChartCard title="Para onde vão seus aportes" className="lg:col-span-4">
-          <DestinationDonut data={contributionsByDestination(s.contributions)} showValues={showValues} />
+          <DestinationDonut data={destinations} showValues={showValues} />
         </ChartCard>
 
         <ChartCard title="Seu fio" className="lg:col-span-12" action={<span className="text-xs text-muted-foreground">últimos 6 meses</span>}>
           <Link to="/diario" className="block rounded-2xl p-2 hover:bg-muted" aria-label="Abrir Lançamentos">
-            <ThreadStrip months={lastMonths(s.contributions, 6, new Date())} />
+            <ThreadStrip months={thread} />
           </Link>
         </ChartCard>
         </TabsContent>
 
         <TabsContent value="metas" className="mt-4 grid gap-4 lg:grid-cols-12">
-        <Goals s={s} wealth={wealth} showValues={showValues} onNew={() => setGoalOpen(true)} />
-        <Challenges s={s} />
+        <GoalsMemo s={s} wealth={wealth} showValues={showValues} onNew={openGoal} />
+        <ChallengesMemo s={s} />
         </TabsContent>
 
         <TabsContent value="historico" className="mt-4 grid gap-4 lg:grid-cols-12">
@@ -291,7 +297,7 @@ function Evolution() {
           />
         </ChartCard>
 
-        <CardBoundary><ReportsSection s={s} showValues={showValues} /></CardBoundary>
+        <CardBoundary><ReportsSectionMemo s={s} showValues={showValues} /></CardBoundary>
         </TabsContent>
       </Tabs>
 
@@ -595,3 +601,11 @@ function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     </Sheet>
   );
 }
+
+// Cards que recebem o estado inteiro só redesenham quando muda uma parte que eles leem (src/lib/data/memo-by-slices.tsx).
+const TimelineChartMemo = memoBySlices(TimelineChart);
+const GrowthCardMemo = memoBySlices(GrowthCard);
+const GoalsMemo = memoBySlices(Goals);
+const ChallengesMemo = memoBySlices(Challenges);
+const ProjectedVsRealMemo = memoBySlices(ProjectedVsReal);
+const ReportsSectionMemo = memoBySlices(ReportsSection);
