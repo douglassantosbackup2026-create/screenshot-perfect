@@ -22,11 +22,11 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { DestinationShare, MonthlyAmount } from "@/lib/calc/progress";
-import { goalProgress } from "@/lib/calc/progress";
+import type { GoalPlan, GoalTemplate } from "@/lib/calc/goals";
 import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { DESTINATIONS, formatDate, HIDDEN, monthShort, monthYear } from "@/lib/labels";
-import type { ActivityItem } from "@/lib/data/selectors";
-import type { Destination, Goal } from "@/lib/data/demo-store";
+import type { ActivityItem, GoalSource, GoalView } from "@/lib/data/selectors";
+import type { Destination } from "@/lib/data/demo-store";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 type AppPath = "/hoje" | "/plano" | "/evolucao" | "/diario" | "/perfil" | "/patrimonio";
@@ -316,22 +316,57 @@ export function ActivityList({
   );
 }
 
-/** Meta com barra de progresso e os valores das pontas. */
+const GOAL_LABEL: Record<GoalTemplate, string> = {
+  reserva: "Reserva de emergência",
+  viagem: "Viagem",
+  imovel: "Imóvel",
+  outro: "Meta de valor",
+};
+
+const SOURCE_HINT: Record<GoalSource, string | null> = {
+  vinculos: null,
+  reserva: "Medida pela sua reserva de emergência.",
+  patrimonio: "Medida pelo patrimônio total. Ligue contas ou itens para medir só o que é desta meta.",
+};
+
+const monthsLabel = (n: number) => (n === 1 ? "1 mês" : n < 24 ? `${n} meses` : `${Math.floor(n / 12)} anos${n % 12 ? ` e ${n % 12} meses` : ""}`);
+
+/** O que dizer sobre o ritmo da meta, já com os valores (ou ocultos). */
+function goalStatus(plan: GoalPlan, deadline: string | null, money: (v: number) => string): string {
+  const until = deadline ? ` até ${monthYear(deadline).toLowerCase()}` : "";
+  const perMonth = plan.requiredMonthly !== null ? `${money(plan.requiredMonthly)}/mês` : "";
+  switch (plan.verdict) {
+    case "concluida":
+      return "Você chegou ao valor. Marque como concluída!";
+    case "vencida":
+      return `O prazo passou. Faltam ${money(plan.missing)}.`;
+    case "em_dia":
+      return `No seu ritmo, chega em ${monthsLabel(plan.etaMonths ?? 0)}. Dentro do prazo.`;
+    case "atrasada":
+      return `No seu ritmo não chega a tempo. Para chegar${until}, guarde ${perMonth}.`;
+    case "sem_ritmo":
+      return `Para chegar${until}, guarde ${perMonth}.`;
+    case "sem_prazo":
+      return plan.etaMonths !== null ? `No seu ritmo, chega em ${monthsLabel(plan.etaMonths)}.` : `Faltam ${money(plan.missing)}.`;
+  }
+}
+
+/** Meta com barra de progresso, os valores das pontas e quanto guardar por mês. */
 export function GoalCard({
-  goal,
-  wealth,
+  view,
   showValues,
   onComplete,
   onDelete,
 }: {
-  goal: Goal;
-  wealth: number;
+  view: GoalView;
   showValues: boolean;
   onComplete: () => void;
   onDelete: () => void;
 }) {
-  const ratio = goal.kind === "valor" && goal.target ? goalProgress(wealth, goal.target) : null;
+  const { goal, plan, source } = view;
+  const ratio = plan ? plan.pct : null;
   const money = (v: number) => (showValues ? formatWealth(v) : HIDDEN);
+  const late = plan?.verdict === "atrasada" || plan?.verdict === "vencida";
   return (
     <li className="rounded-2xl bg-card p-4 shadow-card">
       <div className="flex items-start gap-3">
@@ -341,7 +376,7 @@ export function GoalCard({
         <div className="min-w-0 flex-1">
           <p className="font-semibold leading-snug">{goal.title}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {goal.kind === "valor" ? "Meta de valor" : "Meta de hábito"}
+            {goal.kind === "valor" ? GOAL_LABEL[goal.template ?? "outro"] : "Meta de hábito"}
             {goal.deadline && ` · até ${monthYear(goal.deadline).toLowerCase()}`}
           </p>
         </div>
@@ -349,13 +384,15 @@ export function GoalCard({
           <span className="money rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">{formatPercent(ratio)}</span>
         )}
       </div>
-      {ratio !== null && (
+      {plan && ratio !== null && (
         <>
           <Progress value={ratio * 100} className="mt-4" aria-label={`Progresso da meta ${goal.title}`} />
           <div className="money mt-2 flex justify-between text-xs text-muted-foreground">
-            <span>{money(wealth)}</span>
-            <span>{money(goal.target!)}</span>
+            <span>{money(plan.current)}</span>
+            <span>{money(plan.target)}</span>
           </div>
+          <p className={cn("mt-3 text-sm", late ? "text-foreground" : "text-muted-foreground")}>{goalStatus(plan, goal.deadline, money)}</p>
+          {source && SOURCE_HINT[source] && <p className="mt-1 text-xs text-muted-foreground">{SOURCE_HINT[source]}</p>}
         </>
       )}
       <div className="mt-3 flex gap-2">

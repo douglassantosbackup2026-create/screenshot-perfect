@@ -22,6 +22,7 @@ import { installmentAt, installmentRule, validateInstallments } from "@/lib/calc
 import { validateLimit, type LimitPeriod } from "@/lib/calc/limits";
 import { applyRules, normalize, type CategoryRule, type RuleOp } from "@/lib/calc/categorize";
 import { dedupe, type ImportedTx } from "@/lib/calc/import";
+import { GOAL_TEMPLATES, type GoalTemplate } from "@/lib/calc/goals";
 import { holdsPositions, positionFromTrades, validateTargets, valuePosition, type AssetClass, type Trade, type TradeType } from "@/lib/calc/portfolio";
 import {
   addMonths,
@@ -124,6 +125,15 @@ export type Goal = {
   deadline: string | null;
   createdAt: string;
   completedAt: string | null;
+  /** Modelo escolhido ao criar (metas antigas não têm: contam como "outro"). */
+  template?: GoalTemplate;
+  /** Itens do Patrimônio e contas ligados à meta. Vazio: o progresso usa o patrimônio total. */
+  assetIds?: string[];
+  accountIds?: string[];
+  /** Quanto a pessoa guarda por mês para esta meta, em reais (null: não informou). */
+  monthlyContribution?: number | null;
+  /** Rendimento real ao ano esperado (null: o padrão de src/lib/calc/goals.ts). */
+  expectedReturn?: number | null;
 };
 export type ChallengeRun = { slug: string; startedAt: string; completedAt: string | null };
 /** Item do patrimônio informado pela pessoa (espelho de public.assets). */
@@ -702,6 +712,32 @@ export function consumeRepairNotice() {
   return n;
 }
 
+export type GoalInput = {
+  title: string;
+  kind: GoalKind;
+  target?: number | null;
+  deadline?: string | null;
+  template?: GoalTemplate;
+  assetIds?: string[];
+  accountIds?: string[];
+  monthlyContribution?: number | null;
+};
+
+const ids = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+const positiveOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
+
+/** Metas de antes dos modelos (ou com campos adulterados) ganham os campos novos com o padrão. */
+function repairGoal(g: Goal): Goal {
+  return {
+    ...g,
+    template: GOAL_TEMPLATES.find((t) => t === g.template) ?? "outro",
+    assetIds: ids(g.assetIds),
+    accountIds: ids(g.accountIds),
+    monthlyContribution: positiveOrNull(g.monthlyContribution),
+    expectedReturn: typeof g.expectedReturn === "number" && Number.isFinite(g.expectedReturn) ? g.expectedReturn : null,
+  };
+}
+
 /**
  * Conserta o que veio salvo (ver state-schema.ts) e completa um estado de versões anteriores com os
  * campos novos. Aceita qualquer coisa: dado corrompido nunca impede o app de abrir.
@@ -712,7 +748,8 @@ function migrate(input: unknown): DemoState {
     console.warn("Estado salvo consertado", { dropped, reset });
     repairNotice = { dropped, reset: reset.length };
   }
-  if (raw.version === 8) return { ...emptyState(), ...raw };
+  // Metas ganharam campos opcionais sem mudar a versão: o conserto vale também para quem já está na 8.
+  if (raw.version === 8) return { ...emptyState(), ...raw, goals: (raw.goals ?? []).map(repairGoal) };
   const assets = raw.assets ?? [];
   return {
     ...raw,
@@ -739,7 +776,7 @@ function migrate(input: unknown): DemoState {
     assetValuations:
       raw.assetValuations ?? assets.map((a) => ({ assetId: a.id, month: monthOf(dayOf(a.updatedAt)), value: a.value, at: a.updatedAt })),
     wealthEntries: (raw.wealthEntries ?? []).map((w) => ({ ...w, breakdown: w.breakdown ?? null })),
-    goals: raw.goals ?? [],
+    goals: (raw.goals ?? []).map(repairGoal),
     challenges: raw.challenges ?? [],
     days: raw.days ?? [],
     stats: { ...EMPTY_STATS, ...raw.stats },
@@ -1471,20 +1508,27 @@ export const demo = {
     s.wealthEntries = s.wealthEntries.filter((w) => w.id !== id);
     commit(s);
   },
-  createGoal(input: { title: string; kind: GoalKind; target?: number | null; deadline?: string | null }): ActionResult {
+  createGoal(input: GoalInput): ActionResult {
     return mutate((s, now) => {
       const title = input.title.trim();
       if (!title) throw new Error("Dê um nome para a meta.");
       if (input.kind === "valor" && !(input.target && input.target > 0)) throw new Error("Informe o valor da meta.");
+      if (input.monthlyContribution != null && input.monthlyContribution < 0) throw new Error("O valor por mês não pode ser negativo.");
       const id = newId();
+      const valor = input.kind === "valor";
       s.goals.push({
         id,
         title,
         kind: input.kind,
-        target: input.kind === "valor" ? (input.target ?? null) : null,
+        target: valor ? (input.target ?? null) : null,
         deadline: input.deadline ?? null,
         createdAt: now.toISOString(),
         completedAt: null,
+        template: input.template ?? "outro",
+        assetIds: valor ? (input.assetIds ?? []).filter((a) => s.assets.some((x) => x.id === a)) : [],
+        accountIds: valor ? (input.accountIds ?? []).filter((a) => s.accounts.some((x) => x.id === a)) : [],
+        monthlyContribution: valor ? (input.monthlyContribution ?? null) : null,
+        expectedReturn: null,
       });
       let xp = 0;
       const key = goalCreatedPeriodKey(s.xpEvents, spDate(now), id);
@@ -1507,6 +1551,24 @@ export const demo = {
       markActive(s, now);
       return a.awarded;
     });
+  },
+  /** Muda o ritmo, o prazo ou o que está ligado a uma meta de valor (o tipo e o nome ficam). */
+  updateGoal(id: string, patch: Pick<GoalInput, "target" | "deadline" | "assetIds" | "accountIds" | "monthlyContribution">) {
+    const s = structuredClone(load());
+    const goal = s.goals.find((g) => g.id === id);
+    if (!goal || goal.kind !== "valor") return;
+    if (patch.target !== undefined) {
+      if (!(patch.target && patch.target > 0)) throw new Error("Informe o valor da meta.");
+      goal.target = patch.target;
+    }
+    if (patch.monthlyContribution !== undefined) {
+      if (patch.monthlyContribution != null && patch.monthlyContribution < 0) throw new Error("O valor por mês não pode ser negativo.");
+      goal.monthlyContribution = patch.monthlyContribution;
+    }
+    if (patch.deadline !== undefined) goal.deadline = patch.deadline;
+    if (patch.assetIds) goal.assetIds = patch.assetIds.filter((a) => s.assets.some((x) => x.id === a));
+    if (patch.accountIds) goal.accountIds = patch.accountIds.filter((a) => s.accounts.some((x) => x.id === a));
+    commit(s);
   },
   deleteGoal(id: string) {
     const s = structuredClone(load());

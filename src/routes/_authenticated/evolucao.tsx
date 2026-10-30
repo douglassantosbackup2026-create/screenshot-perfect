@@ -23,7 +23,10 @@ import { WealthSheet } from "@/components/wealth/WealthSheet";
 import { ReportsSection } from "@/components/reports/ReportsSection";
 import { ProjectedVsReal } from "@/components/plan/Tracking";
 import { activeChallenges, completedDays, demo, MAX_ACTIVE_CHALLENGES, useDemo, type DemoState, type GoalKind } from "@/lib/data/demo-store";
-import { activeGoals, currentWealth, milestones, planSummary, recentActivity, wealthGrowth } from "@/lib/data/selectors";
+import { currentWealth, emergencyFundView, goalsView, milestones, planSummary, recentActivity, wealthGrowth } from "@/lib/data/selectors";
+import { accountGroup } from "@/lib/calc/ledger";
+import { isLiability } from "@/lib/calc/assets";
+import type { GoalTemplate } from "@/lib/calc/goals";
 import { lastMonths } from "@/lib/data/thread";
 import { memoBySlices } from "@/lib/data/memo-by-slices";
 import { contributionsByDestination, fiProgress, monthlyContributionSeries, projectMonthlyPath, selfComparison, wealthTimeline } from "@/lib/calc/progress";
@@ -39,9 +42,10 @@ import { CHALLENGES } from "@/content/challenges";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/evolucao")({
-  validateSearch: (s: Record<string, unknown>): { registrar?: boolean; meta?: boolean } => ({
+  validateSearch: (s: Record<string, unknown>): { registrar?: boolean; meta?: boolean; aba?: "metas" } => ({
     ...(s["registrar"] ? { registrar: true } : {}),
     ...(s["meta"] ? { meta: true } : {}),
+    ...(s["aba"] === "metas" ? { aba: "metas" as const } : {}),
   }),
   head: () => pageHead("Progresso", "Sua evolução patrimonial, metas e desafios, comparados só com você mesmo."),
   component: Evolution,
@@ -58,7 +62,7 @@ const signed = (v: number, fmt: (n: number) => string) => (v > 0 ? "+" : v < 0 ?
 
 function Evolution() {
   const s = useDemo();
-  const { registrar, meta } = Route.useSearch();
+  const { registrar, meta, aba } = Route.useSearch();
   const navigate = useNavigate();
   const current = monthOf(spDate(new Date()));
   const { showValues, toggle: toggleValues } = useShowValues();
@@ -231,7 +235,7 @@ function Evolution() {
         </ChartCard>
       </div>
 
-      <Tabs defaultValue="evolucao" className="mt-8">
+      <Tabs defaultValue={aba ?? "evolucao"} className="mt-8">
         <TabsList className="w-full max-w-md">
           <TabsTrigger value="evolucao" className="flex-1">Evolução</TabsTrigger>
           <TabsTrigger value="metas" className="flex-1">Metas</TabsTrigger>
@@ -277,7 +281,7 @@ function Evolution() {
         </TabsContent>
 
         <TabsContent value="metas" className="mt-4 grid gap-4 lg:grid-cols-12">
-        <GoalsMemo s={s} wealth={wealth} showValues={showValues} onNew={openGoal} />
+        <GoalsMemo s={s} showValues={showValues} onNew={openGoal} />
         <ChallengesMemo s={s} />
         </TabsContent>
 
@@ -432,8 +436,8 @@ function GrowthCard({ s, showValues }: { s: DemoState; showValues: boolean }) {
   );
 }
 
-function Goals({ s, wealth, showValues, onNew }: { s: DemoState; wealth: number; showValues: boolean; onNew: () => void }) {
-  const goals = activeGoals(s);
+function Goals({ s, showValues, onNew }: { s: DemoState; showValues: boolean; onNew: () => void }) {
+  const goals = goalsView(s);
   const doneCount = s.goals.length - goals.length;
   function complete(id: string) {
     const r = demo.completeGoal(id);
@@ -453,8 +457,8 @@ function Goals({ s, wealth, showValues, onNew }: { s: DemoState; wealth: number;
       </div>
       {goals.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Uma meta clara ajuda a manter o rumo. Pode ser um valor ou um hábito.</p>}
       <ul className="mt-4 grid gap-4 lg:grid-cols-2">
-        {goals.map((g) => (
-          <GoalCard key={g.id} goal={g} wealth={wealth} showValues={showValues} onComplete={() => complete(g.id)} onDelete={() => demo.deleteGoal(g.id)} />
+        {goals.map((v) => (
+          <GoalCard key={v.goal.id} view={v} showValues={showValues} onComplete={() => complete(v.goal.id)} onDelete={() => demo.deleteGoal(v.goal.id)} />
         ))}
       </ul>
     </section>
@@ -530,24 +534,81 @@ function Challenges({ s }: { s: DemoState }) {
   );
 }
 
+const TEMPLATE_OPTIONS: { value: GoalTemplate; label: string; title: string; placeholder: string }[] = [
+  { value: "reserva", label: "Reserva", title: "Reserva de emergência", placeholder: "Ex.: reserva de emergência" },
+  { value: "viagem", label: "Viagem", title: "", placeholder: "Ex.: viagem para o Nordeste" },
+  { value: "imovel", label: "Imóvel", title: "", placeholder: "Ex.: entrada do apartamento" },
+  { value: "outro", label: "Outra", title: "", placeholder: "Ex.: trocar de carro" },
+];
+
+/** Botão que liga/desliga uma conta ou item do Patrimônio à meta. */
+function LinkChip({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onToggle}
+      className={cn(
+        "min-h-11 rounded-full px-3 text-sm ring-1 transition-colors",
+        on ? "bg-primary text-primary-foreground ring-primary" : "bg-muted text-foreground ring-border hover:ring-primary/60",
+      )}
+    >
+      {on && <Check size={14} className="mr-1 inline" aria-hidden />}
+      {label}
+    </button>
+  );
+}
+
 function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const s = useDemo();
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<GoalKind>("valor");
+  const [template, setTemplate] = useState<GoalTemplate>("outro");
   const [target, setTarget] = useState<number | null>(null);
   const [deadline, setDeadline] = useState("");
+  const [monthly, setMonthly] = useState<number | null>(null);
+  const [linked, setLinked] = useState<{ assets: string[]; accounts: string[] }>({ assets: [], accounts: [] });
+  const reserve = emergencyFundView(s);
   useEffect(() => {
     if (open) {
       setTitle("");
       setKind("valor");
+      setTemplate("outro");
       setTarget(null);
       setDeadline("");
+      setMonthly(null);
+      setLinked({ assets: [], accounts: [] });
     }
   }, [open]);
   if (!open) return null;
 
+  const accounts = s.accounts.filter((a) => accountGroup(a.kind) !== "dividas");
+  const assets = s.assets.filter((a) => !isLiability(a.category));
+  const opt = TEMPLATE_OPTIONS.find((o) => o.value === template)!;
+  const toggle = (k: "assets" | "accounts", id: string) =>
+    setLinked((l) => ({ ...l, [k]: l[k].includes(id) ? l[k].filter((x) => x !== id) : [...l[k], id] }));
+
+  function pickTemplate(t: GoalTemplate) {
+    setTemplate(t);
+    const o = TEMPLATE_OPTIONS.find((x) => x.value === t)!;
+    if (o.title && !title) setTitle(o.title);
+    // Reserva: sugere o alvo calculado (6 meses do custo essencial), se houver gastos para medir.
+    if (t === "reserva" && target === null && reserve.target > 0) setTarget(Math.round(reserve.target / 100));
+  }
+
   function save() {
     try {
-      const r = demo.createGoal({ title, kind, target, deadline: deadline ? `${deadline}-01` : null });
+      const valor = kind === "valor";
+      const r = demo.createGoal({
+        title,
+        kind,
+        target,
+        deadline: deadline ? `${deadline}-01` : null,
+        template: valor ? template : "outro",
+        assetIds: linked.assets,
+        accountIds: linked.accounts,
+        monthlyContribution: valor ? monthly : null,
+      });
       xpToast("Meta criada.", r.xpAwarded);
       handleResult(r);
       onClose();
@@ -573,6 +634,7 @@ function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
               { value: "habito", label: "Criar um hábito" },
             ]}
           />
+          {kind === "valor" && <Segmented label="Para quê" value={template} onChange={pickTemplate} options={TEMPLATE_OPTIONS} />}
           <div>
             <label htmlFor="goal-title" className="text-sm font-semibold">
               Nome da meta
@@ -582,11 +644,38 @@ function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
               className="mt-1.5"
               maxLength={80}
               value={title}
-              placeholder={kind === "valor" ? "Ex.: reserva para a aposentadoria" : "Ex.: revisar o orçamento todo mês"}
+              placeholder={kind === "valor" ? opt.placeholder : "Ex.: revisar o orçamento todo mês"}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          {kind === "valor" && <NumberField label="Valor da meta" value={target} onChange={setTarget} prefix="R$" />}
+          {kind === "valor" && (
+            <NumberField
+              label="Valor da meta"
+              value={target}
+              onChange={setTarget}
+              prefix="R$"
+              hint={template === "reserva" && reserve.target > 0 ? "Sugestão: 6 meses do seu custo essencial." : undefined}
+            />
+          )}
+          {kind === "valor" && (
+            <NumberField label="Quanto você guarda por mês para ela" value={monthly} onChange={setMonthly} prefix="R$" min={0} optional />
+          )}
+          {kind === "valor" && (accounts.length > 0 || assets.length > 0) && (
+            <fieldset>
+              <legend className="text-sm font-semibold">
+                Onde está o dinheiro desta meta <span className="font-normal text-muted-foreground">(opcional)</span>
+              </legend>
+              <p className="mt-0.5 text-sm text-muted-foreground">Sem escolher nada, o progresso usa o seu patrimônio total.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {accounts.map((a) => (
+                  <LinkChip key={a.id} label={a.name} on={linked.accounts.includes(a.id)} onToggle={() => toggle("accounts", a.id)} />
+                ))}
+                {assets.map((a) => (
+                  <LinkChip key={a.id} label={a.name} on={linked.assets.includes(a.id)} onToggle={() => toggle("assets", a.id)} />
+                ))}
+              </div>
+            </fieldset>
+          )}
           <div>
             <label htmlFor="goal-deadline" className="text-sm font-semibold">
               Prazo <span className="font-normal text-muted-foreground">(opcional)</span>

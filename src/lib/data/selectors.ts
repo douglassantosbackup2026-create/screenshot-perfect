@@ -10,6 +10,7 @@ import { aboveAverage, budgetAlertCrossed, budgetAlertLevel, budgetAlerts, dupli
 import { committedByMonth, installmentAt } from "@/lib/calc/installments";
 import { monthEndProjection, type ScheduledFlow } from "@/lib/calc/forecast";
 import { averageMonthlySpending, emergencyFund } from "@/lib/calc/reserve";
+import { goalCurrent, goalPlan } from "@/lib/calc/goals";
 import { LIMIT_PERIODS, limitUsage } from "@/lib/calc/limits";
 import { applyRules } from "@/lib/calc/categorize";
 import { parseEntry } from "@/lib/calc/quickEntry";
@@ -99,6 +100,53 @@ export function currentWealth(s: DemoState): number {
 export function activeGoals(s: DemoState) {
   return s.goals.filter((g) => !g.completedAt);
 }
+
+/** De onde vem o "já tenho" da meta: o que foi ligado a ela, a reserva de emergência ou o patrimônio total. */
+export type GoalSource = "vinculos" | "reserva" | "patrimonio";
+
+/**
+ * Metas ativas com a situação de cada uma (só as de valor têm plano). Ordem: as de valor com prazo
+ * mais próximo primeiro, depois sem prazo, depois hábitos.
+ */
+export function goalsView(s: DemoState, now = new Date()) {
+  return memoOnState(s, `goalsView:${spDate(now)}`, (t) => goalsViewUncached(t, now));
+}
+function goalsViewUncached(s: DemoState, now: Date) {
+  const today = spDate(now);
+  const balances = accountBalances(s.accounts, s.transactions);
+  const items = activeGoals(s).map((goal) => {
+    if (goal.kind !== "valor" || !goal.target) return { goal, plan: null, source: null };
+    const assetIds = goal.assetIds ?? [];
+    const accountIds = goal.accountIds ?? [];
+    let source: GoalSource;
+    let current: number;
+    if (assetIds.length || accountIds.length) {
+      source = "vinculos";
+      current = goalCurrent(
+        s.assets.filter((a) => assetIds.includes(a.id)).map((a) => a.value),
+        accountIds.map((id) => balances[id] ?? 0),
+      );
+    } else if (goal.template === "reserva") {
+      source = "reserva";
+      current = emergencyFundView(s, now).current / 100;
+    } else {
+      source = "patrimonio";
+      current = currentWealth(s);
+    }
+    const plan = goalPlan({
+      target: goal.target,
+      current,
+      today,
+      deadline: goal.deadline,
+      monthlyContribution: goal.monthlyContribution ?? null,
+      annualReturn: goal.expectedReturn ?? null,
+    });
+    return { goal, plan, source };
+  });
+  const rank = (x: (typeof items)[number]) => (x.plan ? (x.goal.deadline ? 0 : 1) : 2);
+  return items.sort((a, b) => rank(a) - rank(b) || (a.goal.deadline ?? "").localeCompare(b.goal.deadline ?? ""));
+}
+export type GoalView = ReturnType<typeof goalsViewUncached>[number];
 
 function hasWealthRecord(s: DemoState, now = new Date()) {
   const m = monthOf(spDate(now));

@@ -9,9 +9,9 @@ import { SuggestionCard } from "@/components/portfolio/PortfolioSection";
 import { handleResult, xpToast } from "@/components/feedback";
 import { completedDays, demo, monthCloseSteps, useDemo, type DemoState } from "@/lib/data/demo-store";
 import { maskMoney, monthYear } from "@/lib/labels";
-import { formatMonthly, formatPercent } from "@/lib/calc/format";
+import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { cn } from "@/lib/utils";
-import { dataWarnings, firstSteps, journeyHome, missionOfWeek, monthHero, nextStep } from "@/lib/data/selectors";
+import { dataWarnings, firstSteps, goalsView, journeyHome, missionOfWeek, monthHero, nextStep } from "@/lib/data/selectors";
 import { DailyAlertsCard } from "@/components/ledger/DayToDay";
 import { memoBySlices } from "@/lib/data/memo-by-slices";
 import { XP } from "@/lib/gamification/rules";
@@ -99,6 +99,7 @@ function JourneyPage() {
           <CardBoundary><NextStepCardMemo s={s} /></CardBoundary>
           <FirstStepsCardMemo s={s} />
           <MonthCloseCardMemo s={s} />
+          <CardBoundary><NextGoalCardMemo s={s} /></CardBoundary>
 
           {s.plan && <CardBoundary><SuggestionCardMemo s={s} showValues={!s.profile.hideValues} compact /></CardBoundary>}
 
@@ -291,6 +292,37 @@ function MonthCloseCard({ s }: { s: DemoState }) {
   );
 }
 
+/** A meta de valor com prazo mais próximo: quanto falta e quanto guardar por mês. */
+function NextGoalCard({ s }: { s: DemoState }) {
+  const next = goalsView(s).find((v) => v.plan && v.plan.verdict !== "concluida");
+  if (!next?.plan) return null;
+  const { goal, plan } = next;
+  const money = maskMoney(!s.profile.hideValues, formatWealth);
+  const perMonth = plan.requiredMonthly && plan.requiredMonthly > 0 ? plan.requiredMonthly : null;
+  return (
+    <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Sua próxima meta">
+      <p className="eyebrow">Sua próxima meta</p>
+      <h2 className="mt-1 text-lg">{goal.title}</h2>
+      <Progress value={plan.pct * 100} className="mt-3 h-2" aria-label={`${formatPercent(plan.pct)} da meta`} />
+      <p className="money mt-2 text-sm text-muted-foreground">
+        {money(plan.current)} de {money(plan.target)}
+        {goal.deadline && ` · até ${monthYear(goal.deadline).toLowerCase()}`}
+      </p>
+      {perMonth !== null && plan.verdict !== "em_dia" && (
+        <p className="mt-1 text-sm">
+          Guarde <span className="money font-semibold text-primary">{money(perMonth)}/mês</span> para chegar no prazo.
+        </p>
+      )}
+      {plan.verdict === "em_dia" && <p className="mt-1 text-sm">No seu ritmo, chega dentro do prazo.</p>}
+      <Button asChild variant="outline" className="mt-4 w-full">
+        <Link to="/evolucao" search={{ aba: "metas" }}>
+          Ver minhas metas
+        </Link>
+      </Button>
+    </section>
+  );
+}
+
 function DailyMissionCard({ mission, done }: { mission: ReturnType<typeof journeyHome>["mission"]; done: boolean }) {
   const xp = XP.daily_mission + (mission.lessonDay != null ? XP.lesson_completed : 0);
 
@@ -349,5 +381,6 @@ const MonthHeroCardMemo = memoBySlices(MonthHeroCard);
 const NextStepCardMemo = memoBySlices(NextStepCard);
 const FirstStepsCardMemo = memoBySlices(FirstStepsCard);
 const MonthCloseCardMemo = memoBySlices(MonthCloseCard);
+const NextGoalCardMemo = memoBySlices(NextGoalCard);
 const SuggestionCardMemo = memoBySlices(SuggestionCard);
 const DailyAlertsCardMemo = memoBySlices(DailyAlertsCard);

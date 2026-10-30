@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyState, makeSeed } from "./demo-store";
 import { monthOf, spDate } from "@/lib/gamification/rules";
-import { contributionSuggestion, quickEntryDraft, dailyAlerts, installmentsView, ledgerMonth, firstSteps, monthCloseShare, monthHero, monthProjection, nextStep, portfolioView, uncategorizedGroups } from "./selectors";
+import { goalsView, contributionSuggestion, quickEntryDraft, dailyAlerts, installmentsView, ledgerMonth, firstSteps, monthCloseShare, monthHero, monthProjection, nextStep, portfolioView, uncategorizedGroups } from "./selectors";
 
 describe("carteira do exemplo da Ana", () => {
   it("posições pelo preço médio, ganho realizado, proventos e rentabilidade anual", () => {
@@ -140,5 +140,43 @@ describe("Início: próximo passo, checklist e número do mês", () => {
     expect(h.contributed).toBeNull();
     p.contributions = [{ id: "c", month, made: false, amount: null, destination: null, note: null, createdAt: now.toISOString() }];
     expect(monthHero(p, now)!.contributed).toBe(0);
+  });
+});
+
+describe("metas além da aposentadoria", () => {
+  const now = new Date("2026-10-30T12:00:00-03:00");
+  const goal = (over: Record<string, unknown>) => ({
+    id: "g",
+    title: "Meta",
+    kind: "valor" as const,
+    target: 12000,
+    deadline: "2027-10-01",
+    createdAt: "2026-10-01T00:00:00Z",
+    completedAt: null,
+    template: "viagem" as const,
+    assetIds: [],
+    accountIds: [],
+    monthlyContribution: null,
+    expectedReturn: 0,
+    ...over,
+  });
+
+  it("com conta ligada, mede só o saldo dela (centavos → reais)", () => {
+    const s = emptyState();
+    s.accounts = [{ id: "a1", name: "Poupança", kind: "poupanca", openingBalance: 300000, createdAt: "2026-01-01T00:00:00Z" }];
+    s.goals = [goal({ accountIds: ["a1"] })];
+    const [v] = goalsView(s, now);
+    expect(v!.source).toBe("vinculos");
+    expect(v!.plan).toMatchObject({ current: 3000, missing: 9000, verdict: "sem_ritmo" });
+    expect(v!.plan!.requiredMonthly).toBe(750);
+  });
+
+  it("sem vínculo, usa o patrimônio total; hábitos ficam por último, sem plano", () => {
+    const s = emptyState();
+    s.goals = [goal({ id: "h", kind: "habito", target: null }), goal({ deadline: null })];
+    const v = goalsView(s, now);
+    expect(v.map((x) => x.goal.id)).toEqual(["g", "h"]);
+    expect(v[0]!.source).toBe("patrimonio");
+    expect(v[1]!.plan).toBeNull();
   });
 });

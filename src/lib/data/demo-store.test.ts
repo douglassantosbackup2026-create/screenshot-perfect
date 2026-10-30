@@ -67,6 +67,29 @@ describe("evolução no modo demonstração", () => {
     expect(() => demo.createGoal({ title: "x", kind: "valor" })).toThrow();
   });
 
+  it("meta com modelo, ritmo e vínculos; vínculo inexistente é descartado; ritmo editável", async () => {
+    const { demo } = await freshStore();
+    demo.startFresh();
+    demo.createGoal({ title: "Japão", kind: "valor", target: 20000, template: "viagem", accountIds: ["nao-existe"], monthlyContribution: 800 });
+    let g = JSON.parse(window.localStorage.getItem(KEY)!).goals[0];
+    expect(g).toMatchObject({ template: "viagem", accountIds: [], assetIds: [], monthlyContribution: 800 });
+    expect(() => demo.createGoal({ title: "y", kind: "valor", target: 10, monthlyContribution: -1 })).toThrow();
+    demo.updateGoal(g.id, { monthlyContribution: 1000, deadline: "2028-01-01" });
+    g = JSON.parse(window.localStorage.getItem(KEY)!).goals[0];
+    expect(g).toMatchObject({ monthlyContribution: 1000, deadline: "2028-01-01" });
+  });
+
+  it("metas salvas antes dos modelos ganham os campos novos", async () => {
+    const { makeSeed } = await freshStore();
+    const old = makeSeed() as unknown as { goals: Record<string, unknown>[] };
+    old.goals = [{ id: "g1", title: "Antiga", kind: "valor", target: 100, deadline: null, createdAt: "2026-01-01T00:00:00Z", completedAt: null, template: "xyz", assetIds: "x" }];
+    window.localStorage.setItem(KEY, JSON.stringify(old));
+    const { demo } = await freshStore();
+    demo.deleteGoal("outra");
+    const g = JSON.parse(window.localStorage.getItem(KEY)!).goals[0];
+    expect(g).toMatchObject({ template: "outro", assetIds: [], accountIds: [], monthlyContribution: null, expectedReturn: null });
+  });
+
   it("desafio conclui sozinho ao atingir a meta e respeita o limite de andamento", async () => {
     const { demo, activeChallenges } = await freshStore();
     demo.startFresh();
