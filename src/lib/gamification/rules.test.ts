@@ -3,6 +3,7 @@ import {
   XP,
   challengeProgress,
   computeDayStreak,
+  goalCompletedXpAllowed,
   goalCreatedPeriodKey,
   hasFullQuarter,
   type ChallengeDef,
@@ -129,6 +130,16 @@ describe("novas ações de XP", () => {
     }
     expect(goalCreatedPeriodKey(events, "2026-10-01", "d")).toBeNull();
     expect(goalCreatedPeriodKey(events, "2026-11-01", "d")).toBe("G:2026-11:d");
+  });
+  it("meta concluída dá XP no máximo 3 vezes por mês", () => {
+    const now = new Date("2026-10-20T15:00:00Z");
+    let events: XpEvent[] = [];
+    for (const id of ["a", "b", "c"]) {
+      expect(goalCompletedXpAllowed(events, now)).toBe(true);
+      events = awardXp(events, "goal_completed", `G:${id}`, now.toISOString()).events;
+    }
+    expect(goalCompletedXpAllowed(events, now)).toBe(false);
+    expect(goalCompletedXpAllowed(events, new Date("2026-11-02T15:00:00Z"))).toBe(true);
   });
 });
 

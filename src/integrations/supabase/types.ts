@@ -134,17 +134,113 @@ export type Database = {
         Row: {
           billing_enforced: boolean
           id: boolean
+          max_import_rows: number
           updated_at: string
         }
         Insert: {
           billing_enforced?: boolean
           id?: boolean
+          max_import_rows?: number
           updated_at?: string
         }
         Update: {
           billing_enforced?: boolean
           id?: boolean
+          max_import_rows?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          at: string
+          details: Json
+          id: number
+          severity: string
+          target: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          at?: string
+          details?: Json
+          id?: never
+          severity?: string
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          at?: string
+          details?: Json
+          id?: never
+          severity?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
+      consent_log: {
+        Row: {
+          anon_id: string | null
+          at: string
+          choice: string
+          id: string
+          policy_version: string
+          user_id: string | null
+        }
+        Insert: {
+          anon_id?: string | null
+          at?: string
+          choice: string
+          id?: string
+          policy_version: string
+          user_id?: string | null
+        }
+        Update: {
+          anon_id?: string | null
+          at?: string
+          choice?: string
+          id?: string
+          policy_version?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      webhook_receipts: {
+        Row: {
+          provider: string
+          received_at: string
+          request_id: string
+        }
+        Insert: {
+          provider: string
+          received_at?: string
+          request_id: string
+        }
+        Update: {
+          provider?: string
+          received_at?: string
+          request_id?: string
         }
         Relationships: []
       }
@@ -1221,6 +1317,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          last_event_at: string | null
           period: string
           plan: string
           preapproval_id: string
@@ -1229,6 +1326,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          last_event_at?: string | null
           period: string
           plan: string
           preapproval_id: string
@@ -1237,6 +1335,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          last_event_at?: string | null
           period?: string
           plan?: string
           preapproval_id?: string
@@ -1692,6 +1791,39 @@ export type Database = {
       admin_save_lesson: {
         Args: { p_lesson: Json; p_program_slug: string }
         Returns: string
+      }
+      apply_subscription_status: {
+        Args: {
+          p_event_at: string
+          p_period: string
+          p_plan: string
+          p_preapproval: string
+          p_source?: string
+          p_status: string
+          p_user: string
+        }
+        Returns: boolean
+      }
+      audit: {
+        Args: { p_action: string; p_details?: Json; p_severity?: string; p_target?: string | null }
+        Returns: undefined
+      }
+      has_admin_role: { Args: never; Returns: boolean }
+      hit_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
+      purge_expired: { Args: never; Returns: Json }
+      submit_lead: {
+        Args: {
+          p_email: string
+          p_simulation?: Json | null
+          p_source: string
+          p_utm_campaign?: string | null
+          p_utm_medium?: string | null
+          p_utm_source?: string | null
+        }
+        Returns: undefined
       }
       record_consent: {
         Args: { p_anon: string | null; p_choice: string; p_version: string }

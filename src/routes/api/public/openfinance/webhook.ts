@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { secretMatches } from "@/lib/security/compare";
 
 /**
  * Aviso do agregador de Open Finance: dados novos (sincroniza), erro ou consentimento revogado.
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/api/public/openfinance/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const secret = process.env["OPEN_FINANCE_WEBHOOK_SECRET"];
-        if (!secret || request.headers.get("x-webhook-secret") !== secret) return new Response("nao autorizado", { status: 401 });
+        if (!(await secretMatches(request.headers.get("x-webhook-secret"), secret))) return new Response("nao autorizado", { status: 401 });
         const { providerFromEnv } = await import("@/lib/openfinance/provider");
         const provider = await providerFromEnv();
         if (!provider) return new Response("desligado", { status: 503 });

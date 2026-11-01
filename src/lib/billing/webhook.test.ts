@@ -45,7 +45,14 @@ describe("assinatura", () => {
       plan: "inteligencia",
       period: "mensal",
       status: "cancelled",
+      eventAt: null,
     });
+  });
+  it("leva a hora da última mudança, para gravar em ordem", () => {
+    const d = decidePreapproval({ id: "pre_1", status: "paused", external_reference: REF, last_modified: "2026-10-30T10:00:00.000-04:00" });
+    expect(d.action === "subscription" && d.eventAt).toBe("2026-10-30T14:00:00.000Z");
+    const bad = decidePreapproval({ id: "pre_1", status: "paused", external_reference: REF, last_modified: "ontem" });
+    expect(bad.action === "subscription" && bad.eventAt).toBeNull();
   });
   it("referência inválida: ignora", () => {
     expect(decidePreapproval({ id: "pre_1", status: "authorized", external_reference: "x" }).action).toBe("ignore");

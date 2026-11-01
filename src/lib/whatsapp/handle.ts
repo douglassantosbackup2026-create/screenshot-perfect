@@ -3,6 +3,7 @@
 import { addTransactionTo, deleteTransactionIn, parseStoredState, updateTransactionIn } from "@/lib/data/demo-store";
 import { readState, updateState as updateStateIn, type Admin } from "@/lib/data/server-state";
 import { resolveAccess } from "@/lib/entitlements/matrix";
+import { allow } from "@/lib/security/rate-limit.server";
 import { APP_NAME } from "@/lib/seo";
 import type { Inbound } from "./inbound";
 import type { Outbound } from "./outbound";
@@ -81,8 +82,19 @@ async function runPlan(db: Admin, link: Link, plan: Plan, ctx: Ctx): Promise<Out
   }
 }
 
-/** Liga o número à conta que gerou o código. Um número fica em uma conta só. */
+/**
+ * Liga o número à conta que gerou o código. Um número fica em uma conta só.
+ * Tentativas limitadas (por número e no total) para ninguém adivinhar o código de outra pessoa.
+ */
 async function linkNumber(db: Admin, phone: string, code: string, now: Date): Promise<Outbound> {
+  const allowed = await allow(
+    [
+      { key: `wa-link:phone:${phone}`, limit: 5, windowSeconds: 3600 },
+      { key: "wa-link:all", limit: 300, windowSeconds: 3600 },
+    ],
+    { failClosed: true },
+  );
+  if (!allowed) return text("Muitas tentativas de conexão. Espere uma hora e gere um código novo no app.");
   const { data: row } = await db.from("whatsapp_link_codes").select("user_id, expires_at").eq("code", code).maybeSingle();
   if (!row || new Date(row.expires_at).getTime() < now.getTime()) {
     return text("Esse código não vale mais. Gere outro no app: Perfil › WhatsApp › Conectar.");
@@ -96,9 +108,13 @@ async function linkNumber(db: Admin, phone: string, code: string, now: Date): Pr
   return text(`✅ Número conectado ao ${APP_NAME}!\n\n${(help() as { text: string }).text}`);
 }
 
+/** A trava vale se ligada no app (VITE_BILLING_ENABLED) ou no banco (app_settings.billing_enforced). */
 async function hasAccess(db: Admin, userId: string, now: Date): Promise<boolean> {
-  if (!BILLING_ENABLED) return true;
-  const { data } = await db.from("entitlements").select("plan, valid_until").eq("user_id", userId).maybeSingle();
+  const [{ data: settings }, { data }] = await Promise.all([
+    db.from("app_settings").select("billing_enforced").maybeSingle(),
+    db.from("entitlements").select("plan, valid_until").eq("user_id", userId).maybeSingle(),
+  ]);
+  if (!BILLING_ENABLED && settings?.billing_enforced !== true) return true;
   return resolveAccess({ billingEnabled: true, entitlement: data ? { plan: data.plan, validUntil: data.valid_until } : null, now }).active;
 }
 

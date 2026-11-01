@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { attachUser } from "@/lib/data/demo-store";
 import { grantAdminAccess, loadAccess, useAccess } from "@/lib/billing/access";
 import { isAdmin } from "@/lib/auth/roles";
+import { needsMfaStep } from "@/lib/auth/mfa";
 
 /** Abrem sem assinatura: a própria Assinatura e o Perfil (exportar dados, excluir a conta, sair). */
 const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil"];
@@ -46,6 +47,9 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
     const userId = await currentUserId();
     if (!userId) throw redirect({ to: "/entrar", search: { redirect: location.pathname } });
+    // Segundo fator ativo e ainda não confirmado neste login: o banco esconde os dados até lá,
+    // então nada é carregado (nem gravado) antes do código.
+    if (await needsMfaStep()) throw redirect({ to: "/verificar", search: { redirect: location.pathname } });
     const s = await attachUser(userId);
     // Não existe plano grátis: sem assinatura, só a Assinatura e o Perfil. Admin entra sempre.
     const access = await loadAccess(userId);

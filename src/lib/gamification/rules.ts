@@ -56,6 +56,14 @@ export function goalCreatedPeriodKey(events: XpEvent[], month: string, goalId: s
   return used < GOAL_CREATED_XP_PER_MONTH ? prefix + goalId : null;
 }
 
+/** Metas concluídas só dão XP até 3 vezes por mês (espelho de complete_goal). */
+export const GOAL_COMPLETED_XP_PER_MONTH = 3;
+export function goalCompletedXpAllowed(events: XpEvent[], now: Date): boolean {
+  const month = spDate(now).slice(0, 7);
+  const used = events.filter((e) => e.action === "goal_completed" && spDate(new Date(e.at)).slice(0, 7) === month).length;
+  return used < GOAL_COMPLETED_XP_PER_MONTH;
+}
+
 export type XpEvent = { action: XpAction; periodKey: string; xp: number; at: string };
 export type WeekStatus = "ativa" | "pausa";
 export type WeekRecord = { weekStart: string; status: WeekStatus };

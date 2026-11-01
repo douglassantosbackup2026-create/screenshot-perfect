@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { periodKey, reminderPush, remindersFor } from "@/lib/push/reminders";
 import { spDate } from "@/lib/gamification/rules";
+import { secretMatches } from "@/lib/security/compare";
 
 /**
  * Envia os lembretes de hoje por notificação push. Chamada uma vez por dia por um agendador
  * (.github/workflows/lembretes.yml) com Authorization: Bearer <CRON_SECRET>. Pode ser chamada de novo:
- * o reminder_log impede repetir o envio no mesmo mês.
+ * o reminder_log impede repetir o envio no mesmo mês. No mesmo disparo apaga o que passou do prazo de
+ * retenção (purge_expired).
  */
 export const Route = createFileRoute("/api/cron/lembretes")({
   server: {
@@ -17,16 +19,23 @@ export const Route = createFileRoute("/api/cron/lembretes")({
 
 async function run(request: Request) {
   const secret = process.env["CRON_SECRET"];
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return new Response("nao autorizado", { status: 401 });
+  if (!(await secretMatches(request.headers.get("authorization"), secret ? `Bearer ${secret}` : null)))
+    return new Response("nao autorizado", { status: 401 });
   // Carregados aqui dentro: o cliente com service_role e a chave VAPID nunca vão para o navegador.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { sendPush, vapidFromEnv } = await import("@/lib/push/send.server");
+  const purged = await supabaseAdmin.rpc("purge_expired");
+  if (purged.error) console.error("purge_expired failed", purged.error.message);
   const vapid = vapidFromEnv();
-  if (!vapid) return Response.json({ ok: false, error: "VAPID não configurado" }, { status: 500 });
+  if (!vapid) return Response.json({ ok: false, error: "VAPID não configurado", purged: purged.data ?? null }, { status: 500 });
 
   const today = spDate(new Date());
   const { data: recipients, error } = await supabaseAdmin.rpc("push_recipients");
-  if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
+  // O texto do erro do banco fica só no log: a resposta não expõe detalhes internos.
+  if (error) {
+    console.error("push_recipients failed", error.message);
+    return Response.json({ ok: false, error: "falha ao ler destinatarios" }, { status: 500 });
+  }
 
   let sent = 0;
   let skipped = 0;
@@ -50,5 +59,5 @@ async function run(request: Request) {
       }
     }
   }
-  return Response.json({ ok: true, today, recipients: recipients?.length ?? 0, sent, skipped, removed });
+  return Response.json({ ok: true, today, recipients: recipients?.length ?? 0, sent, skipped, removed, purged: purged.data ?? null });
 }

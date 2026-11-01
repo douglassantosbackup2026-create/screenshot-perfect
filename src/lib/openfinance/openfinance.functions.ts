@@ -3,6 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { allow, TOO_MANY } from "@/lib/security/rate-limit.server";
 import { providerFromEnv } from "./provider";
 
 const OFF = "A conexão com bancos ainda não está disponível." as const;
@@ -17,6 +18,7 @@ export const connectBank = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const provider = await providerFromEnv();
     if (!provider) return { error: OFF, added: 0 };
+    if (!(await allow([{ key: `bank-connect:user:${context.userId}`, limit: 10, windowSeconds: 3600 }]))) return { error: TOO_MANY, added: 0 };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: conn, error } = await supabaseAdmin
       .from("bank_connections")
@@ -35,6 +37,7 @@ export const syncBank = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const provider = await providerFromEnv();
     if (!provider) return { error: OFF, added: 0 };
+    if (!(await allow([{ key: `bank-sync:user:${context.userId}`, limit: 30, windowSeconds: 3600 }]))) return { error: TOO_MANY, added: 0 };
     // Lida com o cliente da pessoa: a RLS garante que a conexão é dela.
     const { data: conn, error } = await context.supabase
       .from("bank_connections")

@@ -24,7 +24,7 @@ export type Plan =
   | { kind: "delete"; txId: string }
   | { kind: "setCategory"; txId: string; categoryId: string };
 
-const LINK = /^mitikos-([a-z0-9]{6})$/i;
+const LINK = /^mitikos-([a-z0-9]{8})$/i;
 const HELP = /^(ajuda|menu|help|oi|ol[aá]|bom dia|boa tarde|boa noite|come[cç]ar)\b/i;
 
 export function planText(s: DemoState, text: string, ctx: Ctx): Plan {

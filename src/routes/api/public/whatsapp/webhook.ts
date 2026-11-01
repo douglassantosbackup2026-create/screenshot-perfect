@@ -3,6 +3,7 @@ import { whatsappConfig, sendWhatsApp } from "@/lib/whatsapp/client";
 import { parseWebhook } from "@/lib/whatsapp/inbound";
 import { verifyMetaSignature } from "@/lib/whatsapp/signature";
 import { handleInbound } from "@/lib/whatsapp/handle";
+import { secretMatches } from "@/lib/security/compare";
 
 // Webhook do WhatsApp (Cloud API da Meta). GET: verificação do painel da Meta. POST: mensagens.
 // Só confia no que vem assinado com o app secret. Responde 200 mesmo quando uma mensagem falha
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
         const cfg = whatsappConfig();
         if (!cfg) return new Response("not configured", { status: 503 });
         const url = new URL(request.url);
-        const ok = url.searchParams.get("hub.mode") === "subscribe" && url.searchParams.get("hub.verify_token") === cfg.verifyToken;
+        const ok = url.searchParams.get("hub.mode") === "subscribe" && (await secretMatches(url.searchParams.get("hub.verify_token"), cfg.verifyToken));
         return ok ? new Response(url.searchParams.get("hub.challenge") ?? "") : new Response("forbidden", { status: 403 });
       },
       POST: async ({ request }) => {

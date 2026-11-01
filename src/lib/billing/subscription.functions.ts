@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { allow, TOO_MANY } from "@/lib/security/rate-limit.server";
 import { mpRequest, mpToken } from "./mercadopago";
 import { MpPreapprovalSchema } from "./webhook";
 import { NOT_CONFIGURED, openSubscription, TRY_AGAIN } from "./open-subscription";
@@ -14,6 +15,7 @@ export const createSubscription = createServerFn({ method: "POST" })
   // Só o Inteligência está à venda; o Pro ainda é lista de espera.
   .validator((d) => z.object({ plan: z.literal("inteligencia"), period: z.enum(["mensal", "anual"]) }).parse(d))
   .handler(async ({ data, context }) => {
+    if (!(await allow([{ key: `subscribe:user:${context.userId}`, limit: 10, windowSeconds: 3600 }]))) return { error: TOO_MANY, url: null };
     // Sem saber se já existe assinatura, não cria outra: o risco é cobrar duas vezes.
     const { data: existing, error } = await context.supabase
       .from("subscriptions")
@@ -35,6 +37,7 @@ export const createSubscription = createServerFn({ method: "POST" })
 export const cancelSubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!(await allow([{ key: `cancel:user:${context.userId}`, limit: 10, windowSeconds: 3600 }]))) return { error: TOO_MANY };
     const { data: sub, error } = await context.supabase
       .from("subscriptions")
       .select("preapproval_id, status")
@@ -58,5 +61,6 @@ export const cancelSubscription = createServerFn({ method: "POST" })
       .from("subscriptions")
       .update({ status: "cancelled", updated_at: new Date().toISOString() })
       .eq("user_id", context.userId);
+    await supabaseAdmin.rpc("audit", { p_action: "subscription_cancelled_by_user", p_target: context.userId, p_details: { preapproval: sub.preapproval_id } });
     return { error: null };
   });

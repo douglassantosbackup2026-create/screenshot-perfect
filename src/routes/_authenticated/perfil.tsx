@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isAdmin } from "@/lib/auth/roles";
+import { hasAdminRole, isAdmin } from "@/lib/auth/roles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 import { ChangePassword } from "@/components/auth/ChangePassword";
+import { TwoFactor } from "@/components/auth/TwoFactor";
+import { Field } from "@/components/auth/AuthShell";
+import { confirmIdentity, usesPassword } from "@/lib/auth/reauth";
+import { verifiedTotpId } from "@/lib/auth/mfa";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { pageHead } from "@/lib/seo";
 import { useServerFn } from "@tanstack/react-start";
@@ -61,8 +65,22 @@ function Profile() {
   const cancelAtMercadoPago = useServerFn(cancelSubscription);
   const [confirm, setConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  // Excluir exige confirmar a identidade (senha e, se ativo, o código): uma sessão roubada não basta.
+  const [delPassword, setDelPassword] = useState("");
+  const [delCode, setDelCode] = useState("");
+  const [withPassword, setWithPassword] = useState(true);
+  const [withCode, setWithCode] = useState(false);
+  useEffect(() => {
+    if (!delOpen) return;
+    void usesPassword().then(setWithPassword);
+    void verifiedTotpId().then((id) => setWithCode(!!id), () => setWithCode(false));
+  }, [delOpen]);
   const [admin, setAdmin] = useState(false);
-  useEffect(() => void isAdmin().then(setAdmin), []);
+  const [adminRole, setAdminRole] = useState(false);
+  useEffect(() => {
+    void isAdmin().then(setAdmin);
+    void hasAdminRole().then(setAdminRole);
+  }, []);
   // Mesma escolha do aviso de privacidade (src/lib/analytics): mudar aqui ou lá vale para os dois.
   const [consent, setConsentState] = useState(getConsent);
   useEffect(() => {
@@ -192,6 +210,8 @@ function Profile() {
 
       {WHATSAPP_ENABLED && <WhatsAppSection />}
 
+      <TwoFactor required={adminRole} />
+
       <section className="mt-10 divide-y divide-border">
         <h2 className="pb-2 text-lg">Privacidade</h2>
         <Row label="Ocultar valores por padrão" hint="Lançamentos, Patrimônio e Progresso abrem com os valores escondidos.">
@@ -230,16 +250,31 @@ function Profile() {
             <DialogTitle>Excluir minha conta</DialogTitle>
             <DialogDescription>
               Isso cancela sua assinatura e apaga seu plano, seus registros e seu progresso. Não dá para desfazer. Digite EXCLUIR para confirmar.
+              {!withPassword && " Por segurança, saia e entre de novo com o Google antes de excluir."}
             </DialogDescription>
           </DialogHeader>
           <label htmlFor="confirm" className="sr-only">Digite EXCLUIR</label>
           <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
+          {withPassword && (
+            <Field id="del-password" label="Sua senha" type="password" autoComplete="current-password" value={delPassword} onChange={(e) => setDelPassword(e.target.value)} />
+          )}
+          {withPassword && withCode && (
+            <Field id="del-code" label="Código do app autenticador" inputMode="numeric" autoComplete="one-time-code" value={delCode} onChange={(e) => setDelCode(e.target.value)} />
+          )}
           <DialogFooter>
             <Button
               variant="destructive"
-              disabled={confirm !== "EXCLUIR" || deleting}
+              disabled={confirm !== "EXCLUIR" || deleting || (withPassword && !delPassword)}
               onClick={async () => {
                 setDeleting(true);
+                if (withPassword) {
+                  const problem = await confirmIdentity(delPassword, delCode);
+                  if (problem) {
+                    setDeleting(false);
+                    toast.error(problem);
+                    return;
+                  }
+                }
                 // Cancela a assinatura antes: apagar a conta não pode deixar o cartão sendo cobrado.
                 const cancelled = await cancelAtMercadoPago().catch(() => ({ error: "falhou" }));
                 if (cancelled.error) {

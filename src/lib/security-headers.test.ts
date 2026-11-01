@@ -10,6 +10,8 @@ describe("headers de segurança", () => {
     expect(r.headers.get("x-content-type-options")).toBe("nosniff");
     expect(r.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(r.headers.get("strict-transport-security")).toContain("max-age=");
+    expect(r.headers.get("strict-transport-security")).toContain("preload");
+    expect(r.headers.get("content-security-policy-report-only")).toContain("report-uri /api/public/csp-report");
   });
 
   it("deixa o preview do Lovable abrir o app num iframe e bloqueia o resto", () => {

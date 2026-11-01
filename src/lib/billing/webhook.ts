@@ -46,6 +46,8 @@ export const MpPreapprovalSchema = z.object({
   id: z.string().min(1).max(64),
   status: z.enum(SUBSCRIPTION_STATUSES),
   external_reference: reference,
+  // Última mudança da assinatura, para gravar o status em ordem mesmo com notificações fora de ordem.
+  last_modified: z.string().max(40).nullish(),
   // Só aceitamos mandar a pessoa para o próprio Mercado Pago.
   init_point: z
     .string()
@@ -58,7 +60,16 @@ export type MpPreapproval = z.infer<typeof MpPreapprovalSchema>;
 export type Credit = { id: string; userId: string; plan: PaidPlan; period: BillingPeriod; cents: number };
 export type Decision =
   | { action: "credit"; credit: Credit }
-  | { action: "subscription"; userId: string; preapprovalId: string; plan: PaidPlan; period: BillingPeriod; status: SubscriptionStatus }
+  | {
+      action: "subscription";
+      userId: string;
+      preapprovalId: string;
+      plan: PaidPlan;
+      period: BillingPeriod;
+      status: SubscriptionStatus;
+      /** Quando o Mercado Pago mudou a assinatura (ISO); null se ele não informou. */
+      eventAt: string | null;
+    }
   | { action: "ignore"; reason: string };
 
 /** Credita só pagamento aprovado, em reais, com referência válida e o valor exato do catálogo. */
@@ -91,5 +102,7 @@ export function decideAuthorizedPayment(ap: MpAuthorizedPayment, fallbackRef?: s
 export function decidePreapproval(pre: MpPreapproval): Decision {
   const ref = parseReference(pre.external_reference);
   if (!ref) return { action: "ignore", reason: "referência inválida" };
-  return { action: "subscription", userId: ref.userId, preapprovalId: pre.id, plan: ref.plan, period: ref.period, status: pre.status };
+  const modified = pre.last_modified ? new Date(pre.last_modified) : null;
+  const eventAt = modified && !Number.isNaN(modified.getTime()) ? modified.toISOString() : null;
+  return { action: "subscription", userId: ref.userId, preapprovalId: pre.id, plan: ref.plan, period: ref.period, status: pre.status, eventAt };
 }

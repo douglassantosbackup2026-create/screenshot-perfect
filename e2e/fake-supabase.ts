@@ -53,6 +53,7 @@ export async function signIn(
     if (path === "/auth/v1/user") return json(route, USER);
     if (path === "/auth/v1/logout") return route.fulfill({ status: 204 });
     if (path === "/rest/v1/rpc/is_admin") return json(route, db.admin);
+    if (path === "/rest/v1/rpc/has_admin_role") return json(route, db.admin);
     if (path === "/rest/v1/entitlements" || path === "/rest/v1/subscriptions") {
       if (path === "/rest/v1/entitlements" && db.entitlementDown) return json(route, { message: "fora do ar" }, 503);
       const row = path === "/rest/v1/entitlements" ? db.entitlement : null;

@@ -33,6 +33,7 @@ import {
   levelFromXp,
   computeStreak,
   eligibleAchievements,
+  goalCompletedXpAllowed,
   goalCreatedPeriodKey,
   hasFullQuarter,
   isoWeekKey,
@@ -1673,9 +1674,10 @@ export const demo = {
       const goal = s.goals.find((g) => g.id === id);
       if (!goal || goal.completedAt) return 0;
       goal.completedAt = now.toISOString();
+      markActive(s, now);
+      if (!goalCompletedXpAllowed(s.xpEvents, now)) return 0;
       const a = awardXp(s.xpEvents, "goal_completed", "G:" + id, now.toISOString());
       s.xpEvents = a.events;
-      markActive(s, now);
       return a.awarded;
     });
   },
@@ -2095,9 +2097,10 @@ export function holdingsValue(s: Pick<DemoState, "holdings" | "trades">, assetId
     .reduce((t, h) => t + valuePosition(positionFromTrades(s.trades.filter((x) => x.holdingId === h.id)), h.price).marketValue, 0);
 }
 
-/** XP por planejar um mês no orçamento: o atual ou um à frente, uma vez por mês planejado (espelho de _budget_award). */
+/** XP por planejar um mês no orçamento: só o atual ou o seguinte, uma vez por mês planejado (espelho de _budget_award). */
 function awardBudgetPlanned(s: DemoState, now: Date, month: string): number {
-  if (month < monthOf(spDate(now))) return 0;
+  const current = monthOf(spDate(now));
+  if (month < current || month > shiftMonth(current, 1)) return 0;
   const a = awardXp(s.xpEvents, "budget_planned", "M:" + month.slice(0, 7), now.toISOString());
   s.xpEvents = a.events;
   markActive(s, now);

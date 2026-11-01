@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { allow, clientIp } from "@/lib/security/rate-limit.server";
 
 // Recebe erros do navegador (src/lib/client-errors.ts) e só registra no log do servidor.
-// Não grava nada nem responde dados: o pior que um abuso faz é encher o log, e o corpo tem tamanho limitado.
+// Não grava nada nem responde dados: o pior que um abuso faz é encher o log, e o corpo tem tamanho limitado
+// e cada IP manda no máximo 30 relatos por minuto.
 const MAX_BODY = 8 * 1024;
 const Report = z.object({
   kind: z.enum(["boundary", "root", "onerror", "unhandledrejection"]),
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/api/public/client-error")({
       POST: async ({ request }) => {
         const text = await request.text().catch(() => "");
         if (!text || text.length > MAX_BODY) return new Response(null, { status: 204 });
+        if (!(await allow([{ key: `client-error:ip:${clientIp(request)}`, limit: 30, windowSeconds: 60 }]))) return new Response(null, { status: 204 });
         try {
           const r = Report.parse(JSON.parse(text));
           console.error(`[client-error] ${r.kind} ${r.path}: ${r.message}\n${r.stack}`);

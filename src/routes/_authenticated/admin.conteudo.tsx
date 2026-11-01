@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
-import { isAdmin } from "@/lib/auth/roles";
+import { adminGate } from "@/lib/auth/roles";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,10 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/conteudo")({
   beforeLoad: async () => {
-    if (!(await isAdmin())) throw redirect({ to: "/hoje", replace: true });
+    // Admin sem o segundo fator confirmado vai para o Perfil ativar/confirmar.
+    const gate = await adminGate();
+    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
+    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
   },
   head: () => pageHead("Admin de conteúdo", "Cadastro e revisão de lições, perguntas e missões semanais.", "Cadastro e revisão de lições, perguntas e missões."),
   component: Admin,

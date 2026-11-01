@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
 import { errMsg } from "@/lib/errors";
+import { safeHref } from "@/lib/content-rules";
 
 export const Route = createFileRoute("/_authenticated/programa/$dia")({
   beforeLoad: () => {
@@ -124,7 +125,7 @@ function LessonPage() {
                   {lesson.sources.map((src, i) => (
                     <span key={src.url}>
                       {i > 0 && " · "}
-                      <a href={src.url} target="_blank" rel="noreferrer" className="underline">
+                      <a href={safeHref(src.url)} target="_blank" rel="noopener noreferrer" className="underline">
                         {src.label}
                       </a>
                     </span>

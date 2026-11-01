@@ -35,6 +35,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Por quanto tempo guardamos",
+    body: [
+      "Seus dados do app: enquanto a conta existir. Ao excluir a conta, apagamos tudo na hora, inclusive o e-mail deixado na calculadora.",
+      "Medição de uso: 13 meses. E-mails da calculadora sem conta: 24 meses.",
+      "Mensagens do WhatsApp: guardamos só o código de cada mensagem, por 90 dias, para não registrar a mesma duas vezes.",
+      "Registros de segurança (pagamentos, mudanças de assinatura, ações da equipe): 5 anos, sem possibilidade de alteração, para auditoria e obrigações legais. O registro do seu consentimento fica enquanto a conta existir.",
+    ],
+  },
+  {
     title: "Seus direitos",
     body: [
       "Exportar: em Perfil, “Baixar meus dados” gera um arquivo com tudo.",

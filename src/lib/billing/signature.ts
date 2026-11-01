@@ -1,5 +1,9 @@
 // Verificação da assinatura x-signature do webhook do Mercado Pago (HMAC-SHA256).
 // Manifesto oficial: "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
+import { safeEqual } from "@/lib/security/compare";
+
+export { safeEqual };
+
 export function parseSignatureHeader(header: string | null): { ts: string; v1: string } | null {
   if (!header) return null;
   const parts = Object.fromEntries(
@@ -22,14 +26,6 @@ export async function hmacHex(secret: string, message: string): Promise<string> 
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
   return Array.from(new Uint8Array(sig), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/** Compara dois textos em tempo constante (para assinaturas). */
-export function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let r = 0;
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return r === 0;
 }
 
 /** Notificação mais velha (ou mais adiantada) que isso é recusada: uma assinatura válida não pode ser reenviada depois. */

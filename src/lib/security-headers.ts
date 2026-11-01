@@ -1,6 +1,8 @@
 // Headers de segurança em toda resposta do servidor.
 // A CSP completa vai primeiro em modo "Report-Only": o SSR injeta scripts inline, e impor `script-src`
 // sem nonce quebraria a hidratação. O que já pode ser imposto sem risco vai na CSP de verdade.
+// As violações da CSP completa chegam em /api/public/csp-report (log do servidor): quando só sobrarem os
+// scripts inline do SSR, o próximo passo é nonce + impor script-src.
 
 /**
  * Quem pode exibir o app num iframe: o próprio app e o editor do Lovable (o preview roda dentro de lovable.dev).
@@ -21,6 +23,7 @@ export const REPORT_ONLY_CSP = [
   `frame-ancestors ${FRAME_ANCESTORS}`,
   "object-src 'none'",
   "base-uri 'self'",
+  "report-uri /api/public/csp-report",
 ].join("; ");
 
 export const SECURITY_HEADERS: Record<string, string> = {
@@ -28,7 +31,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy-Report-Only": REPORT_ONLY_CSP,
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
 };
 

@@ -19,6 +19,7 @@ import { Route as PagamentoRouteImport } from './routes/pagamento'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SobreRouteImport } from './routes/sobre'
+import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
 import { Route as AuthenticatedEvolucaoRouteImport } from './routes/_authenticated/evolucao'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authen
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
 import { Route as ApiPublicClientErrorRouteImport } from './routes/api/public/client-error'
+import { Route as ApiPublicCspReportRouteImport } from './routes/api/public/csp-report'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago/webhook'
 import { Route as ApiPublicOpenfinanceWebhookRouteImport } from './routes/api/public/openfinance/webhook'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
@@ -88,6 +90,11 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
 const SobreRoute = SobreRouteImport.update({
   id: '/sobre',
   path: '/sobre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificarRoute = VerificarRouteImport.update({
+  id: '/verificar',
+  path: '/verificar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
@@ -183,6 +190,11 @@ const ApiPublicClientErrorRoute = ApiPublicClientErrorRouteImport.update({
   path: '/api/public/client-error',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCspReportRoute = ApiPublicCspReportRouteImport.update({
+  id: '/api/public/csp-report',
+  path: '/api/public/csp-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMercadopagoWebhookRoute =
   ApiPublicMercadopagoWebhookRouteImport.update({
     id: '/api/public/mercadopago/webhook',
@@ -212,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
+  '/verificar': typeof VerificarRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -230,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
+  '/api/public/csp-report': typeof ApiPublicCspReportRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -244,6 +258,7 @@ export interface FileRoutesByTo {
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
+  '/verificar': typeof VerificarRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -262,6 +277,7 @@ export interface FileRoutesByTo {
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
+  '/api/public/csp-report': typeof ApiPublicCspReportRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -278,6 +294,7 @@ export interface FileRoutesById {
   '/privacidade': typeof PrivacidadeRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
+  '/verificar': typeof VerificarRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
   '/_authenticated/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -296,6 +313,7 @@ export interface FileRoutesById {
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
+  '/api/public/csp-report': typeof ApiPublicCspReportRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -312,6 +330,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
+    | '/verificar'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -330,6 +349,7 @@ export interface FileRouteTypes {
     | '/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/public/client-error'
+    | '/api/public/csp-report'
     | '/api/public/mercadopago/webhook'
     | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
@@ -344,6 +364,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
+    | '/verificar'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -362,6 +383,7 @@ export interface FileRouteTypes {
     | '/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/public/client-error'
+    | '/api/public/csp-report'
     | '/api/public/mercadopago/webhook'
     | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
@@ -377,6 +399,7 @@ export interface FileRouteTypes {
     | '/privacidade'
     | '/redefinir-senha'
     | '/sobre'
+    | '/verificar'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
     | '/_authenticated/evolucao'
@@ -395,6 +418,7 @@ export interface FileRouteTypes {
     | '/_authenticated/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/public/client-error'
+    | '/api/public/csp-report'
     | '/api/public/mercadopago/webhook'
     | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
@@ -411,8 +435,10 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   SobreRoute: typeof SobreRoute
+  VerificarRoute: typeof VerificarRoute
   ApiCronLembretesRoute: typeof ApiCronLembretesRoute
   ApiPublicClientErrorRoute: typeof ApiPublicClientErrorRoute
+  ApiPublicCspReportRoute: typeof ApiPublicCspReportRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
   ApiPublicOpenfinanceWebhookRoute: typeof ApiPublicOpenfinanceWebhookRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
@@ -488,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/sobre'
       fullPath: '/sobre'
       preLoaderRoute: typeof SobreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verificar': {
+      id: '/verificar'
+      path: '/verificar'
+      fullPath: '/verificar'
+      preLoaderRoute: typeof VerificarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/contas': {
@@ -616,6 +649,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicClientErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/csp-report': {
+      id: '/api/public/csp-report'
+      path: '/api/public/csp-report'
+      fullPath: '/api/public/csp-report'
+      preLoaderRoute: typeof ApiPublicCspReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mercadopago/webhook': {
       id: '/api/public/mercadopago/webhook'
       path: '/api/public/mercadopago/webhook'
@@ -692,8 +732,10 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   RedefinirSenhaRoute: RedefinirSenhaRoute,
   SobreRoute: SobreRoute,
+  VerificarRoute: VerificarRoute,
   ApiCronLembretesRoute: ApiCronLembretesRoute,
   ApiPublicClientErrorRoute: ApiPublicClientErrorRoute,
+  ApiPublicCspReportRoute: ApiPublicCspReportRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
   ApiPublicOpenfinanceWebhookRoute: ApiPublicOpenfinanceWebhookRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,

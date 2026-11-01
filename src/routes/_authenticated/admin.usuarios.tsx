@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { pageHead } from "@/lib/seo";
-import { isAdmin } from "@/lib/auth/roles";
+import { adminGate } from "@/lib/auth/roles";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,10 @@ import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/usuarios")({
   beforeLoad: async () => {
-    if (!(await isAdmin())) throw redirect({ to: "/hoje", replace: true });
+    // Admin sem o segundo fator confirmado vai para o Perfil ativar/confirmar.
+    const gate = await adminGate();
+    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
+    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
   },
   head: () => pageHead("Admin de usuários", "Busca de contas, assinatura e cobrança.", "Busca de contas e assinatura."),
   component: AdminUsers,

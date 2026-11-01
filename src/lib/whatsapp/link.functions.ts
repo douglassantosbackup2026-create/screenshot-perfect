@@ -1,14 +1,23 @@
 // Conectar o WhatsApp a partir do Perfil: gera um código curto que a pessoa manda para o número do Mitikos.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { allow, TOO_MANY } from "@/lib/security/rate-limit.server";
 
 // Sem 0/O e 1/I/L, que se confundem ao digitar.
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const CODE_TTL_MS = 10 * 60 * 1000;
+export const CODE_LENGTH = 8;
 
-function newCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
-  return Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
+/** 8 letras sorteadas sem viés: bytes acima do último múltiplo de 31 são descartados. */
+export function newCode(): string {
+  const limit = 256 - (256 % ALPHABET.length);
+  let code = "";
+  while (code.length < CODE_LENGTH) {
+    for (const b of crypto.getRandomValues(new Uint8Array(16))) {
+      if (b < limit && code.length < CODE_LENGTH) code += ALPHABET[b % ALPHABET.length];
+    }
+  }
+  return code;
 }
 
 /** Cria o código e devolve o link wa.me com a mensagem pronta. */
@@ -17,6 +26,7 @@ export const createWhatsAppLink = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const number = (process.env["WHATSAPP_DISPLAY_NUMBER"] ?? "").replace(/\D/g, "");
     if (!number) return { error: "O WhatsApp ainda não está configurado." as const, code: null, url: null };
+    if (!(await allow([{ key: `wa-code:user:${context.userId}`, limit: 10, windowSeconds: 3600 }]))) return { error: TOO_MANY, code: null, url: null };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Um código por vez: gerar outro invalida o anterior.
     await supabaseAdmin.from("whatsapp_link_codes").delete().eq("user_id", context.userId);
