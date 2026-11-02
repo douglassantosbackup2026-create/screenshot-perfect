@@ -6,7 +6,7 @@ import { needsMfaStep, removeTotp, startTotpEnroll, verifiedTotpId, verifyTotp }
 
 /**
  * Verificação em duas etapas no Perfil: ativar (QR + código), confirmar o código nesta sessão e desativar.
- * Obrigatória para admin: sem ela, o back-office não abre (`required`).
+ * Com `required`, não deixa desativar (hoje nenhuma tela usa: é opcional para todos, inclusive admin).
  */
 export function TwoFactor({ required = false }: { required?: boolean }) {
   const [factorId, setFactorId] = useState<string | null>(null);

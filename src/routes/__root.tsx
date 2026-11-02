@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AchievementSheet } from "@/components/feedback";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { captureUtm, linkConsentToUser } from "@/lib/analytics/analytics";
+import { captureRef, claimPendingRef } from "@/lib/affiliates/ref";
 import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -134,12 +135,18 @@ function RootComponent() {
   // Só para poder instalar o app; fora do preview do editor (iframe) e do ambiente de desenvolvimento.
   useEffect(() => installClientErrorReporting(), []);
   // Analytics: UTMs da página de entrada e, depois do login, a escolha do banner vai para a conta.
+  // Afiliados: o ?ref= da entrada fica guardado e, depois do login, liga a conta ao afiliado.
   useEffect(() => {
     captureUtm(window.location.search);
+    captureRef(window.location.search);
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
       // Fora do callback: chamar o Supabase dentro dele pode travar o cliente de auth.
-      const id = session?.user.id;
-      if (id) setTimeout(() => void linkConsentToUser(id), 0);
+      const user = session?.user;
+      if (user)
+        setTimeout(() => {
+          void linkConsentToUser(user.id);
+          void claimPendingRef(user);
+        }, 0);
     });
     return () => data.subscription.unsubscribe();
   }, []);

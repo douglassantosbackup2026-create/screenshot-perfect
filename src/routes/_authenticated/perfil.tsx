@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { hasAdminRole, isAdmin } from "@/lib/auth/roles";
+import { isAdmin } from "@/lib/auth/roles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -76,10 +76,8 @@ function Profile() {
     void verifiedTotpId().then((id) => setWithCode(!!id), () => setWithCode(false));
   }, [delOpen]);
   const [admin, setAdmin] = useState(false);
-  const [adminRole, setAdminRole] = useState(false);
   useEffect(() => {
     void isAdmin().then(setAdmin);
-    void hasAdminRole().then(setAdminRole);
   }, []);
   // Mesma escolha do aviso de privacidade (src/lib/analytics): mudar aqui ou lá vale para os dois.
   const [consent, setConsentState] = useState(getConsent);
@@ -210,7 +208,7 @@ function Profile() {
 
       {WHATSAPP_ENABLED && <WhatsAppSection />}
 
-      <TwoFactor required={adminRole} />
+      <TwoFactor />
 
       <section className="mt-10 divide-y divide-border">
         <h2 className="pb-2 text-lg">Privacidade</h2>
@@ -233,11 +231,13 @@ function Profile() {
       <nav className="mt-10 flex flex-col border-t border-border pt-4 text-sm" aria-label="Links">
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
         <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Sua assinatura</Link>
+        <Link to="/afiliado" className="min-h-11 py-3">Programa de afiliados</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
         {admin && <Link to="/admin/usuarios" className="min-h-11 py-3">Admin de usuários</Link>}
         {admin && <Link to="/admin/funil" className="min-h-11 py-3">Admin: funil</Link>}
+        {admin && <Link to="/admin/afiliados" className="min-h-11 py-3">Admin: afiliados</Link>}
         <ChangePassword />
         <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
           Sair

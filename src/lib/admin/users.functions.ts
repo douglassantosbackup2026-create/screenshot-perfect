@@ -1,5 +1,5 @@
 // Ações de admin sobre a assinatura de outra conta. Cada uma confere is_admin() com a sessão de quem
-// chama (exige o segundo fator, aal2) antes de usar o service role; sem isso, nada acontece.
+// chama antes de usar o service role; sem isso, nada acontece.
 // Toda ação fica no audit_log com o id do admin.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";

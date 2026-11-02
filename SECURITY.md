@@ -14,8 +14,8 @@ O app **não movimenta dinheiro**: não há PIX, saque nem transferência entre 
 | Pagamento duplicado / replay | `credit_payment` idempotente pelo id do pagamento; `webhook_receipts` por `x-request-id`; janela de 5 min na assinatura HMAC | migrations `assinaturas`, `security_hardening_2` |
 | Status de assinatura fora de ordem | `apply_subscription_status` só grava evento mais novo (`last_event_at`) | `security_hardening_2` |
 | Acesso a dados de outra pessoa | RLS em todas as tabelas; gatilhos conferem dono de conta/categoria/transferência/recorrência/aporte | migrations |
-| Escalação de privilégio | Papéis em `user_roles` (cliente só lê); `has_role` só responde sobre a própria conta; admin exige MFA (`aal2`) no banco | `security_hardening_2` |
-| Account takeover | MFA TOTP opcional para todos e obrigatório para admin; com MFA ativo, o banco esconde os dados sem `aal2`; excluir conta exige senha recente (+ código) | `src/lib/auth/mfa.ts`, `_mfa_ok`, `_recent_auth` |
+| Escalação de privilégio | Papéis em `user_roles` (cliente só lê); `has_role` só responde sobre a própria conta; admin não exige MFA (decisão de produto) | `security_hardening_2`, `admin_sem_mfa` |
+| Account takeover | MFA TOTP opcional para todos, inclusive admin; com MFA ativo, o banco esconde os dados sem `aal2`; excluir conta exige senha recente (+ código) | `src/lib/auth/mfa.ts`, `_mfa_ok`, `_recent_auth` |
 | Brute force / abuso | Limite por IP, usuário e número em `hit_rate_limit` (rotas públicas, server functions, código do WhatsApp, leads, analytics) | `src/lib/security/rate-limit.server.ts` |
 | Enumeração de e-mail | `submit_lead` responde igual para e-mail novo ou repetido | `security_hardening_2` |
 | Comparação de segredos | Tempo constante (`secretMatches`) no cron, Open Finance e WhatsApp | `src/lib/security/compare.ts` |

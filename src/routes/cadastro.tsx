@@ -10,6 +10,7 @@ import { authErrorMessage, passwordProblems, safePath } from "@/lib/auth/passwor
 import { CALC_PREFILL_KEY } from "@/lib/data/demo-store";
 import { pageHead } from "@/lib/seo";
 import { track } from "@/lib/analytics/analytics";
+import { captureRef, currentRef, normalizeRef, saveRef } from "@/lib/affiliates/ref";
 
 export const Route = createFileRoute("/cadastro")({
   validateSearch: z.object({ redirect: z.string().optional() }),
@@ -29,18 +30,42 @@ function SignUp() {
   // Quem veio da calculadora já tem a conta feita: o cadastro só salva.
   const [fromCalc, setFromCalc] = useState(false);
   useEffect(() => setFromCalc(!!window.sessionStorage.getItem(CALC_PREFILL_KEY)), []);
+  // Código de afiliado: vem do link (?ref=) ou a pessoa digita. Só liga a conta ao afiliado.
+  const [refCode, setRefCode] = useState("");
+  const [linkRef, setLinkRef] = useState<string | null>(null);
+  useEffect(() => {
+    captureRef(window.location.search);
+    const code = currentRef()?.code ?? null;
+    setLinkRef(code);
+    if (code) setRefCode(code);
+  }, []);
   const problems = passwordProblems(password);
   const next = safePath(target, "/onboarding");
+
+  /** Guarda o código digitado; undefined se o formato estiver errado (já avisou). */
+  function keepRef(): { ref?: string; ref_source?: string } | undefined {
+    if (!refCode.trim()) return {};
+    const code = normalizeRef(refCode);
+    if (!code) {
+      toast.error("Código de indicação inválido: use só letras e números.");
+      return undefined;
+    }
+    const source = code === linkRef ? "link" : "cupom";
+    saveRef(code, source);
+    return { ref: code, ref_source: source };
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (problems.length) return void toast.error(problems[0]);
     if (!terms) return void toast.error("Aceite os termos para continuar.");
+    const ref = keepRef();
+    if (!ref) return;
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { display_name: name.trim() } },
+      options: { data: { display_name: name.trim(), ...ref } },
     });
     setBusy(false);
     if (error) return void toast.error(authErrorMessage(error.message));
@@ -54,6 +79,7 @@ function SignUp() {
   }
 
   async function google() {
+    if (!keepRef()) return;
     // Volta por /entrar, que já leva quem tem sessão para o destino.
     const back = `${window.location.origin}/entrar?redirect=${encodeURIComponent(next)}`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: back } });
@@ -91,6 +117,15 @@ function SignUp() {
             </button>
           </div>
         </div>
+        <Field
+          id="ref"
+          label="Código de indicação (opcional)"
+          autoComplete="off"
+          autoCapitalize="characters"
+          maxLength={20}
+          value={refCode}
+          onChange={(e) => setRefCode(e.target.value.toUpperCase())}
+        />
         <label className="flex items-start gap-3 text-sm">
           <Checkbox checked={terms} onCheckedChange={(v) => setTerms(v === true)} className="mt-0.5" />
           <span>

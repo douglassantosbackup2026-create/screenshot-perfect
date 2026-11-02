@@ -1,6 +1,6 @@
 // Segundo fator (TOTP, app autenticador) pelo Supabase Auth.
 // Quem ativa passa a precisar do código a cada login: o banco só libera os dados dessa pessoa com sessão
-// aal2 (_mfa_ok, migration 20261107120000). Admin precisa ter o segundo fator para usar o back-office.
+// aal2 (_mfa_ok, migration 20261107120000). É opcional para todos, inclusive admin.
 import { supabase } from "@/integrations/supabase/client";
 
 /**

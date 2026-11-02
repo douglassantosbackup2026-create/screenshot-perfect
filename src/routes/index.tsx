@@ -156,6 +156,10 @@ function Index() {
             Privacidade
           </Link>
           {" · "}
+          <Link to="/afiliados" className="underline">
+            Seja afiliado
+          </Link>
+          {" · "}
           <button type="button" className="underline" onClick={openConsentPreferences}>
             Preferências de privacidade
           </button>

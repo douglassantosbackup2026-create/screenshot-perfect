@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Papel de admin vem do banco (user_roles), sempre de quem está conectado: is_admin() não recebe id,
  * então ninguém pergunta sobre outra conta. Sem sessão ou com erro, não é admin.
- * is_admin() só é verdadeiro com o segundo fator confirmado (sessão aal2).
+ * O segundo fator é opcional também para admin (migration 20261108120000).
  */
 export async function isAdmin(): Promise<boolean> {
   const { data, error } = await supabase.rpc("is_admin");

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AfiliadosRouteImport } from './routes/afiliados'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
 import { Route as EntrarRouteImport } from './routes/entrar'
@@ -20,6 +21,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as VerificarRouteImport } from './routes/verificar'
+import { Route as AuthenticatedAfiliadoRouteImport } from './routes/_authenticated/afiliado'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
 import { Route as AuthenticatedEvolucaoRouteImport } from './routes/_authenticated/evolucao'
@@ -32,6 +34,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/plano'
 import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
+import { Route as AuthenticatedAdminAfiliadosRouteImport } from './routes/_authenticated/admin.afiliados'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedAdminFunilRouteImport } from './routes/_authenticated/admin.funil'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
@@ -50,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AfiliadosRoute = AfiliadosRouteImport.update({
+  id: '/afiliados',
+  path: '/afiliados',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CadastroRoute = CadastroRouteImport.update({
@@ -96,6 +104,11 @@ const VerificarRoute = VerificarRouteImport.update({
   id: '/verificar',
   path: '/verificar',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAfiliadoRoute = AuthenticatedAfiliadoRouteImport.update({
+  id: '/afiliado',
+  path: '/afiliado',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
   id: '/contas',
@@ -157,6 +170,12 @@ const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
   path: '/revisao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminAfiliadosRoute =
+  AuthenticatedAdminAfiliadosRouteImport.update({
+    id: '/admin/afiliados',
+    path: '/admin/afiliados',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminConteudoRoute =
   AuthenticatedAdminConteudoRouteImport.update({
     id: '/admin/conteudo',
@@ -216,6 +235,7 @@ const ApiPublicWhatsappWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/afiliados': typeof AfiliadosRoute
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
@@ -225,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/verificar': typeof VerificarRoute
+  '/afiliado': typeof AuthenticatedAfiliadoRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -237,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/plano': typeof AuthenticatedPlanoRoute
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
+  '/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
@@ -250,6 +272,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/afiliados': typeof AfiliadosRoute
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
@@ -259,6 +282,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/verificar': typeof VerificarRoute
+  '/afiliado': typeof AuthenticatedAfiliadoRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -271,6 +295,7 @@ export interface FileRoutesByTo {
   '/plano': typeof AuthenticatedPlanoRoute
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
+  '/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
@@ -286,6 +311,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/afiliados': typeof AfiliadosRoute
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
   '/entrar': typeof EntrarRoute
@@ -295,6 +321,7 @@ export interface FileRoutesById {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/verificar': typeof VerificarRoute
+  '/_authenticated/afiliado': typeof AuthenticatedAfiliadoRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
   '/_authenticated/evolucao': typeof AuthenticatedEvolucaoRoute
@@ -307,6 +334,7 @@ export interface FileRoutesById {
   '/_authenticated/plano': typeof AuthenticatedPlanoRoute
   '/_authenticated/planos': typeof AuthenticatedPlanosRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
+  '/_authenticated/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/admin/funil': typeof AuthenticatedAdminFunilRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
@@ -322,6 +350,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/afiliados'
     | '/cadastro'
     | '/calculadora'
     | '/entrar'
@@ -331,6 +360,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/sobre'
     | '/verificar'
+    | '/afiliado'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -343,6 +373,7 @@ export interface FileRouteTypes {
     | '/plano'
     | '/planos'
     | '/revisao'
+    | '/admin/afiliados'
     | '/admin/conteudo'
     | '/admin/funil'
     | '/admin/usuarios'
@@ -356,6 +387,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/afiliados'
     | '/cadastro'
     | '/calculadora'
     | '/entrar'
@@ -365,6 +397,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/sobre'
     | '/verificar'
+    | '/afiliado'
     | '/contas'
     | '/diario'
     | '/evolucao'
@@ -377,6 +410,7 @@ export interface FileRouteTypes {
     | '/plano'
     | '/planos'
     | '/revisao'
+    | '/admin/afiliados'
     | '/admin/conteudo'
     | '/admin/funil'
     | '/admin/usuarios'
@@ -391,6 +425,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/afiliados'
     | '/cadastro'
     | '/calculadora'
     | '/entrar'
@@ -400,6 +435,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/sobre'
     | '/verificar'
+    | '/_authenticated/afiliado'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
     | '/_authenticated/evolucao'
@@ -412,6 +448,7 @@ export interface FileRouteTypes {
     | '/_authenticated/plano'
     | '/_authenticated/planos'
     | '/_authenticated/revisao'
+    | '/_authenticated/admin/afiliados'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/admin/funil'
     | '/_authenticated/admin/usuarios'
@@ -427,6 +464,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AfiliadosRoute: typeof AfiliadosRoute
   CadastroRoute: typeof CadastroRoute
   CalculadoraRoute: typeof CalculadoraRoute
   EntrarRoute: typeof EntrarRoute
@@ -458,6 +496,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/afiliados': {
+      id: '/afiliados'
+      path: '/afiliados'
+      fullPath: '/afiliados'
+      preLoaderRoute: typeof AfiliadosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cadastro': {
@@ -522,6 +567,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/verificar'
       preLoaderRoute: typeof VerificarRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/afiliado': {
+      id: '/_authenticated/afiliado'
+      path: '/afiliado'
+      fullPath: '/afiliado'
+      preLoaderRoute: typeof AuthenticatedAfiliadoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/contas': {
       id: '/_authenticated/contas'
@@ -607,6 +659,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/afiliados': {
+      id: '/_authenticated/admin/afiliados'
+      path: '/admin/afiliados'
+      fullPath: '/admin/afiliados'
+      preLoaderRoute: typeof AuthenticatedAdminAfiliadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/conteudo': {
       id: '/_authenticated/admin/conteudo'
       path: '/admin/conteudo'
@@ -681,6 +740,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAfiliadoRoute: typeof AuthenticatedAfiliadoRoute
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDiarioRoute: typeof AuthenticatedDiarioRoute
   AuthenticatedEvolucaoRoute: typeof AuthenticatedEvolucaoRoute
@@ -693,6 +753,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlanoRoute: typeof AuthenticatedPlanoRoute
   AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
+  AuthenticatedAdminAfiliadosRoute: typeof AuthenticatedAdminAfiliadosRoute
   AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
   AuthenticatedAdminFunilRoute: typeof AuthenticatedAdminFunilRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
@@ -700,6 +761,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAfiliadoRoute: AuthenticatedAfiliadoRoute,
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDiarioRoute: AuthenticatedDiarioRoute,
   AuthenticatedEvolucaoRoute: AuthenticatedEvolucaoRoute,
@@ -712,6 +774,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlanoRoute: AuthenticatedPlanoRoute,
   AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
+  AuthenticatedAdminAfiliadosRoute: AuthenticatedAdminAfiliadosRoute,
   AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
   AuthenticatedAdminFunilRoute: AuthenticatedAdminFunilRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
@@ -724,6 +787,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AfiliadosRoute: AfiliadosRoute,
   CadastroRoute: CadastroRoute,
   CalculadoraRoute: CalculadoraRoute,
   EntrarRoute: EntrarRoute,

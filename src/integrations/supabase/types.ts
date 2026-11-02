@@ -52,6 +52,142 @@ export type Database = {
           },
         ]
       }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          commission_cents: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          paid_by: string | null
+          payment_cents: number
+          payment_id: string
+          referred_user: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_cents: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_cents: number
+          payment_id: string
+          referred_user?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_cents?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_cents?: number
+          payment_id?: string
+          referred_user?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          code: string | null
+          commission_bp: number
+          commission_mode: string
+          commission_months: number | null
+          created_at: string
+          email: string
+          id: string
+          instagram: string
+          message: string
+          name: string
+          pix_key: string
+          review_note: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          whatsapp: string
+        }
+        Insert: {
+          code?: string | null
+          commission_bp?: number
+          commission_mode?: string
+          commission_months?: number | null
+          created_at?: string
+          email: string
+          id?: string
+          instagram?: string
+          message?: string
+          name: string
+          pix_key?: string
+          review_note?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          whatsapp?: string
+        }
+        Update: {
+          code?: string | null
+          commission_bp?: number
+          commission_mode?: string
+          commission_months?: number | null
+          created_at?: string
+          email?: string
+          id?: string
+          instagram?: string
+          message?: string
+          name?: string
+          pix_key?: string
+          review_note?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          affiliate_id: string
+          code: string
+          created_at: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_id: string
+          code: string
+          created_at?: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          affiliate_id?: string
+          code?: string
+          created_at?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       achievements: {
         Row: {
           code: string
@@ -1767,6 +1903,39 @@ export type Database = {
         }
         Returns: string
       }
+      admin_affiliate_commissions: {
+        Args: { p_status: string | null }
+        Returns: Json
+      }
+      admin_list_affiliates: {
+        Args: { p_status: string | null }
+        Returns: Json
+      }
+      admin_review_affiliate: {
+        Args: {
+          p_bp?: number
+          p_code?: string
+          p_decision: string
+          p_id: string
+          p_mode?: string
+          p_months?: number
+          p_note?: string
+        }
+        Returns: undefined
+      }
+      admin_set_affiliate_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      admin_set_commission_status: {
+        Args: { p_ids: string[]; p_status: string }
+        Returns: number
+      }
+      claim_referral: {
+        Args: { p_code?: string; p_source?: string }
+        Returns: Json
+      }
+      my_affiliate: { Args: never; Returns: Json }
       admin_find_users: {
         Args: { p_query: string }
         Returns: {

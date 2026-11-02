@@ -10,8 +10,11 @@ import { grantAdminAccess, loadAccess, useAccess } from "@/lib/billing/access";
 import { isAdmin } from "@/lib/auth/roles";
 import { needsMfaStep } from "@/lib/auth/mfa";
 
-/** Abrem sem assinatura: a própria Assinatura e o Perfil (exportar dados, excluir a conta, sair). */
-const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil"];
+/**
+ * Abrem sem assinatura: a própria Assinatura, o Perfil (exportar dados, excluir a conta, sair) e o
+ * painel de afiliado (quem divulga não precisa assinar).
+ */
+const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/afiliado"];
 
 /** Conta já conferida no servidor nesta aba, e se é admin; trocar de tela não repete essas consultas. */
 let verifiedUser: string | null = null;
