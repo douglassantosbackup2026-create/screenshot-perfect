@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { addMonths, monthOf, spDate } from "@/lib/gamification/rules";
 import { installmentSchedule } from "@/lib/calc/installments";
@@ -405,6 +405,12 @@ describe("orçamento por envelopes", () => {
   const month = () => monthOf(spDate(new Date()));
 
   it("no exemplo da Ana, o aporte do mês passado zerou o envelope Aposentadoria e o deste mês ainda está para sair", async () => {
+    // Depois do dia 10, quando o aluguel do mês já saiu.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-21T15:00:00Z"));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const { makeSeed, budgetMonths } = await freshStore();
     const s = makeSeed();
     const months = budgetMonths(s, month());
