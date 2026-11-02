@@ -22,7 +22,8 @@ import {
   type CommissionMode,
   type CommissionRule,
 } from "@/lib/calc/commission";
-import { PLAN_NAMES, PRICES_CENTS } from "@/lib/billing/catalog";
+import { PLAN_NAMES } from "@/lib/billing/catalog";
+import { usePlanPrices } from "@/lib/billing/prices";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/afiliados")({
@@ -54,6 +55,7 @@ type Affiliate = {
   referrals: number;
   pending_cents: number;
   paid_cents: number;
+  coupons?: string[];
 };
 type Commission = {
   id: string;
@@ -77,9 +79,13 @@ function AdminAffiliates() {
   const [editing, setEditing] = useState<Affiliate | null>(null);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc("admin_list_affiliates", { p_status: null });
+    const [{ data, error }, coupons] = await Promise.all([supabase.rpc("admin_list_affiliates", { p_status: null }), supabase.rpc("admin_list_coupons")]);
     if (error) return void toast.error(errMsg(error));
-    setRows(data as unknown as Affiliate[]);
+    // Cupons de cada afiliado, só para mostrar no cartão (o cadastro é em Admin: cupons).
+    const byAffiliate = new Map<string, string[]>();
+    for (const c of (coupons.data ?? []) as unknown as { code: string; affiliate_id: string | null; active: boolean }[])
+      if (c.affiliate_id && c.active) byAffiliate.set(c.affiliate_id, [...(byAffiliate.get(c.affiliate_id) ?? []), c.code]);
+    setRows((data as unknown as Affiliate[]).map((a) => ({ ...a, coupons: byAffiliate.get(a.id) ?? [] })));
   }, []);
   useEffect(() => void load(), [load]);
 
@@ -181,6 +187,8 @@ function AffiliateCard({ a, onEdit, onChanged }: { a: Affiliate; onEdit: () => v
             <dd className="money">
               {formatMoney(a.pending_cents)} / {formatMoney(a.paid_cents)}
             </dd>
+            <dt className="text-muted-foreground">Cupons</dt>
+            <dd className="money">{a.coupons?.length ? a.coupons.join(", ") : "—"}</dd>
           </>
         )}
         {a.status === "recusado" && a.review_note && (
@@ -247,7 +255,8 @@ function ReviewDialog({ affiliate: a, onClose, onSaved }: { affiliate: Affiliate
   const m = Number(months);
   const monthsOk = mode !== "meses" || (Number.isInteger(m) && m >= 1 && m <= 120);
   const codeOk = /^[A-Z0-9]{4,20}$/.test(code);
-  const price = PRICES_CENTS.inteligencia.mensal ?? 0;
+  const { prices } = usePlanPrices();
+  const price = prices.inteligencia.mensal ?? 0;
   const now = new Date().toISOString();
   const sample = bp === null ? null : commissionFor({ mode, bp, months: m }, { paymentCents: price, paidAt: now, firstPaidAt: now, previousCount: 0 });
 

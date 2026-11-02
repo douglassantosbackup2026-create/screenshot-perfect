@@ -9,7 +9,8 @@ import { Waitlist } from "@/components/sales/sections";
 import { SubscribeButtons } from "@/components/billing/SubscribeButtons";
 import { useAccess } from "@/lib/billing/access";
 import { cancelSubscription } from "@/lib/billing/subscription.functions";
-import { PLANS, PRICING_NOTE } from "@/content/pricing";
+import { plansFor, PRICING_NOTE } from "@/content/pricing";
+import { usePlanPrices } from "@/lib/billing/prices";
 import { formatDate } from "@/lib/labels";
 import { useDemo } from "@/lib/data/demo-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,8 +64,10 @@ function useCurrentSubscription(enabled: boolean) {
 function Plans() {
   const access = useAccess();
   const s = useDemo();
-  const plan = PLANS.find((p) => p.slug === "inteligencia")!;
-  const pro = PLANS.find((p) => p.slug === "pro")!;
+  const { prices } = usePlanPrices();
+  const plans = plansFor(prices);
+  const plan = plans.find((p) => p.slug === "inteligencia")!;
+  const pro = plans.find((p) => p.slug === "pro")!;
   const subscribed = access.active && !access.billingOff;
   const { loaded, reload } = useCurrentSubscription(subscribed);
   const returning = !access.active && !!s.profile.onboardingCompletedAt;
@@ -116,7 +119,7 @@ function Plans() {
               </li>
             ))}
           </ul>
-          {!access.active && <SubscribeButtons />}
+          {!access.active && <SubscribeButtons prices={prices} />}
         </section>
 
         <section className="rounded-3xl bg-card p-6 shadow-card" aria-label={`Plano ${pro.name}`}>

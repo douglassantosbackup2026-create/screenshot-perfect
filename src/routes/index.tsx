@@ -3,7 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
-import { formatMonthly } from "@/lib/calc/format";
+import { formatMoney, formatMonthly } from "@/lib/calc/format";
+import { fetchPlanPrices } from "@/lib/billing/prices";
 import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
 import { startOnboarding } from "@/lib/data/start-onboarding";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,10 +29,14 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: APP_TAGLINE },
     ],
   }),
+  // Preços de hoje já no HTML (SSR); se o banco não responder, os de partida.
+  loader: () => fetchPlanPrices(),
   component: Index,
 });
 
 function Index() {
+  const prices = Route.useLoaderData();
+  const monthly = formatMoney(prices.inteligencia.mensal ?? 0);
   const navigate = useNavigate();
   const [age, setAge] = useState<number | null>(30);
   const [retire, setRetire] = useState<number | null>(60);
@@ -93,8 +98,8 @@ function Index() {
       </h1>
       <p className="mt-4 text-lg text-muted-foreground">
         {JOURNEY_ENABLED
-          ? "Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Sem vender nada para você: R$ 39,90 por mês, cancele quando quiser."
-          : "Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Sem vender nada para você: R$ 39,90 por mês, cancele quando quiser."}
+          ? `Uma jornada em 4 unidades, de 2 a 5 minutos por lição. Sem vender nada para você: ${monthly} por mês, cancele quando quiser.`
+          : `Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Sem vender nada para você: ${monthly} por mês, cancele quando quiser.`}
       </p>
       <div className="mt-6 flex flex-col gap-2">
         <Button onClick={start}>{signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}</Button>
@@ -135,7 +140,7 @@ function Index() {
       <ProductPreview />
       <Curriculum />
       <WhatWeDont />
-      <Pricing onStart={start} />
+      <Pricing prices={prices} onStart={start} />
       <Faq />
 
       <section className="mt-16 rounded-2xl bg-card shadow-card p-6 text-center">

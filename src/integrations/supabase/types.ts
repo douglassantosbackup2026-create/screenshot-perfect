@@ -1453,6 +1453,11 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          amount_cents: number | null
+          coupon_cycles: number | null
+          coupon_id: string | null
+          cycles_used: number
+          full_cents: number | null
           last_event_at: string | null
           period: string
           plan: string
@@ -1462,6 +1467,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amount_cents?: number | null
+          coupon_cycles?: number | null
+          coupon_id?: string | null
+          cycles_used?: number
+          full_cents?: number | null
           last_event_at?: string | null
           period: string
           plan: string
@@ -1471,12 +1481,107 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amount_cents?: number | null
+          coupon_cycles?: number | null
+          coupon_id?: string | null
+          cycles_used?: number
+          full_cents?: number | null
           last_event_at?: string | null
           period?: string
           plan?: string
           preapproval_id?: string
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          affiliate_id: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          cycles: number | null
+          duration: string
+          expires_at: string | null
+          id: string
+          kind: string
+          max_uses: number | null
+          periods: string[]
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          affiliate_id?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          cycles?: number | null
+          duration: string
+          expires_at?: string | null
+          id?: string
+          kind: string
+          max_uses?: number | null
+          periods?: string[]
+          value: number
+        }
+        Update: {
+          active?: boolean
+          affiliate_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          cycles?: number | null
+          duration?: string
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          max_uses?: number | null
+          periods?: string[]
+          value?: number
+        }
+        Relationships: []
+      }
+      plan_prices: {
+        Row: {
+          cents: number
+          period: string
+          plan: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cents: number
+          period: string
+          plan: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cents?: number
+          period?: string
+          plan?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
           user_id?: string
         }
         Relationships: []
@@ -1906,6 +2011,19 @@ export type Database = {
       admin_affiliate_commissions: {
         Args: { p_status: string | null }
         Returns: Json
+      }
+      admin_list_coupons: { Args: never; Returns: Json }
+      admin_set_plan_price: {
+        Args: { p_cents: number; p_period: string; p_plan: string }
+        Returns: undefined
+      }
+      admin_save_coupon: {
+        Args: { p_coupon: Json; p_id: string | null }
+        Returns: string
+      }
+      admin_set_coupon_active: {
+        Args: { p_active: boolean; p_id: string }
+        Returns: undefined
       }
       admin_list_affiliates: {
         Args: { p_status: string | null }

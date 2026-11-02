@@ -44,6 +44,25 @@ export function clearRef() {
   safe(() => window.localStorage.removeItem(REF_KEY), undefined);
 }
 
+// Cupom de desconto do link (?cupom=CODIGO): preenche o campo na Assinatura. Quem confere é o servidor.
+const COUPON_KEY = "mk_cupom";
+
+export function captureCoupon(search: string) {
+  const code = new URLSearchParams(search).get("cupom")?.trim().toUpperCase();
+  if (code && /^[A-Z0-9]{3,20}$/.test(code))
+    safe(() => window.localStorage.setItem(COUPON_KEY, JSON.stringify({ code, at: Date.now() })), undefined);
+}
+
+export function currentCoupon(): string | null {
+  if (typeof window === "undefined") return null;
+  const s = safe(() => JSON.parse(window.localStorage.getItem(COUPON_KEY) ?? "null") as { code: string; at: number } | null, null);
+  return s && Date.now() - s.at <= TTL_MS ? s.code : null;
+}
+
+export function clearCoupon() {
+  safe(() => window.localStorage.removeItem(COUPON_KEY), undefined);
+}
+
 /** Contas já conferidas nesta aba (a sessão renova várias vezes; basta perguntar uma). */
 const checked = new Set<string>();
 

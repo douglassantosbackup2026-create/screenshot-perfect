@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatMonthly, formatWealth, formatPercent, formatAge, formatAgeMonths, formatMoney } from './format';
+import { formatMonthly, formatWealth, formatPercent, formatAge, formatAgeMonths, formatMoney, annualPerMonthCents } from './format';
 
 // Intl usa espaço não separável entre "R$" e o número; normaliza para comparar.
 const plain = (s: string) => s.replace(/\s/g, ' ');
@@ -45,5 +45,12 @@ describe('formatMoney', () => {
   });
   it('zero negativo não vira "-R$ 0,00"', () => {
     expect(plain(formatMoney(-0))).toBe('R$ 0,00');
+  });
+});
+
+describe('annualPerMonthCents', () => {
+  it('anual dividido em 12, em reais inteiros', () => {
+    expect(annualPerMonthCents(39900)).toBe(3300);
+    expect(annualPerMonthCents(44900)).toBe(3700);
   });
 });

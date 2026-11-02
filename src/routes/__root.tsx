@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AchievementSheet } from "@/components/feedback";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { captureUtm, linkConsentToUser } from "@/lib/analytics/analytics";
-import { captureRef, claimPendingRef } from "@/lib/affiliates/ref";
+import { captureCoupon, captureRef, claimPendingRef } from "@/lib/affiliates/ref";
 import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -139,6 +139,7 @@ function RootComponent() {
   useEffect(() => {
     captureUtm(window.location.search);
     captureRef(window.location.search);
+    captureCoupon(window.location.search);
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
       // Fora do callback: chamar o Supabase dentro dele pode travar o cliente de auth.
       const user = session?.user;

@@ -18,3 +18,7 @@ const brlExact = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: '
 // Livro-caixa: valor exato, a partir de centavos.
 // "+ 0" evita "-R$ 0,00" quando o valor é zero negativo.
 export const formatMoney = (cents: number) => brlExact.format(cents / 100 + 0);
+/** Plano anual dividido em 12, em reais inteiros (centavos): 39900 → "cerca de R$ 33 por mês". */
+export const annualPerMonthCents = (annualCents: number) => Math.round(annualCents / 1200) * 100;
+/** Centavos em reais inteiros, sem casas: 3300 → "R$ 33". */
+export const formatReais = (cents: number) => brl.format(Math.round(cents / 100));

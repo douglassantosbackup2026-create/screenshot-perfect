@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildReference, parseReference, priceCents, toCents } from "./catalog";
+import { buildReference, defaultPriceCents as priceCents, parseReference, toCents } from "./catalog";
 import { buildManifest, hmacHex, tsToMs, verifyMercadoPagoSignature } from "./signature";
 
 const USER = "11111111-2222-3333-4444-555555555555";
 
-describe("preços cobrados", () => {
+describe("preços de partida (e das assinaturas antigas)", () => {
   it("Inteligência mensal custa R$ 39,90", () => expect(priceCents("inteligencia", "mensal")).toBe(3990));
   it("Inteligência anual custa R$ 399,00", () => expect(priceCents("inteligencia", "anual")).toBe(39900));
   it("Pro mensal custa R$ 59,90", () => expect(priceCents("pro", "mensal")).toBe(5990));
@@ -13,9 +13,29 @@ describe("preços cobrados", () => {
 });
 
 describe("referência do pagamento", () => {
-  it("ida e volta", () => expect(parseReference(buildReference(USER, "pro", "mensal"))).toEqual({ userId: USER, plan: "pro", period: "mensal" }));
+  it("ida e volta, com o valor cobrado e o preço cheio do dia", () => {
+    expect(buildReference(USER, "inteligencia", "mensal", 3592, 4490)).toBe(`${USER}|inteligencia|mensal|3592|4490`);
+    expect(parseReference(buildReference(USER, "inteligencia", "mensal", 3592, 4490))).toEqual({
+      userId: USER,
+      plan: "inteligencia",
+      period: "mensal",
+      amountCents: 3592,
+      fullCents: 4490,
+    });
+  });
+  it("assinatura antiga (3 partes): preço de partida", () =>
+    expect(parseReference(`${USER}|pro|mensal`)).toEqual({ userId: USER, plan: "pro", period: "mensal", amountCents: 5990, fullCents: 5990 }));
+  it("referência de cupom de 4 partes: preço cheio de partida", () =>
+    expect(parseReference(`${USER}|inteligencia|mensal|3192`)).toMatchObject({ amountCents: 3192, fullCents: 3990 }));
   it("rejeita período que não existe para o plano", () => expect(parseReference(`${USER}|pro|anual`)).toBeNull());
   it("rejeita usuário inválido", () => expect(parseReference("abc|pro|mensal")).toBeNull());
+  it("rejeita cobrado acima do cheio, abaixo do mínimo, não inteiro ou partes a mais", () => {
+    expect(parseReference(`${USER}|inteligencia|mensal|5000|4490`)).toBeNull();
+    expect(parseReference(`${USER}|inteligencia|mensal|50|4490`)).toBeNull();
+    expect(parseReference(`${USER}|inteligencia|mensal|31.5|4490`)).toBeNull();
+    expect(parseReference(`${USER}|inteligencia|mensal|5000`)).toBeNull();
+    expect(parseReference(`${USER}|inteligencia|mensal|3192|4490|x`)).toBeNull();
+  });
 });
 
 describe("assinatura do webhook", () => {

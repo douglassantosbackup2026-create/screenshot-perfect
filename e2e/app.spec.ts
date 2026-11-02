@@ -89,7 +89,6 @@ test("o registro do patrimônio fica no Patrimônio; links antigos do Progresso 
 test("edição não salva do plano sobrevive a um lançamento feito pelo +", async ({ page }) => {
   await signIn(page, makeSeed());
   await page.goto("/plano");
-  await page.getByRole("button", { name: "Premissas" }).click();
   await page.getByRole("spinbutton", { name: "Aporte mensal" }).fill("4321");
   await expect(page.getByText("Alterações não salvas", { exact: true })).toBeVisible();
 
@@ -250,7 +249,7 @@ test("/planos para quem assina: sem plano grátis, sem botão de assinar e o Pro
 test("no celular, todo botão visível tem pelo menos 44px de altura", async ({ page }) => {
   await signIn(page, makeSeed());
   const small: string[] = [];
-  for (const path of ["/hoje", "/fechamento", "/plano", "/evolucao", "/planos"]) {
+  for (const path of ["/hoje", "/fechamento", "/diario", "/plano", "/evolucao", "/planos"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     for (const b of await page.getByRole("button").all()) {

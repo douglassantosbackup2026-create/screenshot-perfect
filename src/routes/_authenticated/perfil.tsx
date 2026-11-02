@@ -238,6 +238,8 @@ function Profile() {
         {admin && <Link to="/admin/usuarios" className="min-h-11 py-3">Admin de usuários</Link>}
         {admin && <Link to="/admin/funil" className="min-h-11 py-3">Admin: funil</Link>}
         {admin && <Link to="/admin/afiliados" className="min-h-11 py-3">Admin: afiliados</Link>}
+        {admin && <Link to="/admin/cupons" className="min-h-11 py-3">Admin: cupons</Link>}
+        {admin && <Link to="/admin/precos" className="min-h-11 py-3">Admin: preços</Link>}
         <ChangePassword />
         <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
           Sair

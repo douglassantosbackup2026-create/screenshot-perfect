@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { JOURNEY_ENABLED } from "@/lib/features";
@@ -59,15 +59,31 @@ function PlanPage() {
   return <PlanView initial={s.plan?.inputs ?? inputsFromProfile(s.profile)} isNew={!s.plan} />;
 }
 
+/** Bloco recolhível da tela: título, uma linha do que tem dentro e o conteúdo. */
+function Fold({ title, hint, open, onOpenChange, children }: { title: string; hint: string; open?: boolean; onOpenChange?: (o: boolean) => void; children: ReactNode }) {
+  const [own, setOwn] = useState(false);
+  const isOpen = open ?? own;
+  return (
+    <Collapsible open={isOpen} onOpenChange={onOpenChange ?? setOwn} className="rounded-2xl bg-card shadow-card">
+      <CollapsibleTrigger className="flex min-h-14 w-full items-center justify-between gap-3 px-5 py-3 text-left">
+        <span>
+          <span className="block font-semibold">{title}</span>
+          <span className="block text-sm text-muted-foreground">{hint}</span>
+        </span>
+        <ChevronDown size={18} strokeWidth={1.75} className={isOpen ? "shrink-0 rotate-180" : "shrink-0"} aria-hidden />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-4 px-5 pb-5">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const s = useDemo();
   const [draft, setDraft] = useState<PlanInputs>(initial);
   const [scenario, setScenario] = useState<ScenarioKey>("central");
   const [withInss, setWithInss] = useState<"sem" | "com">("sem");
-  const [editOpen, setEditOpen] = useState(isNew);
+  const [advancedOpen, setAdvancedOpen] = useState(isNew);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [quickOpen, setQuickOpen] = useState(false);
-  const [lifeOpen, setLifeOpen] = useState(false);
   const [lifeReason, setLifeReason] = useState<string | null>(null);
   const [whatIfOpen, setWhatIfOpen] = useState(false);
 
@@ -97,11 +113,10 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
       return;
     }
     const res = demo.savePlan(draft, reason, life);
-    xpToast(isNew ? "Plano salvo." : reason === "quick_review" ? "Revisão feita." : "Plano salvo.", res.xpAwarded);
+    xpToast(isNew ? "Plano salvo." : reason === "quick_review" || reason === "annual_review" ? "Revisão feita." : "Plano salvo.", res.xpAwarded);
     handleResult(res);
-    setEditOpen(false);
-    setQuickOpen(false);
-    setLifeOpen(false);
+    setAdvancedOpen(false);
+    setReviewOpen(false);
     setLifeReason(null);
   }
 
@@ -116,13 +131,12 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
   const setPct = (k: "inflationAA" | "costsAA") => (v: number | null) => setDraft((d) => ({ ...d, [k]: (v ?? 0) / 100 }));
   const setRet = (k: ScenarioKey) => (v: number | null) => setDraft((d) => ({ ...d, returns: { ...d.returns, [k]: (v ?? 0) / 100 } }));
 
-  const central = all?.semInss.central;
   const sens = useMemo(() => (all ? sensitivity(calc, scenario, includeInss) : []), [all, calc, scenario, includeInss]);
   const assetsForRetirement = s.assets.length ? summarizeAssets(s.assets).retirementTotal : null;
   const review = useMemo(() => sinceLastReview(s), [s]);
 
   return (
-    <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
+    <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <AreaTabs />
       <h1>Seu plano</h1>
 
@@ -140,150 +154,117 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         </div>
       )}
 
-      {/* No celular, uma coluna na ordem do código; no desktop, resumo à esquerda e gráfico à direita. */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-[5fr_7fr] lg:items-start lg:gap-x-6 lg:[grid-template-areas:'res_chart'_'seg_chart'_'pre_chart'_'calc_hist'_'rev_hist'_'sens_hist']">
-      <div className="lg:[grid-area:res]">
-      {r && central && (
-        <section className="rounded-3xl bg-card p-6 shadow-card" aria-live="polite">
-          <p className="text-lg leading-7">
-            Para chegar lá, guarde cerca de{" "}
-            <strong className="money block font-display text-4xl font-semibold text-primary">{formatMonthly(r.requiredMonthlyContribution)}</strong>{" "}
-            por mês.
-          </p>
-          <p className="mt-3 text-muted-foreground">
-            Hoje você guarda <span className="money">{formatMonthly(draft.monthlyContribution)}</span>.{" "}
-            {r.depletionAge == null
-              ? `Nesse ritmo, o dinheiro dura até os ${draft.horizonAge} anos.`
-              : `Nesse ritmo, o dinheiro duraria até cerca de ${formatAge(r.depletionAge)}.`}
-          </p>
-        </section>
-      )}
-      {r && (
-        <section className="mt-4 rounded-2xl bg-card p-5 shadow-card" aria-label="De onde vem o patrimônio projetado">
-          <h2 className="text-base">De onde vem o patrimônio aos {draft.retirementAge} anos</h2>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Patrimônio de hoje, rendendo</dt>
-              <dd className="money">{formatWealth(r.fvFromInitial)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Aportes mensais, rendendo</dt>
-              <dd className="money">{formatWealth(r.fvFromContributions)}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-t border-border pt-2 font-semibold">
-              <dt>Estimativa total</dt>
-              <dd className="money">{formatWealth(r.projectedWealthAtRetirement)}</dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Renda que esse patrimônio sustentaria: cerca de <span className="money">{formatMonthly(r.sustainableMonthlyIncome)}</span> por mês. Diferença
-            estimada até o patrimônio necessário:{" "}
-            <span className="money">{r.gap > 0 ? formatWealth(r.gap) : "nenhuma neste cenário"}</span>.
-          </p>
-        </section>
-      )}
-      {r && !isNew && s.plan && (
-        <Button variant="outline" className="mt-4 w-full" onClick={() => setWhatIfOpen(true)}>
-          <Sparkles size={16} strokeWidth={1.75} aria-hidden />
-          E se…?
-        </Button>
-      )}
-      {r && (
-        <CardBoundary className="mt-4">
-        <GoalSeekCard
-          inputs={draft}
-          scenario={scenario}
-          includeInss={includeInss}
-          onUseAge={(age) => {
-            set("retirementAge")(age);
-            setEditOpen(true);
-            toast("Idade alterada nas premissas. Salve o plano se quiser manter.");
-          }}
-        />
-        </CardBoundary>
-      )}
-      {s.plan && (
-        <CardBoundary className="mt-4">
-          <PensionTaxCard inputs={s.plan.inputs} />
-        </CardBoundary>
-      )}
-      {errors.length > 0 && <p className="mt-6 text-sm text-destructive">{errors[0]}</p>}
-      </div>
+      <div className="mt-6 space-y-4">
+        {/* A resposta e o gráfico juntos: quanto guardar e aonde isso leva. */}
+        {r && (
+          <section className="rounded-3xl bg-card p-6 shadow-card" aria-live="polite">
+            <p className="text-lg leading-7">
+              Para chegar lá, guarde cerca de{" "}
+              <strong className="money block font-display text-4xl font-semibold text-primary">{formatMonthly(r.requiredMonthlyContribution)}</strong>{" "}
+              por mês.
+            </p>
+            <p className="mt-3 text-muted-foreground">
+              Hoje você guarda <span className="money">{formatMonthly(draft.monthlyContribution)}</span>.{" "}
+              {r.depletionAge == null
+                ? `Nesse ritmo, o dinheiro dura até os ${draft.horizonAge} anos.`
+                : `Nesse ritmo, o dinheiro duraria até cerca de ${formatAge(r.depletionAge)}.`}
+            </p>
+            <figure className="mt-5">
+              <div className="h-52 w-full" aria-hidden>
+                <ResponsiveContainer>
+                  <AreaChart data={series} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid {...GRID} />
+                    <XAxis dataKey="age" tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                    <YAxis
+                      width={48}
+                      tick={AXIS_TICK}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : `${Math.round(v / 1e3)} mil`)}
+                    />
+                    <Tooltip formatter={(v: number) => [formatWealth(v), "Patrimônio"]} labelFormatter={(a) => `${a} anos`} contentStyle={TOOLTIP_STYLE} />
+                    <Area type="monotone" dataKey="wealth" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.12} strokeWidth={2} isAnimationActive={false} />
+                    <ReferenceLine x={draft.retirementAge} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
+                    <ReferenceDot x={draft.retirementAge} y={r.targetWealth} r={5} fill="var(--card)" stroke="var(--primary)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <figcaption className="mt-2 text-sm text-muted-foreground">
+                Aos {draft.retirementAge} anos você teria cerca de {formatWealth(r.projectedWealthAtRetirement)}. O ponto mostra o que precisa ter:{" "}
+                {formatWealth(r.targetWealth)}.
+              </figcaption>
+            </figure>
+          </section>
+        )}
 
-      <div className="space-y-3 lg:[grid-area:seg]">
-        <Segmented
-          label="Considerar INSS"
-          value={withInss}
-          onChange={(v) => {
-            if (v === "com" && !hasInss) {
-              setEditOpen(true);
-              toast("Adicione a estimativa do Meu INSS nas premissas.");
-              return;
-            }
-            setWithInss(v);
-          }}
-          options={[
-            { value: "sem", label: "Sem INSS" },
-            { value: "com", label: hasInss ? "Com minha estimativa do INSS" : "Adicionar estimativa do Meu INSS" },
-          ]}
-        />
-        <Segmented label="Cenário" value={scenario} onChange={setScenario} options={SCEN} />
-      </div>
-
-      {r && (
-        <section className="rounded-2xl bg-card p-5 shadow-card lg:[grid-area:chart]" aria-label="Gráfico do patrimônio">
-          <figure>
-            <div className="h-56 w-full" aria-hidden>
-              <ResponsiveContainer>
-                <AreaChart data={series} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid {...GRID} />
-                  <XAxis dataKey="age" tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                  <YAxis
-                    width={48}
-                    tick={AXIS_TICK}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : `${Math.round(v / 1e3)} mil`)}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => [formatWealth(v), "Patrimônio"]}
-                    labelFormatter={(a) => `${a} anos`}
-                    contentStyle={TOOLTIP_STYLE}
-                  />
-                  <Area type="monotone" dataKey="wealth" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.12} strokeWidth={2} isAnimationActive={false} />
-                  <ReferenceLine x={draft.retirementAge} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
-                  <ReferenceDot x={draft.retirementAge} y={r.targetWealth} r={5} fill="var(--card)" stroke="var(--primary)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <figcaption className="mt-2 text-sm text-muted-foreground">
-              Com o aporte de hoje, o patrimônio chega a cerca de {formatWealth(r.projectedWealthAtRetirement)} aos {draft.retirementAge} anos. O
-              alvo para pagar a renda até os {draft.horizonAge} é cerca de {formatWealth(r.targetWealth)} (ponto no gráfico). Em valores nominais,
-              com inflação de {formatPercent(draft.inflationAA)}, seriam cerca de {formatWealth(r.projectedWealthNominal)}.
-            </figcaption>
-          </figure>
-          <p className="mt-3 rounded-xl bg-muted p-3 text-sm">
-            Retorno real {formatPercent(draft.returns[scenario])} ao ano · horizonte {draft.horizonAge} anos · custos {formatPercent(draft.costsAA)} ao ano ·{" "}
-            {includeInss ? `com INSS de ${formatMonthly(draft.inssEstimate!)}` : "sem INSS"}
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {s.plan ? `Premissas salvas em ${formatDate(s.plan.updatedAt)}` : "Premissas ainda não salvas"} · motor {ENGINE_VERSION}
-            {dirty && s.plan ? " · você está vendo alterações não salvas" : ""}
-          </p>
+        <section className="rounded-2xl bg-card p-5 shadow-card" aria-label="Seu plano em 3 números">
+          <h2 className="text-base">Seu plano em 3 números</h2>
+          <div className="mt-3 space-y-4">
+            <NumberField label="Aposentar aos" value={draft.retirementAge} onChange={(v) => set("retirementAge")(v ?? 0)} suffix="anos" help="A idade em que você quer parar de depender do trabalho." />
+            <NumberField label="Renda desejada" value={draft.desiredMonthlyIncome} onChange={(v) => set("desiredMonthlyIncome")(v ?? 0)} prefix="R$" help="Quanto você quer ter por mês, em valores de hoje." />
+            <NumberField label="Aporte mensal" value={draft.monthlyContribution} onChange={(v) => set("monthlyContribution")(v ?? 0)} prefix="R$" help="Quanto você guarda por mês hoje." />
+          </div>
+          {isNew && (
+            <Button className="mt-5 w-full" onClick={() => save("edit")}>
+              Salvar plano
+            </Button>
+          )}
         </section>
-      )}
+        {errors.length > 0 && <p className="text-sm text-destructive">{errors[0]}</p>}
 
-      <Collapsible open={editOpen} onOpenChange={setEditOpen} className="rounded-2xl bg-card shadow-card lg:[grid-area:pre]">
-        <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between px-5 font-semibold">
-          Premissas
-          <ChevronDown size={18} strokeWidth={1.75} className={editOpen ? "rotate-180" : ""} aria-hidden />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-4 px-5 pb-5">
+        <div className="space-y-3">
+          <Segmented label="Cenário" value={scenario} onChange={setScenario} options={SCEN} />
+          {hasInss && (
+            <Segmented
+              label="Considerar INSS"
+              value={withInss}
+              onChange={setWithInss}
+              options={[
+                { value: "sem", label: "Sem INSS" },
+                { value: "com", label: "Com minha estimativa" },
+              ]}
+            />
+          )}
+        </div>
+
+        {!isNew && s.plan && (
+          <Button variant="outline" className="w-full" onClick={() => setReviewOpen(true)}>
+            Revisar plano
+          </Button>
+        )}
+
+        {r && (
+          <Fold title="Ferramentas" hint="“E se…?”, com quantos anos parar, previdência e IR">
+            {!isNew && s.plan && (
+              <Button variant="outline" className="w-full" onClick={() => setWhatIfOpen(true)}>
+                <Sparkles size={16} strokeWidth={1.75} aria-hidden />
+                E se…?
+              </Button>
+            )}
+            <CardBoundary>
+              <GoalSeekCard
+                inputs={draft}
+                scenario={scenario}
+                includeInss={includeInss}
+                onUseAge={(age) => {
+                  set("retirementAge")(age);
+                  toast("Idade alterada no plano. Salve se quiser manter.");
+                }}
+              />
+            </CardBoundary>
+            {s.plan && (
+              <CardBoundary>
+                <PensionTaxCard inputs={s.plan.inputs} />
+              </CardBoundary>
+            )}
+          </Fold>
+        )}
+
+        <Fold title="Ajustes avançados" hint="Idade, patrimônio, INSS, retornos, inflação e custos" open={advancedOpen} onOpenChange={setAdvancedOpen}>
           <div className="grid grid-cols-2 gap-3">
             <NumberField label="Idade atual" value={draft.currentAge} onChange={(v) => set("currentAge")(v ?? 0)} suffix="anos" help="Sua idade em anos completos." />
-            <NumberField label="Aposentar aos" value={draft.retirementAge} onChange={(v) => set("retirementAge")(v ?? 0)} suffix="anos" help="A idade em que você quer parar de depender do trabalho." />
+            <NumberField label="Horizonte" value={draft.horizonAge} onChange={(v) => set("horizonAge")(v ?? 0)} suffix="anos" help="Até que idade o dinheiro precisa durar. O padrão é 95 anos." />
           </div>
-          <NumberField label="Horizonte" value={draft.horizonAge} onChange={(v) => set("horizonAge")(v ?? 0)} suffix="anos" help="Até que idade o dinheiro precisa durar. O padrão é 95 anos." />
           <div>
             <NumberField label="Patrimônio atual" value={draft.initialWealth} onChange={(v) => set("initialWealth")(v ?? 0)} prefix="R$" help="Quanto você já guardou para a aposentadoria." />
             {assetsForRetirement != null && Math.abs(assetsForRetirement - draft.initialWealth) >= 1 && (
@@ -292,19 +273,10 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
               </button>
             )}
           </div>
-          <NumberField label="Aporte mensal" value={draft.monthlyContribution} onChange={(v) => set("monthlyContribution")(v ?? 0)} prefix="R$" help="Quanto você guarda por mês hoje." />
-          <NumberField label="Renda desejada" value={draft.desiredMonthlyIncome} onChange={(v) => set("desiredMonthlyIncome")(v ?? 0)} prefix="R$" help="Quanto você quer ter por mês, em valores de hoje." />
           <NumberField label="Estimativa do INSS" value={draft.inssEstimate} onChange={set("inssEstimate")} prefix="R$" optional help={INSS_HELP} />
           <div className="grid grid-cols-3 gap-2">
             {SCEN.map((sc) => (
-              <NumberField
-                key={sc.value}
-                label={sc.label}
-                value={round2(draft.returns[sc.value] * 100)}
-                onChange={setRet(sc.value)}
-                suffix="%"
-                step={0.5}
-              />
+              <NumberField key={sc.value} label={sc.label} value={round2(draft.returns[sc.value] * 100)} onChange={setRet(sc.value)} suffix="%" step={0.5} />
             ))}
           </div>
           <p className="-mt-2 text-xs text-muted-foreground">Retorno real ao ano, acima da inflação, em cada cenário.</p>
@@ -312,89 +284,104 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
             <NumberField label="Inflação" value={round2(draft.inflationAA * 100)} onChange={setPct("inflationAA")} suffix="%" step={0.5} help="Usada só para mostrar o valor nominal." />
             <NumberField label="Custos anuais" value={round2(draft.costsAA * 100)} onChange={setPct("costsAA")} suffix="%" step={0.1} help="Taxas que você paga por ano. Reduzem o retorno." />
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button className="flex-1" onClick={() => save("edit")} disabled={!dirty && !isNew}>
+          {/* Plano novo salva pelo botão dos 3 números. */}
+          {!isNew && (
+            <Button className="w-full" onClick={() => save("edit")} disabled={!dirty}>
               Salvar plano
             </Button>
-            {!isNew && dirty && (
-              <Button variant="outline" onClick={() => setDraft(initial)}>
-                Desfazer
-              </Button>
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
-      <Collapsible className="rounded-2xl bg-card shadow-card lg:[grid-area:calc]">
-        <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between px-5 font-semibold">
-          Como calculamos
-          <ChevronDown size={18} strokeWidth={1.75} aria-hidden />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-2 px-5 pb-5 text-sm text-muted-foreground">
-          <p>Tudo está em reais de hoje, já descontada a inflação. O valor nominal aparece só como informação.</p>
-          <p>Cada cenário usa um retorno real anual. Os custos que você informar reduzem esse retorno.</p>
-          <p>Os aportes e as retiradas acontecem no fim de cada mês, com a taxa mensal equivalente.</p>
-          <p>O patrimônio-alvo é o valor que paga sua renda até o horizonte, consumindo o dinheiro aos poucos.</p>
-          <p>O cenário padrão não conta com o INSS. Impostos não são considerados.</p>
-          <p>Valores mensais são arredondados para R$ 10 e patrimônios para R$ 1.000, porque a estimativa não tem precisão maior que isso.</p>
-          <p>A inflação não muda o resultado em reais de hoje: ela só converte o patrimônio para valores nominais. O que move o resultado é o retorno acima da inflação.</p>
-          <p>Versão do motor de cálculo: {ENGINE_VERSION}.</p>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {!isNew && (
-        <section className="lg:[grid-area:rev]">
-          <Button variant="outline" className="w-full" onClick={() => setReviewOpen(true)}>
-            Revisar plano
-          </Button>
-        </section>
-      )}
-
-      {sens.length > 0 && (
-        <section className="rounded-2xl bg-card p-5 shadow-card lg:[grid-area:sens]" aria-label="O que mais muda o resultado">
-          <h2 className="text-lg">O que mais muda o resultado</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Mudando uma coisa por vez, no cenário {scenario}. Variação na renda mensal sustentável.</p>
-          <ul className="mt-3 divide-y divide-border">
-            {sens.map((it) => (
-              <li key={it.key} className="flex items-center justify-between gap-4 py-2.5 text-sm">
-                <span>{it.label}</span>
-                <span className={"money " + (it.deltaSustainableIncome >= 0 ? "text-primary" : "text-muted-foreground")}>
-                  {it.deltaSustainableIncome >= 0 ? "+" : "−"}
-                  {formatMonthly(Math.abs(it.deltaSustainableIncome))}/mês
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {s.snapshots.length > 0 && (
-        <section className="rounded-2xl bg-card p-5 shadow-card lg:[grid-area:hist]">
-          <h2 className="text-lg">Histórico</h2>
-          {review && (
-            <div className="mt-3 rounded-xl bg-muted p-3 text-sm">
-              <p className="font-semibold">Desde a revisão de {formatDate(review.since)}</p>
-              <p className="mt-1 text-muted-foreground">
-                Rumo à independência: {formatPercent(review.coverageBefore)} → {formatPercent(review.coverageNow)}. Renda sustentável estimada{" "}
-                {review.deltaSustainableIncome >= 0 ? "subiu" : "caiu"} <span className="money">{formatMonthly(Math.abs(review.deltaSustainableIncome))}</span> por
-                mês. A mudança vem das premissas que você alterou, não de rendimento.
-              </p>
-            </div>
           )}
-          <ul className="mt-3 divide-y divide-border">
-            {s.snapshots.map((sn) => (
-              <li key={sn.id} className="flex items-center justify-between py-3 text-sm">
-                <span>
-                  {formatDate(sn.createdAt)} · {REASON_LABEL[sn.reason]}
-                  {sn.lifeReason ? ` (${sn.lifeReason.toLowerCase()})` : ""}
-                </span>
-                <span className="money text-muted-foreground">{formatMonthly(sn.requiredCentralSemInss)}/mês</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        </Fold>
 
+        {r && (
+          <Fold title="Detalhes" hint="De onde vem o patrimônio, o que mais pesa, histórico e cálculo">
+            <section aria-label="De onde vem o patrimônio projetado">
+              <h2 className="text-base">De onde vem o patrimônio aos {draft.retirementAge} anos</h2>
+              <dl className="mt-3 space-y-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Patrimônio de hoje, rendendo</dt>
+                  <dd className="money">{formatWealth(r.fvFromInitial)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Aportes mensais, rendendo</dt>
+                  <dd className="money">{formatWealth(r.fvFromContributions)}</dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-border pt-2 font-semibold">
+                  <dt>Estimativa total</dt>
+                  <dd className="money">{formatWealth(r.projectedWealthAtRetirement)}</dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Renda que esse patrimônio sustentaria: cerca de <span className="money">{formatMonthly(r.sustainableMonthlyIncome)}</span> por mês. Diferença
+                estimada até o patrimônio necessário: <span className="money">{r.gap > 0 ? formatWealth(r.gap) : "nenhuma neste cenário"}</span>. Em valores
+                nominais, com inflação de {formatPercent(draft.inflationAA)}, seriam cerca de {formatWealth(r.projectedWealthNominal)}.
+              </p>
+              <p className="mt-3 rounded-xl bg-muted p-3 text-sm">
+                Retorno real {formatPercent(draft.returns[scenario])} ao ano · horizonte {draft.horizonAge} anos · custos {formatPercent(draft.costsAA)} ao ano ·{" "}
+                {includeInss ? `com INSS de ${formatMonthly(draft.inssEstimate!)}` : "sem INSS"}
+              </p>
+            </section>
+
+            {sens.length > 0 && (
+              <section className="border-t border-border pt-4" aria-label="O que mais muda o resultado">
+                <h2 className="text-base">O que mais muda o resultado</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Mudando uma coisa por vez, no cenário {scenario}. Variação na renda mensal sustentável.</p>
+                <ul className="mt-3 divide-y divide-border">
+                  {sens.map((it) => (
+                    <li key={it.key} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                      <span>{it.label}</span>
+                      <span className={"money " + (it.deltaSustainableIncome >= 0 ? "text-primary" : "text-muted-foreground")}>
+                        {it.deltaSustainableIncome >= 0 ? "+" : "−"}
+                        {formatMonthly(Math.abs(it.deltaSustainableIncome))}/mês
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {s.snapshots.length > 0 && (
+              <section className="border-t border-border pt-4">
+                <h2 className="text-base">Histórico</h2>
+                {review && (
+                  <div className="mt-3 rounded-xl bg-muted p-3 text-sm">
+                    <p className="font-semibold">Desde a revisão de {formatDate(review.since)}</p>
+                    <p className="mt-1 text-muted-foreground">
+                      Rumo à independência: {formatPercent(review.coverageBefore)} → {formatPercent(review.coverageNow)}. Renda sustentável estimada{" "}
+                      {review.deltaSustainableIncome >= 0 ? "subiu" : "caiu"} <span className="money">{formatMonthly(Math.abs(review.deltaSustainableIncome))}</span>{" "}
+                      por mês. A mudança vem das premissas que você alterou, não de rendimento.
+                    </p>
+                  </div>
+                )}
+                <ul className="mt-3 divide-y divide-border">
+                  {s.snapshots.map((sn) => (
+                    <li key={sn.id} className="flex items-center justify-between py-3 text-sm">
+                      <span>
+                        {formatDate(sn.createdAt)} · {REASON_LABEL[sn.reason]}
+                        {sn.lifeReason ? ` (${sn.lifeReason.toLowerCase()})` : ""}
+                      </span>
+                      <span className="money text-muted-foreground">{formatMonthly(sn.requiredCentralSemInss)}/mês</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section className="space-y-2 border-t border-border pt-4 text-sm text-muted-foreground">
+              <h2 className="text-base text-foreground">Como calculamos</h2>
+              <p>Tudo está em reais de hoje, já descontada a inflação. O valor nominal aparece só como informação.</p>
+              <p>Cada cenário usa um retorno real anual. Os custos que você informar reduzem esse retorno.</p>
+              <p>Os aportes e as retiradas acontecem no fim de cada mês, com a taxa mensal equivalente.</p>
+              <p>O patrimônio-alvo é o valor que paga sua renda até o horizonte, consumindo o dinheiro aos poucos.</p>
+              <p>O cenário padrão não conta com o INSS. Impostos não são considerados.</p>
+              <p>Valores mensais são arredondados para R$ 10 e patrimônios para R$ 1.000, porque a estimativa não tem precisão maior que isso.</p>
+              <p>A inflação não muda o resultado em reais de hoje: ela só converte o patrimônio para valores nominais. O que move o resultado é o retorno acima da inflação.</p>
+              <p className="text-xs">
+                {s.plan ? `Premissas salvas em ${formatDate(s.plan.updatedAt)}` : "Premissas ainda não salvas"} · motor {ENGINE_VERSION}
+                {dirty && s.plan ? " · você está vendo alterações não salvas" : ""}
+              </p>
+            </section>
+          </Fold>
+        )}
       </div>
 
       <footer className="mt-10 border-t border-border pt-6">
@@ -406,87 +393,62 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
         <WhatIfSheet base={s.plan.inputs} scenario={scenario} includeInss={includeInss} open={whatIfOpen} onOpenChange={setWhatIfOpen} onSave={saveWhatIf} />
       )}
 
-      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+      {/* Uma revisão só: confirma as premissas ou registra o que mudou na vida. */}
+      <Dialog
+        open={reviewOpen}
+        onOpenChange={(o) => {
+          setReviewOpen(o);
+          if (!o) setLifeReason(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Revisar plano</DialogTitle>
-            <DialogDescription>Escolha o tipo de revisão.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            {[
-              { label: "Revisão rápida", hint: "Confirmar que as premissas ainda valem", go: () => setQuickOpen(true) },
-              { label: "Mudou algo na sua vida", hint: "Renda, família, trabalho ou cidade", go: () => setLifeOpen(true) },
-              ...(annualAvailable
-                ? [{ label: "Revisão anual", hint: "Registrar a revisão completa do ano", go: () => save("annual_review") }]
-                : []),
-            ].map((o) => (
-              <button
-                key={o.label}
-                type="button"
-                onClick={() => {
-                  setReviewOpen(false);
-                  o.go();
-                }}
-                className="block min-h-14 w-full rounded-2xl bg-muted px-4 py-3 text-left hover:bg-muted/70"
-              >
-                <span className="block font-semibold">{o.label}</span>
-                <span className="block text-sm text-muted-foreground">{o.hint}</span>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={quickOpen} onOpenChange={setQuickOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Revisão rápida</DialogTitle>
-            <DialogDescription>Confira se as premissas ainda valem para você.</DialogDescription>
+            <DialogDescription>Confira se o plano ainda vale para você.</DialogDescription>
           </DialogHeader>
           <ul className="space-y-1 text-sm">
             <li>Aposentar aos {draft.retirementAge} anos</li>
-            <li>Renda desejada: <span className="money">{formatMonthly(draft.desiredMonthlyIncome)}</span></li>
-            <li>Aporte atual: <span className="money">{formatMonthly(draft.monthlyContribution)}</span></li>
+            <li>
+              Renda desejada: <span className="money">{formatMonthly(draft.desiredMonthlyIncome)}</span>
+            </li>
+            <li>
+              Aporte atual: <span className="money">{formatMonthly(draft.monthlyContribution)}</span>
+            </li>
             <li>Retorno central: {formatPercent(draft.returns.central)} ao ano</li>
             <li>{hasInss ? `INSS informado: ${formatMonthly(draft.inssEstimate!)}` : "Sem estimativa do INSS"}</li>
           </ul>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setQuickOpen(false); setEditOpen(true); }}>
-              Ajustar premissas
-            </Button>
-            <Button onClick={() => save("quick_review")}>Confirmar premissas</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={lifeOpen} onOpenChange={setLifeOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mudou algo na sua vida?</DialogTitle>
-            <DialogDescription>Escolha o motivo, ajuste as premissas e salve.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Motivo">
-            {LIFE_REASONS.map((lr) => (
+          <p className="text-sm font-semibold">Mudou algo na sua vida?</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="O que mudou">
+            {[null, ...LIFE_REASONS].map((lr) => (
               <button
-                key={lr}
+                key={lr ?? "nada"}
                 type="button"
                 role="radio"
                 aria-checked={lifeReason === lr}
                 onClick={() => setLifeReason(lr)}
                 className={"min-h-10 rounded-full border px-4 text-sm " + (lifeReason === lr ? "border-primary font-semibold text-primary" : "border-border")}
               >
-                {lr}
+                {lr ?? "Nada mudou"}
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <NumberField label="Renda desejada" value={draft.desiredMonthlyIncome} onChange={(v) => set("desiredMonthlyIncome")(v ?? 0)} prefix="R$" />
-            <NumberField label="Aporte mensal" value={draft.monthlyContribution} onChange={(v) => set("monthlyContribution")(v ?? 0)} prefix="R$" />
-          </div>
-          <NumberField label="Aposentar aos" value={draft.retirementAge} onChange={(v) => set("retirementAge")(v ?? 0)} suffix="anos" />
-          <DialogFooter>
-            <Button disabled={!lifeReason} onClick={() => save("life_event", lifeReason!)}>
-              Salvar plano
+          {lifeReason && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <NumberField label="Renda desejada" value={draft.desiredMonthlyIncome} onChange={(v) => set("desiredMonthlyIncome")(v ?? 0)} prefix="R$" />
+                <NumberField label="Aporte mensal" value={draft.monthlyContribution} onChange={(v) => set("monthlyContribution")(v ?? 0)} prefix="R$" />
+              </div>
+              <NumberField label="Aposentar aos" value={draft.retirementAge} onChange={(v) => set("retirementAge")(v ?? 0)} suffix="anos" />
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            {annualAvailable && !lifeReason && (
+              <Button variant="ghost" onClick={() => save("annual_review")}>
+                Registrar como revisão anual
+              </Button>
+            )}
+            <Button onClick={() => (lifeReason ? save("life_event", lifeReason) : save("quick_review"))}>
+              {lifeReason ? "Salvar plano" : "Confirmar premissas"}
             </Button>
           </DialogFooter>
         </DialogContent>

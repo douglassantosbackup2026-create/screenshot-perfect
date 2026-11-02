@@ -3,7 +3,7 @@ import { buildReference } from "./catalog";
 import { decideAuthorizedPayment, decidePayment, decidePreapproval, isMercadoPagoUrl, MpPaymentSchema, MpPreapprovalSchema } from "./webhook";
 
 const USER = "11111111-2222-3333-4444-555555555555";
-const REF = buildReference(USER, "inteligencia", "mensal");
+const REF = buildReference(USER, "inteligencia", "mensal", 3990, 3990);
 
 describe("pagamento", () => {
   it("aprovado, em reais e no valor do catálogo: credita", () => {
@@ -16,6 +16,23 @@ describe("pagamento", () => {
     expect(decidePayment({ id: 9, status: "approved", transaction_amount: 1, currency_id: "BRL", external_reference: REF }).action).toBe("ignore");
     expect(decidePayment({ id: 9, status: "approved", transaction_amount: 39.9, currency_id: "USD", external_reference: REF }).action).toBe("ignore");
     expect(decidePayment({ id: 9, status: "pending", transaction_amount: 39.9, currency_id: "BRL", external_reference: REF }).action).toBe("ignore");
+  });
+  it("com cupom: aceita o valor com desconto e o cheio (depois do prazo); outro valor, não", () => {
+    const ref = buildReference(USER, "inteligencia", "mensal", 3192, 3990);
+    const pay = (amount: number) => decidePayment({ id: 9, status: "approved", transaction_amount: amount, currency_id: "BRL", external_reference: ref });
+    expect(pay(31.92)).toMatchObject({ action: "credit", credit: { cents: 3192 } });
+    expect(pay(39.9)).toMatchObject({ action: "credit", credit: { cents: 3990 } });
+    expect(pay(20).action).toBe("ignore");
+  });
+  it("preço mudou: vale o preço do dia em que a pessoa assinou, não o de hoje", () => {
+    const pay = (amount: number, reference: string) =>
+      decidePayment({ id: 9, status: "approved", transaction_amount: amount, currency_id: "BRL", external_reference: reference });
+    // Assinou a R$ 44,90 depois do aumento.
+    expect(pay(44.9, buildReference(USER, "inteligencia", "mensal", 4490, 4490)).action).toBe("credit");
+    expect(pay(39.9, buildReference(USER, "inteligencia", "mensal", 4490, 4490)).action).toBe("ignore");
+    // Assinatura antiga, de antes de o preço ir para o banco, continua a R$ 39,90.
+    expect(pay(39.9, `${USER}|inteligencia|mensal`).action).toBe("credit");
+    expect(pay(44.9, `${USER}|inteligencia|mensal`).action).toBe("ignore");
   });
 });
 

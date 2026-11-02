@@ -5,7 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { LESSONS } from "@/content/program";
 import { UNITS } from "@/content/journey";
-import { PLANS, PRICING_NOTE, type PlanTier } from "@/content/pricing";
+import { plansFor, PRICING_NOTE, type PlanTier } from "@/content/pricing";
+import type { PlanPrices } from "@/lib/billing/catalog";
 import { JOURNEY_ENABLED } from "@/lib/features";
 import { APP_NAME } from "@/lib/seo";
 import { PillarCards } from "@/components/PillarCards";
@@ -168,7 +169,7 @@ export function WhatWeDont() {
   );
 }
 
-export function Pricing({ onStart }: { onStart: () => void }) {
+export function Pricing({ prices, onStart }: { prices: PlanPrices; onStart: () => void }) {
   return (
     <section id="planos" className="mt-16 scroll-mt-6" aria-label="Planos">
       <h2>Planos</h2>
@@ -176,7 +177,8 @@ export function Pricing({ onStart }: { onStart: () => void }) {
         Uma assinatura com tudo: orçamento, patrimônio e aposentadoria. Vendemos clareza, nunca produtos financeiros.
       </p>
       <div className="mt-5 space-y-4">
-        {PLANS.map((plan) => (
+        {/* Só o que está à venda; plano em lista de espera (Pro) fica fora da página inicial. */}
+        {plansFor(prices).filter((plan) => !plan.waitlistSource).map((plan) => (
           <PlanCard key={plan.slug} plan={plan} onStart={onStart} />
         ))}
       </div>

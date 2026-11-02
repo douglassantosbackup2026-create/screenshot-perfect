@@ -1,7 +1,7 @@
 // O que fazer com cada notificação do Mercado Pago, já com os dados lidos da API (nunca do corpo da notificação).
 // Funções puras: a rota /api/public/mercadopago/webhook busca os dados e executa a decisão.
 import { z } from "zod";
-import { parseReference, priceCents, toCents, type BillingPeriod, type PaidPlan } from "./catalog";
+import { parseReference, toCents, type BillingPeriod, type PaidPlan } from "./catalog";
 
 const money = z.number().finite().nonnegative();
 
@@ -72,12 +72,15 @@ export type Decision =
     }
   | { action: "ignore"; reason: string };
 
-/** Credita só pagamento aprovado, em reais, com referência válida e o valor exato do catálogo. */
+/**
+ * Credita só pagamento aprovado, em reais, com referência válida e um dos valores dela: o cobrado (com cupom)
+ * ou o preço cheio do dia em que a pessoa assinou. O preço de hoje não entra: mudá-lo não afeta quem já assina.
+ */
 export function decidePayment(p: MpPayment): Decision {
   if (p.status !== "approved") return { action: "ignore", reason: "não aprovado" };
   const ref = parseReference(p.external_reference);
   const cents = toCents(p.transaction_amount);
-  if (!ref || p.currency_id !== "BRL" || cents !== priceCents(ref.plan, ref.period))
+  if (!ref || p.currency_id !== "BRL" || (cents !== ref.fullCents && cents !== ref.amountCents))
     return { action: "ignore", reason: "referência ou valor não confere" };
   // Mesmo id para a notificação de pagamento e a de cobrança da assinatura: o banco credita uma vez só.
   return { action: "credit", credit: { id: `mp_${p.id}`, userId: ref.userId, plan: ref.plan, period: ref.period, cents } };

@@ -36,7 +36,9 @@ import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
 import { Route as AuthenticatedAdminAfiliadosRouteImport } from './routes/_authenticated/admin.afiliados'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
+import { Route as AuthenticatedAdminCuponsRouteImport } from './routes/_authenticated/admin.cupons'
 import { Route as AuthenticatedAdminFunilRouteImport } from './routes/_authenticated/admin.funil'
+import { Route as AuthenticatedAdminPrecosRouteImport } from './routes/_authenticated/admin.precos'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
@@ -182,11 +184,23 @@ const AuthenticatedAdminConteudoRoute =
     path: '/admin/conteudo',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminCuponsRoute =
+  AuthenticatedAdminCuponsRouteImport.update({
+    id: '/admin/cupons',
+    path: '/admin/cupons',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminFunilRoute = AuthenticatedAdminFunilRouteImport.update({
   id: '/admin/funil',
   path: '/admin/funil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminPrecosRoute =
+  AuthenticatedAdminPrecosRouteImport.update({
+    id: '/admin/precos',
+    path: '/admin/precos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminUsuariosRoute =
   AuthenticatedAdminUsuariosRouteImport.update({
     id: '/admin/usuarios',
@@ -260,7 +274,9 @@ export interface FileRoutesByFullPath {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/admin/cupons': typeof AuthenticatedAdminCuponsRoute
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
+  '/admin/precos': typeof AuthenticatedAdminPrecosRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
@@ -297,7 +313,9 @@ export interface FileRoutesByTo {
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/admin/cupons': typeof AuthenticatedAdminCuponsRoute
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
+  '/admin/precos': typeof AuthenticatedAdminPrecosRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
@@ -336,7 +354,9 @@ export interface FileRoutesById {
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
+  '/_authenticated/admin/cupons': typeof AuthenticatedAdminCuponsRoute
   '/_authenticated/admin/funil': typeof AuthenticatedAdminFunilRoute
+  '/_authenticated/admin/precos': typeof AuthenticatedAdminPrecosRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
@@ -375,7 +395,9 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/afiliados'
     | '/admin/conteudo'
+    | '/admin/cupons'
     | '/admin/funil'
+    | '/admin/precos'
     | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/cron/lembretes'
@@ -412,7 +434,9 @@ export interface FileRouteTypes {
     | '/revisao'
     | '/admin/afiliados'
     | '/admin/conteudo'
+    | '/admin/cupons'
     | '/admin/funil'
+    | '/admin/precos'
     | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/cron/lembretes'
@@ -450,7 +474,9 @@ export interface FileRouteTypes {
     | '/_authenticated/revisao'
     | '/_authenticated/admin/afiliados'
     | '/_authenticated/admin/conteudo'
+    | '/_authenticated/admin/cupons'
     | '/_authenticated/admin/funil'
+    | '/_authenticated/admin/precos'
     | '/_authenticated/admin/usuarios'
     | '/_authenticated/programa/$dia'
     | '/api/cron/lembretes'
@@ -673,11 +699,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminConteudoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/cupons': {
+      id: '/_authenticated/admin/cupons'
+      path: '/admin/cupons'
+      fullPath: '/admin/cupons'
+      preLoaderRoute: typeof AuthenticatedAdminCuponsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/funil': {
       id: '/_authenticated/admin/funil'
       path: '/admin/funil'
       fullPath: '/admin/funil'
       preLoaderRoute: typeof AuthenticatedAdminFunilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/precos': {
+      id: '/_authenticated/admin/precos'
+      path: '/admin/precos'
+      fullPath: '/admin/precos'
+      preLoaderRoute: typeof AuthenticatedAdminPrecosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/usuarios': {
@@ -755,7 +795,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
   AuthenticatedAdminAfiliadosRoute: typeof AuthenticatedAdminAfiliadosRoute
   AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
+  AuthenticatedAdminCuponsRoute: typeof AuthenticatedAdminCuponsRoute
   AuthenticatedAdminFunilRoute: typeof AuthenticatedAdminFunilRoute
+  AuthenticatedAdminPrecosRoute: typeof AuthenticatedAdminPrecosRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
 }
@@ -776,7 +818,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
   AuthenticatedAdminAfiliadosRoute: AuthenticatedAdminAfiliadosRoute,
   AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
+  AuthenticatedAdminCuponsRoute: AuthenticatedAdminCuponsRoute,
   AuthenticatedAdminFunilRoute: AuthenticatedAdminFunilRoute,
+  AuthenticatedAdminPrecosRoute: AuthenticatedAdminPrecosRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
   AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
 }

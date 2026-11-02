@@ -1,9 +1,11 @@
 // Abre uma assinatura no Mercado Pago para uma conta e devolve o link de autorização. Usado pela
 // própria pessoa (createSubscription) e pelo admin, que gera um link novo para mandar a ela.
 // Só roda no servidor (token do Mercado Pago e cliente com service role).
-import { buildReference, PLAN_NAMES, priceCents, type BillingPeriod } from "./catalog";
+import { buildReference, PLAN_NAMES, type BillingPeriod } from "./catalog";
+import { currentPriceCents } from "./prices.server";
 import { mpRequest, mpToken } from "./mercadopago";
 import { MpPreapprovalSchema, type SubscriptionStatus } from "./webhook";
+import type { ValidCoupon } from "./coupons.server";
 import { APP_NAME } from "@/lib/seo";
 
 export const NOT_CONFIGURED = "O pagamento ainda não está configurado." as const;
@@ -19,11 +21,22 @@ export async function openSubscription(input: {
   origin: string;
   /** Assinatura já registrada para a conta (lida antes por quem chama). */
   existing: { preapproval_id: string; status: SubscriptionStatus | string } | null;
+  /** Cupom já conferido (loadCoupon): a assinatura nasce com o valor com desconto. */
+  coupon?: ValidCoupon | null;
 }): Promise<OpenResult> {
   const token = mpToken();
   if (!token) return { error: NOT_CONFIGURED, url: null };
-  const cents = priceCents(input.plan, input.period);
-  if (cents === null || !input.email) return { error: "Não foi possível abrir a assinatura para esta conta.", url: null };
+  const coupon = input.coupon ?? null;
+  // Preço de hoje (o cupom já foi calculado sobre ele); fica gravado na referência e vale para sempre nesta assinatura.
+  let full: number | null;
+  try {
+    full = coupon ? coupon.fullCents : await currentPriceCents(input.plan, input.period);
+  } catch (e) {
+    console.error("plan price read failed", e instanceof Error ? e.message : e);
+    return { error: TRY_AGAIN, url: null };
+  }
+  if (full === null || !input.email) return { error: "Não foi possível abrir a assinatura para esta conta.", url: null };
+  const cents = coupon ? coupon.amountCents : full;
 
   const { existing } = input;
   if (existing?.status === "authorized" || existing?.status === "paused")
@@ -41,7 +54,7 @@ export async function openSubscription(input: {
     method: "POST",
     body: {
       reason: `${APP_NAME} ${PLAN_NAMES[input.plan]} (${input.period})`,
-      external_reference: buildReference(input.userId, input.plan, input.period),
+      external_reference: buildReference(input.userId, input.plan, input.period, cents, full),
       payer_email: input.email,
       auto_recurring: {
         frequency: input.period === "anual" ? 12 : 1,
@@ -64,6 +77,11 @@ export async function openSubscription(input: {
     period: input.period,
     status: "pending",
     updated_at: new Date().toISOString(),
+    coupon_id: coupon?.id ?? null,
+    amount_cents: cents,
+    full_cents: full,
+    coupon_cycles: coupon?.cycles ?? null,
+    cycles_used: 0,
   });
   if (saved.error) {
     console.error("subscription pending upsert failed", saved.error.message);

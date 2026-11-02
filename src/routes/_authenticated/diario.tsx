@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { HideValuesToggle } from "@/components/HideValuesToggle";
 import { ShowValuesProvider, useShowValues } from "@/hooks/use-show-values";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -44,6 +46,7 @@ function Diary() {
   const [highlight, setHighlight] = useState<string | null>(null);
   const { showValues, toggle: toggleValues } = useShowValues();
   const [txEditing, setTxEditing] = useState<TxEditing>(null);
+  const [threadOpen, setThreadOpen] = useState(false);
 
   useEffect(() => {
     if (registrar || lancar) {
@@ -82,46 +85,50 @@ function Diary() {
         <HideValuesToggle showValues={showValues} onToggle={toggleValues} />
       </div>
 
-      {/* O aporte do mês numa linha; o histórico de aportes fica abaixo dos lançamentos. */}
-      <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 shadow-card">
-        <span className="text-sm">
-          Aporte de {monthName(current)}:{" "}
-          <span className={currentLogged ? "font-semibold text-primary" : "font-semibold"}>{currentLogged ? "registrado" : "pendente"}</span>
-        </span>
-        <Button size="sm" variant={currentLogged ? "outline" : "default"} onClick={() => setLogMonth(current)}>
-          {currentLogged ? "Ver" : "Registrar"}
-        </Button>
-      </div>
+      {/* O aporte do mês só aparece enquanto falta registrar; o histórico fica recolhido no fim. */}
+      {!currentLogged && (
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 shadow-card">
+          <span className="text-sm">
+            Aporte de {monthName(current)}: <span className="font-semibold">pendente</span>
+          </span>
+          <Button size="sm" onClick={() => setLogMonth(current)}>
+            Registrar
+          </Button>
+        </div>
+      )}
 
       <LedgerSection s={s} showValues={showValues} editing={txEditing} setEditing={setTxEditing} />
 
-      <section className="mt-10" aria-label="Aportes mês a mês">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xl">Aportes mês a mês</h2>
-          <p className="text-sm text-muted-foreground">
-            {months.length} {months.length === 1 ? "mês" : "meses"} · {withContribution} com aporte
-            {showValues && total > 0 && (
-              <>
-                {" "}
-                · <span className="money">{formatWealth(total)}</span>
-              </>
-            )}
-          </p>
-        </div>
-        <div className="mt-4">
-        <CardBoundary>
-        <ConstancyThread
-          months={months.map((m) => ({
-            month: m.month,
-            state: m.state,
-            tags: tagsFor(m.month),
-            highlight: highlight === m.month,
-            onSelect: () => (m.items.length ? setDetail(m.month) : setLogMonth(m.month)),
-          }))}
-        />
-        </CardBoundary>
-        </div>
-      </section>
+      <Collapsible open={threadOpen} onOpenChange={setThreadOpen} className="mt-10 rounded-2xl bg-card shadow-card">
+        <CollapsibleTrigger className="flex min-h-14 w-full items-center justify-between gap-3 px-5 text-left">
+          <span>
+            <span className="block font-semibold">Aportes mês a mês</span>
+            <span className="block text-sm text-muted-foreground">
+              {months.length} {months.length === 1 ? "mês" : "meses"} · {withContribution} com aporte
+              {showValues && total > 0 && (
+                <>
+                  {" "}
+                  · <span className="money">{formatWealth(total)}</span>
+                </>
+              )}
+            </span>
+          </span>
+          <ChevronDown size={18} strokeWidth={1.75} className={threadOpen ? "shrink-0 rotate-180" : "shrink-0"} aria-hidden />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="px-5 pb-5">
+          <CardBoundary>
+            <ConstancyThread
+              months={months.map((m) => ({
+                month: m.month,
+                state: m.state,
+                tags: tagsFor(m.month),
+                highlight: highlight === m.month,
+                onSelect: () => (m.items.length ? setDetail(m.month) : setLogMonth(m.month)),
+              }))}
+            />
+          </CardBoundary>
+        </CollapsibleContent>
+      </Collapsible>
 
       <LogSheet
         month={logMonth}

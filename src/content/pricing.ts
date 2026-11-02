@@ -1,6 +1,8 @@
 // Planos mostrados na landing e na tela de Assinatura. Não existe plano grátis: o Inteligência é a
-// assinatura base e o Pro ainda é lista de espera. Valores iguais aos de src/lib/billing/catalog.ts.
+// assinatura base e o Pro ainda é lista de espera. Os preços vêm do banco (plan_prices; ver src/lib/billing/prices.ts).
 import { JOURNEY_ENABLED } from "@/lib/features";
+import { annualPerMonthCents, formatMoney, formatReais } from "@/lib/calc/format";
+import type { PlanPrices } from "@/lib/billing/catalog";
 
 export type PlanTier = {
   slug: "inteligencia" | "pro";
@@ -10,22 +12,25 @@ export type PlanTier = {
   tag: string;
   highlight: boolean;
   /** Preço anual, quando existe, com o equivalente por mês. */
-  annualNote?: string;
+  annualNote?: string | undefined;
   /** Origem gravada em `leads.source` pela lista de espera; null para o plano que já está à venda. */
   waitlistSource: string | null;
   summary: string;
   features: string[];
 };
 
-export const PLANS: PlanTier[] = [
+/** Os planos com os preços de hoje. */
+export const plansFor = (prices: PlanPrices): PlanTier[] => [
   {
     slug: "inteligencia",
     name: "Inteligência",
-    price: "R$ 39,90",
+    price: formatMoney(prices.inteligencia.mensal ?? 0),
     period: "/mês",
     tag: "Assinatura",
     highlight: true,
-    annualNote: "ou R$ 399,00 por ano (cerca de R$ 33 por mês)",
+    annualNote: prices.inteligencia.anual
+      ? `ou ${formatMoney(prices.inteligencia.anual)} por ano (cerca de ${formatReais(annualPerMonthCents(prices.inteligencia.anual))} por mês)`
+      : undefined,
     waitlistSource: null,
     summary: "Orçamento, patrimônio e aposentadoria num app só.",
     features: [
@@ -42,7 +47,7 @@ export const PLANS: PlanTier[] = [
   {
     slug: "pro",
     name: "Pro",
-    price: "R$ 59,90",
+    price: formatMoney(prices.pro.mensal ?? 0),
     period: "/mês",
     tag: "Em breve",
     highlight: false,

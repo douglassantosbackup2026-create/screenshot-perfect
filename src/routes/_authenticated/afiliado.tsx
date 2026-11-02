@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/calc/format";
 import { describeRule, type CommissionMode } from "@/lib/calc/commission";
+import { describeCoupon, type CouponTerms } from "@/lib/calc/coupon";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/afiliado")({
@@ -28,6 +29,7 @@ type Mine = {
   pending_cents: number;
   paid_cents: number;
   commissions: Commission[];
+  coupons?: (CouponTerms & { code: string; expires_at: string | null })[];
 };
 
 const STATUS_LABEL: Record<string, string> = { pendente: "A receber", paga: "Paga", cancelada: "Cancelada" };
@@ -117,6 +119,32 @@ function Approved({ mine, code }: { mine: Mine; code: string }) {
           liga a pessoa a você.
         </p>
       </section>
+
+      {!!mine.coupons?.length && (
+        <section className="mt-4 rounded-2xl bg-card p-5 shadow-card">
+          <p className="eyebrow">Seus cupons de desconto</p>
+          <p className="mt-1 text-sm text-muted-foreground">Quem assina com um destes cupons ganha o desconto e fica ligado a você.</p>
+          <ul className="mt-3 divide-y divide-border">
+            {mine.coupons.map((k) => {
+              const withCoupon = `${link}&cupom=${k.code}`;
+              return (
+                <li key={k.code} className="flex items-center gap-2 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="money block text-primary">{k.code}</span>
+                    <span className="block text-sm text-muted-foreground">
+                      {describeCoupon(k)}
+                      {k.expires_at ? ` · até ${formatDate(k.expires_at)}` : ""}
+                    </span>
+                  </span>
+                  <Button size="icon" variant="ghost" aria-label={`Copiar link com o cupom ${k.code}`} onClick={() => copy(withCoupon)}>
+                    <Copy size={16} />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
         {[

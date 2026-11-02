@@ -10,6 +10,7 @@ import {
   MpPreapprovalSchema,
   type Decision,
 } from "@/lib/billing/webhook";
+import { shouldRevert } from "@/lib/calc/coupon";
 
 // Notificação do Mercado Pago. Só confia na assinatura e nos dados lidos direto da API.
 // Eventos: payment (cobranças), subscription_preapproval (status da assinatura) e
@@ -53,6 +54,33 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
     },
   },
 });
+
+/** Cupom com prazo: depois da última cobrança com desconto, a assinatura no Mercado Pago volta ao preço cheio. */
+async function revertCouponIfDone(supabaseAdmin: Admin, token: string, userId: string) {
+  const { data: sub, error } = await supabaseAdmin
+    .from("subscriptions")
+    .select("preapproval_id, amount_cents, full_cents, coupon_cycles, cycles_used")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !sub || sub.amount_cents === null || sub.full_cents === null) return;
+  if (!shouldRevert({ amountCents: sub.amount_cents, fullCents: sub.full_cents, cycles: sub.coupon_cycles, cyclesUsed: sub.cycles_used })) return;
+
+  const res = await mpRequest(token, `/preapproval/${encodeURIComponent(sub.preapproval_id)}`, MpPreapprovalSchema, {
+    method: "PUT",
+    body: { auto_recurring: { transaction_amount: sub.full_cents / 100, currency_id: "BRL" } },
+  });
+  if (!res) {
+    console.error("coupon revert failed", sub.preapproval_id);
+    return;
+  }
+  const saved = await supabaseAdmin.from("subscriptions").update({ amount_cents: sub.full_cents }).eq("user_id", userId);
+  if (saved.error) console.error("coupon revert save failed", saved.error.message);
+  await supabaseAdmin.rpc("audit", {
+    p_action: "coupon_ended",
+    p_target: userId,
+    p_details: { preapproval: sub.preapproval_id, full_cents: sub.full_cents },
+  });
+}
 
 async function handle(supabaseAdmin: Admin, token: string, type: string | undefined, dataId: string): Promise<Response> {
   // Falha ao ler do Mercado Pago responde 502: ele reenvia a notificação, e nenhuma cobrança se perde.
@@ -107,6 +135,8 @@ async function handle(supabaseAdmin: Admin, token: string, type: string | undefi
       console.error("credit_payment failed", error.message);
       return new Response("db error", { status: 500 });
     }
+    // O pagamento já está creditado: falha aqui só fica no log e tenta de novo na próxima notificação.
+    await revertCouponIfDone(supabaseAdmin, token, c.userId);
     return new Response("ok");
   }
 

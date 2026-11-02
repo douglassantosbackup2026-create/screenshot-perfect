@@ -1,4 +1,5 @@
-// Lançamentos do mês (rota /diario): resumo, gastos por categoria, próximas recorrências e a lista por dia.
+// Lançamentos do mês (rota /diario): os três números e o botão Lançar no topo; a lista por dia numa aba e
+// a análise (gastos por categoria, próximas recorrências, fim do mês…) em "Resumo do mês".
 // Só exibe; as contas vêm de src/lib/calc e src/lib/data/selectors.
 import { memo, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -8,6 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CardBoundary } from "@/components/ErrorBoundary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HIDDEN, dayLabel } from "@/lib/labels";
 import { ImportSheet } from "@/components/ledger/ImportSheet";
 import { RecurringSheet } from "@/components/ledger/RecurringSheet";
@@ -47,13 +49,6 @@ export function LedgerSection({
 
   return (
     <section className="mt-6" aria-label="Entradas e saídas">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl">Entradas e saídas</h2>
-        <Link to="/contas" className="text-sm font-semibold text-primary hover:underline">
-          Contas e categorias
-        </Link>
-      </div>
-
       {s.accounts.length === 0 ? (
         <EmptyState
           className="mt-4"
@@ -68,6 +63,43 @@ export function LedgerSection({
         </EmptyState>
       ) : (
         <>
+          {/* Mês e os três números; depois a ação principal; a lista e o resumo em abas. */}
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              onClick={() => setMonth(addMonths(month, -1))}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-card hover:text-primary"
+            >
+              <ChevronLeft size={18} aria-hidden />
+            </button>
+            <p className="font-semibold">{monthYear(month)}</p>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              disabled={month >= current}
+              onClick={() => setMonth(addMonths(month, 1))}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-card hover:text-primary disabled:opacity-40"
+            >
+              <ChevronRight size={18} aria-hidden />
+            </button>
+          </div>
+
+          <dl className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-card p-3 shadow-card">
+              <dt className="text-xs text-muted-foreground">Entradas</dt>
+              <dd className="money font-display text-lg font-bold text-primary">{money(m.summary.income)}</dd>
+            </div>
+            <div className="rounded-2xl bg-card p-3 shadow-card">
+              <dt className="text-xs text-muted-foreground">Saídas</dt>
+              <dd className="money font-display text-lg font-bold">{money(m.summary.expense)}</dd>
+            </div>
+            <div className="rounded-2xl bg-card p-3 shadow-card">
+              <dt className="text-xs text-muted-foreground">Sobrou</dt>
+              <dd className={cn("money font-display text-lg font-bold", m.summary.net < 0 && "text-destructive")}>{money(m.summary.net)}</dd>
+            </div>
+          </dl>
+
           <div className="mt-4 flex gap-2">
             <Button className="flex-1" onClick={() => setEditing({ tx: null })}>
               Lançar
@@ -93,122 +125,106 @@ export function LedgerSection({
           </div>
           <UndoBar s={s} />
 
-          <div className="mt-6 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              aria-label="Mês anterior"
-              onClick={() => setMonth(addMonths(month, -1))}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-card hover:text-primary"
-            >
-              <ChevronLeft size={18} aria-hidden />
-            </button>
-            <p className="font-semibold">{monthYear(month)}</p>
-            <button
-              type="button"
-              aria-label="Próximo mês"
-              disabled={month >= current}
-              onClick={() => setMonth(addMonths(month, 1))}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-card hover:text-primary disabled:opacity-40"
-            >
-              <ChevronRight size={18} aria-hidden />
-            </button>
-          </div>
-          <Select value={accountId} onValueChange={setAccountId}>
-            <SelectTrigger className="mt-3 h-11 rounded-xl bg-card" aria-label="Filtrar por conta">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todas as contas</SelectItem>
-              {s.accounts.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Tabs defaultValue="lista" className="mt-6">
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-full">
+              <TabsTrigger value="lista" className="min-h-11 rounded-full">
+                Lançamentos
+              </TabsTrigger>
+              <TabsTrigger value="resumo" className="min-h-11 rounded-full">
+                Resumo do mês
+              </TabsTrigger>
+            </TabsList>
 
-          <dl className="mt-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-card p-3 shadow-card">
-              <dt className="text-xs text-muted-foreground">Entradas</dt>
-              <dd className="money font-display text-lg font-bold text-primary">{money(m.summary.income)}</dd>
-            </div>
-            <div className="rounded-2xl bg-card p-3 shadow-card">
-              <dt className="text-xs text-muted-foreground">Saídas</dt>
-              <dd className="money font-display text-lg font-bold">{money(m.summary.expense)}</dd>
-            </div>
-            <div className="rounded-2xl bg-card p-3 shadow-card">
-              <dt className="text-xs text-muted-foreground">Sobrou</dt>
-              <dd className={cn("money font-display text-lg font-bold", m.summary.net < 0 && "text-destructive")}>{money(m.summary.net)}</dd>
-            </div>
-          </dl>
-          {m.uncategorized > 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {m.uncategorized} {m.uncategorized === 1 ? "lançamento sem categoria" : "lançamentos sem categoria"} neste mês.
-            </p>
-          )}
-
-          {topSpending.length > 0 && (
-            <div className="mt-4 rounded-2xl bg-card p-5 shadow-card">
-              <h3 className="text-base">Para onde foi o dinheiro</h3>
-              <ul className="mt-3 space-y-3">
-                {topSpending.map((c) => (
-                  <li key={c.categoryId ?? "none"}>
-                    <div className="flex justify-between gap-4 text-sm">
-                      <span>{c.name}</span>
-                      <span className="money text-muted-foreground">{money(c.amount)}</span>
+            <TabsContent value="lista">
+              {s.accounts.length > 1 && (
+                <Select value={accountId} onValueChange={setAccountId}>
+                  <SelectTrigger className="mt-3 h-11 w-auto gap-2 rounded-full bg-card px-4 text-sm" aria-label="Filtrar por conta">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>Todas as contas</SelectItem>
+                    {s.accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {m.uncategorized > 0 && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {m.uncategorized} {m.uncategorized === 1 ? "lançamento sem categoria" : "lançamentos sem categoria"} neste mês.
+                </p>
+              )}
+              <div className="mt-3 space-y-4">
+                {m.days.length === 0 && <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-card">Nenhum lançamento neste mês.</p>}
+                {m.days.map((d) => (
+                  <div key={d.date} className="rounded-2xl bg-card p-4 shadow-card">
+                    <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+                      <span>{dayLabel(d.date)}</span>
+                      {d.net !== 0 && <span className="money">{money(d.net)}</span>}
                     </div>
-                    <div className="mt-1 h-2 rounded-full bg-muted" aria-hidden>
-                      <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max(c.share * 100, 2)}%` }} />
-                    </div>
-                  </li>
+                    <ul className="mt-2 divide-y divide-border">
+                      {d.items.map((t) => (
+                        <TxRow key={t.id} t={t} money={money} showValues={showValues} onEdit={setEditing} />
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
-            </div>
-          )}
-
-          {upcoming.length > 0 && month === current && (
-            <div className="mt-4 rounded-2xl bg-card p-5 shadow-card">
-              <h3 className="text-base">Próximos 30 dias</h3>
-              <ul className="mt-2 divide-y divide-border text-sm">
-                {upcoming.map((u) => (
-                  <li key={u.rule.id} className="flex items-center justify-between gap-4 py-2">
-                    <span>
-                      <span className="block font-semibold">{u.rule.payee}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {dayLabel(u.date)} · {u.accountName}
-                      </span>
-                    </span>
-                    <span className={cn("money shrink-0 whitespace-nowrap", u.rule.amount > 0 && "text-primary")}>{money(u.rule.amount)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {month === current && (
-            <>
-              <CardBoundary><MonthEndCard s={s} showValues={showValues} /></CardBoundary>
-              <CardBoundary><InstallmentsCard s={s} showValues={showValues} /></CardBoundary>
-              <CardBoundary><DailyAlertsCard s={s} showValues={showValues} className="mt-4" /></CardBoundary>
-            </>
-          )}
-
-          <div className="mt-4 space-y-4">
-            {m.days.length === 0 && <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-card">Nenhum lançamento neste mês.</p>}
-            {m.days.map((d) => (
-              <div key={d.date} className="rounded-2xl bg-card p-4 shadow-card">
-                <div className="flex justify-between gap-4 text-xs text-muted-foreground">
-                  <span>{dayLabel(d.date)}</span>
-                  {d.net !== 0 && <span className="money">{money(d.net)}</span>}
-                </div>
-                <ul className="mt-2 divide-y divide-border">
-                  {d.items.map((t) => (
-                    <TxRow key={t.id} t={t} money={money} showValues={showValues} onEdit={setEditing} />
-                  ))}
-                </ul>
               </div>
-            ))}
-          </div>
+            </TabsContent>
+
+            <TabsContent value="resumo">
+              {topSpending.length === 0 && month !== current && (
+                <p className="mt-3 rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-card">Nada para resumir neste mês.</p>
+              )}
+              {topSpending.length > 0 && (
+                <div className="mt-4 rounded-2xl bg-card p-5 shadow-card">
+                  <h3 className="text-base">Para onde foi o dinheiro</h3>
+                  <ul className="mt-3 space-y-3">
+                    {topSpending.map((c) => (
+                      <li key={c.categoryId ?? "none"}>
+                        <div className="flex justify-between gap-4 text-sm">
+                          <span>{c.name}</span>
+                          <span className="money text-muted-foreground">{money(c.amount)}</span>
+                        </div>
+                        <div className="mt-1 h-2 rounded-full bg-muted" aria-hidden>
+                          <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max(c.share * 100, 2)}%` }} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {upcoming.length > 0 && month === current && (
+                <div className="mt-4 rounded-2xl bg-card p-5 shadow-card">
+                  <h3 className="text-base">Próximos 30 dias</h3>
+                  <ul className="mt-2 divide-y divide-border text-sm">
+                    {upcoming.map((u) => (
+                      <li key={u.rule.id} className="flex items-center justify-between gap-4 py-2">
+                        <span>
+                          <span className="block font-semibold">{u.rule.payee}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {dayLabel(u.date)} · {u.accountName}
+                          </span>
+                        </span>
+                        <span className={cn("money shrink-0 whitespace-nowrap", u.rule.amount > 0 && "text-primary")}>{money(u.rule.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {month === current && (
+                <>
+                  <CardBoundary><MonthEndCard s={s} showValues={showValues} /></CardBoundary>
+                  <CardBoundary><InstallmentsCard s={s} showValues={showValues} /></CardBoundary>
+                  <CardBoundary><DailyAlertsCard s={s} showValues={showValues} className="mt-4" /></CardBoundary>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       )}
 
