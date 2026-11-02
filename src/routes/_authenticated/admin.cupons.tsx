@@ -178,7 +178,7 @@ function CouponDialog({
       expires_at: expires ? new Date(`${expires}T23:59:59-03:00`).toISOString() : null,
       affiliate_id: affiliateId === NONE ? null : affiliateId,
     };
-    const { error } = await supabase.rpc("admin_save_coupon", { p_id: coupon?.id ?? null, p_coupon: payload as unknown as Json });
+    const { error } = await supabase.rpc("admin_save_coupon", { p_id: (coupon?.id ?? null) as unknown as string, p_coupon: payload as unknown as Json });
     setBusy(false);
     if (error) return void toast.error(errMsg(error));
     toast.success(coupon ? "Cupom salvo." : "Cupom criado.");

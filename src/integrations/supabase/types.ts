@@ -52,6 +52,27 @@ export type Database = {
           },
         ]
       }
+      achievements: {
+        Row: {
+          code: string
+          description: string
+          icon: string
+          title: string
+        }
+        Insert: {
+          code: string
+          description: string
+          icon: string
+          title: string
+        }
+        Update: {
+          code?: string
+          description?: string
+          icon?: string
+          title?: string
+        }
+        Relationships: []
+      }
       affiliate_commissions: {
         Row: {
           affiliate_id: string
@@ -156,56 +177,21 @@ export type Database = {
         }
         Relationships: []
       }
-      referrals: {
+      allocation_targets: {
         Row: {
-          affiliate_id: string
-          code: string
-          created_at: string
-          source: string
+          asset_class: Database["public"]["Enums"]["asset_class"]
+          percent: number
           user_id: string
         }
         Insert: {
-          affiliate_id: string
-          code: string
-          created_at?: string
-          source: string
+          asset_class: Database["public"]["Enums"]["asset_class"]
+          percent: number
           user_id: string
         }
         Update: {
-          affiliate_id?: string
-          code?: string
-          created_at?: string
-          source?: string
+          asset_class?: Database["public"]["Enums"]["asset_class"]
+          percent?: number
           user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referrals_affiliate_id_fkey"
-            columns: ["affiliate_id"]
-            isOneToOne: false
-            referencedRelation: "affiliates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      achievements: {
-        Row: {
-          code: string
-          description: string
-          icon: string
-          title: string
-        }
-        Insert: {
-          code: string
-          description: string
-          icon: string
-          title: string
-        }
-        Update: {
-          code?: string
-          description?: string
-          icon?: string
-          title?: string
         }
         Relationships: []
       }
@@ -248,24 +234,6 @@ export type Database = {
         }
         Relationships: []
       }
-      allocation_targets: {
-        Row: {
-          asset_class: Database["public"]["Enums"]["asset_class"]
-          percent: number
-          user_id: string
-        }
-        Insert: {
-          asset_class: Database["public"]["Enums"]["asset_class"]
-          percent: number
-          user_id: string
-        }
-        Update: {
-          asset_class?: Database["public"]["Enums"]["asset_class"]
-          percent?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
       app_settings: {
         Row: {
           billing_enforced: boolean
@@ -284,99 +252,6 @@ export type Database = {
           id?: boolean
           max_import_rows?: number
           updated_at?: string
-        }
-        Relationships: []
-      }
-      audit_log: {
-        Row: {
-          action: string
-          actor: string | null
-          at: string
-          details: Json
-          id: number
-          severity: string
-          target: string | null
-        }
-        Insert: {
-          action: string
-          actor?: string | null
-          at?: string
-          details?: Json
-          id?: never
-          severity?: string
-          target?: string | null
-        }
-        Update: {
-          action?: string
-          actor?: string | null
-          at?: string
-          details?: Json
-          id?: never
-          severity?: string
-          target?: string | null
-        }
-        Relationships: []
-      }
-      consent_log: {
-        Row: {
-          anon_id: string | null
-          at: string
-          choice: string
-          id: string
-          policy_version: string
-          user_id: string | null
-        }
-        Insert: {
-          anon_id?: string | null
-          at?: string
-          choice: string
-          id?: string
-          policy_version: string
-          user_id?: string | null
-        }
-        Update: {
-          anon_id?: string | null
-          at?: string
-          choice?: string
-          id?: string
-          policy_version?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      rate_limits: {
-        Row: {
-          count: number
-          key: string
-          window_start: string
-        }
-        Insert: {
-          count?: number
-          key: string
-          window_start: string
-        }
-        Update: {
-          count?: number
-          key?: string
-          window_start?: string
-        }
-        Relationships: []
-      }
-      webhook_receipts: {
-        Row: {
-          provider: string
-          received_at: string
-          request_id: string
-        }
-        Insert: {
-          provider: string
-          received_at?: string
-          request_id: string
-        }
-        Update: {
-          provider?: string
-          received_at?: string
-          request_id?: string
         }
         Relationships: []
       }
@@ -451,6 +326,36 @@ export type Database = {
           updated_at?: string
           user_id?: string
           value?: number
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          action: string
+          actor: string | null
+          at: string
+          details: Json
+          id: number
+          severity: string
+          target: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          at?: string
+          details?: Json
+          id?: never
+          severity?: string
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          at?: string
+          details?: Json
+          id?: never
+          severity?: string
+          target?: string | null
         }
         Relationships: []
       }
@@ -648,6 +553,33 @@ export type Database = {
         }
         Relationships: []
       }
+      consent_log: {
+        Row: {
+          anon_id: string | null
+          at: string
+          choice: string
+          id: string
+          policy_version: string
+          user_id: string | null
+        }
+        Insert: {
+          anon_id?: string | null
+          at?: string
+          choice: string
+          id?: string
+          policy_version: string
+          user_id?: string | null
+        }
+        Update: {
+          anon_id?: string | null
+          at?: string
+          choice?: string
+          id?: string
+          policy_version?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contributions: {
         Row: {
           amount: number | null
@@ -686,6 +618,88 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          affiliate_id: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          cycles: number | null
+          duration: string
+          expires_at: string | null
+          id: string
+          kind: string
+          max_uses: number | null
+          periods: string[]
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          affiliate_id?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          cycles?: number | null
+          duration: string
+          expires_at?: string | null
+          id?: string
+          kind: string
+          max_uses?: number | null
+          periods?: string[]
+          value: number
+        }
+        Update: {
+          active?: boolean
+          affiliate_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          cycles?: number | null
+          duration?: string
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          max_uses?: number | null
+          periods?: string[]
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_mission_completions: {
         Row: {
@@ -746,32 +760,47 @@ export type Database = {
       }
       goals: {
         Row: {
+          account_ids: string[]
+          asset_ids: string[]
           completed_at: string | null
           created_at: string
           deadline: string | null
+          expected_return: number | null
           id: string
           kind: string
+          monthly_contribution: number | null
           target: number | null
+          template: string
           title: string
           user_id: string
         }
         Insert: {
+          account_ids?: string[]
+          asset_ids?: string[]
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
+          expected_return?: number | null
           id?: string
           kind: string
+          monthly_contribution?: number | null
           target?: number | null
+          template?: string
           title: string
           user_id: string
         }
         Update: {
+          account_ids?: string[]
+          asset_ids?: string[]
           completed_at?: string | null
           created_at?: string
           deadline?: string | null
+          expected_return?: number | null
           id?: string
           kind?: string
+          monthly_contribution?: number | null
           target?: number | null
+          template?: string
           title?: string
           user_id?: string
         }
@@ -817,69 +846,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      whatsapp_links: {
-        Row: {
-          discreet: boolean
-          last_tx_id: string | null
-          phone: string
-          proactive_opt_in: boolean
-          updated_at: string
-          user_id: string
-          verified_at: string
-        }
-        Insert: {
-          discreet?: boolean
-          last_tx_id?: string | null
-          phone: string
-          proactive_opt_in?: boolean
-          updated_at?: string
-          user_id: string
-          verified_at?: string
-        }
-        Update: {
-          discreet?: boolean
-          last_tx_id?: string | null
-          phone?: string
-          proactive_opt_in?: boolean
-          updated_at?: string
-          user_id?: string
-          verified_at?: string
-        }
-        Relationships: []
-      }
-      whatsapp_link_codes: {
-        Row: {
-          code: string
-          expires_at: string
-          user_id: string
-        }
-        Insert: {
-          code: string
-          expires_at: string
-          user_id: string
-        }
-        Update: {
-          code?: string
-          expires_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      whatsapp_messages: {
-        Row: {
-          id: string
-          received_at: string
-        }
-        Insert: {
-          id: string
-          received_at?: string
-        }
-        Update: {
-          id?: string
-          received_at?: string
-        }
-        Relationships: []
       }
       leads: {
         Row: {
@@ -1102,6 +1068,30 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_prices: {
+        Row: {
+          cents: number
+          period: string
+          plan: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cents: number
+          period: string
+          plan: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cents?: number
+          period?: string
+          plan?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       plan_snapshots: {
         Row: {
           created_at: string
@@ -1242,6 +1232,33 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       question_answers: {
         Row: {
           answered_at: string
@@ -1273,6 +1290,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rate_limits: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       recurring_rules: {
         Row: {
@@ -1340,32 +1375,37 @@ export type Database = {
           },
         ]
       }
-      push_subscriptions: {
+      referrals: {
         Row: {
-          auth: string
+          affiliate_id: string
+          code: string
           created_at: string
-          endpoint: string
-          id: string
-          p256dh: string
+          source: string
           user_id: string
         }
         Insert: {
-          auth: string
+          affiliate_id: string
+          code: string
           created_at?: string
-          endpoint: string
-          id?: string
-          p256dh: string
+          source: string
           user_id: string
         }
         Update: {
-          auth?: string
+          affiliate_id?: string
+          code?: string
           created_at?: string
-          endpoint?: string
-          id?: string
-          p256dh?: string
+          source?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reminder_log: {
         Row: {
@@ -1494,97 +1534,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
-      }
-      coupons: {
-        Row: {
-          active: boolean
-          affiliate_id: string | null
-          code: string
-          created_at: string
-          created_by: string | null
-          cycles: number | null
-          duration: string
-          expires_at: string | null
-          id: string
-          kind: string
-          max_uses: number | null
-          periods: string[]
-          value: number
-        }
-        Insert: {
-          active?: boolean
-          affiliate_id?: string | null
-          code: string
-          created_at?: string
-          created_by?: string | null
-          cycles?: number | null
-          duration: string
-          expires_at?: string | null
-          id?: string
-          kind: string
-          max_uses?: number | null
-          periods?: string[]
-          value: number
-        }
-        Update: {
-          active?: boolean
-          affiliate_id?: string | null
-          code?: string
-          created_at?: string
-          created_by?: string | null
-          cycles?: number | null
-          duration?: string
-          expires_at?: string | null
-          id?: string
-          kind?: string
-          max_uses?: number | null
-          periods?: string[]
-          value?: number
-        }
-        Relationships: []
-      }
-      plan_prices: {
-        Row: {
-          cents: number
-          period: string
-          plan: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          cents: number
-          period: string
-          plan: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          cents?: number
-          period?: string
-          plan?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      coupon_redemptions: {
-        Row: {
-          coupon_id: string
-          created_at: string
-          user_id: string
-        }
-        Insert: {
-          coupon_id: string
-          created_at?: string
-          user_id: string
-        }
-        Update: {
-          coupon_id?: string
-          created_at?: string
-          user_id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trades: {
         Row: {
@@ -1915,6 +1873,24 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_receipts: {
+        Row: {
+          provider: string
+          received_at: string
+          request_id: string
+        }
+        Insert: {
+          provider: string
+          received_at?: string
+          request_id: string
+        }
+        Update: {
+          provider?: string
+          received_at?: string
+          request_id?: string
+        }
+        Relationships: []
+      }
       week_activity: {
         Row: {
           iso_week: string
@@ -1966,6 +1942,69 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_link_codes: {
+        Row: {
+          code: string
+          expires_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          expires_at: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          expires_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_links: {
+        Row: {
+          discreet: boolean
+          last_tx_id: string | null
+          phone: string
+          proactive_opt_in: boolean
+          updated_at: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          discreet?: boolean
+          last_tx_id?: string | null
+          phone: string
+          proactive_opt_in?: boolean
+          updated_at?: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          discreet?: boolean
+          last_tx_id?: string | null
+          phone?: string
+          proactive_opt_in?: boolean
+          updated_at?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          id: string
+          received_at: string
+        }
+        Insert: {
+          id: string
+          received_at?: string
+        }
+        Update: {
+          id?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       xp_events: {
         Row: {
           action_type: Database["public"]["Enums"]["xp_action"]
@@ -2008,118 +2047,6 @@ export type Database = {
         }
         Returns: string
       }
-      admin_affiliate_commissions: {
-        Args: { p_status: string | null }
-        Returns: Json
-      }
-      admin_list_coupons: { Args: never; Returns: Json }
-      admin_set_plan_price: {
-        Args: { p_cents: number; p_period: string; p_plan: string }
-        Returns: undefined
-      }
-      admin_save_coupon: {
-        Args: { p_coupon: Json; p_id: string | null }
-        Returns: string
-      }
-      admin_set_coupon_active: {
-        Args: { p_active: boolean; p_id: string }
-        Returns: undefined
-      }
-      admin_list_affiliates: {
-        Args: { p_status: string | null }
-        Returns: Json
-      }
-      admin_review_affiliate: {
-        Args: {
-          p_bp?: number
-          p_code?: string
-          p_decision: string
-          p_id: string
-          p_mode?: string
-          p_months?: number
-          p_note?: string
-        }
-        Returns: undefined
-      }
-      admin_set_affiliate_status: {
-        Args: { p_id: string; p_status: string }
-        Returns: undefined
-      }
-      admin_set_commission_status: {
-        Args: { p_ids: string[]; p_status: string }
-        Returns: number
-      }
-      claim_referral: {
-        Args: { p_code?: string; p_source?: string }
-        Returns: Json
-      }
-      my_affiliate: { Args: never; Returns: Json }
-      admin_find_users: {
-        Args: { p_query: string }
-        Returns: {
-          created_at: string
-          display_name: string | null
-          email: string
-          last_sign_in_at: string | null
-          payments: Json
-          plan: string | null
-          preapproval_id: string | null
-          subscription_period: string | null
-          subscription_status: string | null
-          subscription_updated_at: string | null
-          user_id: string
-          valid_until: string | null
-        }[]
-      }
-      admin_funnel: {
-        Args: { p_from: string; p_to: string }
-        Returns: { people: number; source: string; step: string }[]
-      }
-      admin_save_lesson: {
-        Args: { p_lesson: Json; p_program_slug: string }
-        Returns: string
-      }
-      apply_subscription_status: {
-        Args: {
-          p_event_at: string
-          p_period: string
-          p_plan: string
-          p_preapproval: string
-          p_source?: string
-          p_status: string
-          p_user: string
-        }
-        Returns: boolean
-      }
-      audit: {
-        Args: { p_action: string; p_details?: Json; p_severity?: string; p_target?: string | null }
-        Returns: undefined
-      }
-      has_admin_role: { Args: never; Returns: boolean }
-      hit_rate_limit: {
-        Args: { p_key: string; p_limit: number; p_window_seconds: number }
-        Returns: boolean
-      }
-      purge_expired: { Args: never; Returns: Json }
-      submit_lead: {
-        Args: {
-          p_email: string
-          p_simulation?: Json | null
-          p_source: string
-          p_utm_campaign?: string | null
-          p_utm_medium?: string | null
-          p_utm_source?: string | null
-        }
-        Returns: undefined
-      }
-      record_consent: {
-        Args: { p_anon: string | null; p_choice: string; p_version: string }
-        Returns: undefined
-      }
-      track_event: {
-        Args: { p_anon: string; p_name: string; p_path?: string | null; p_props?: Json; p_utm?: Json }
-        Returns: undefined
-      }
       _award_xp: {
         Args: {
           p_action: Database["public"]["Enums"]["xp_action"]
@@ -2134,12 +2061,14 @@ export type Database = {
         Args: { p_from: string; p_metric: string; p_to: string; p_user: string }
         Returns: number
       }
+      _client_ip: { Args: never; Returns: string }
       _daily_mission_kind: { Args: { p_user: string }; Returns: string }
       _lesson_unlocked: {
         Args: { p_lesson: string; p_user: string }
         Returns: boolean
       }
       _mark_week_active: { Args: { p_user: string }; Returns: undefined }
+      _mfa_ok: { Args: never; Returns: boolean }
       _nominal_date: {
         Args: {
           k: number
@@ -2147,14 +2076,104 @@ export type Database = {
         }
         Returns: string
       }
+      _recent_auth: { Args: { p_seconds: number }; Returns: boolean }
       _refresh_progress: { Args: { p_user: string }; Returns: Json }
       _refresh_progress_core: { Args: { p_user: string }; Returns: Json }
       _settle_daily_mission: {
         Args: { p_kind: string; p_user: string }
         Returns: number
       }
+      admin_affiliate_commissions: { Args: { p_status: string }; Returns: Json }
+      admin_find_users: {
+        Args: { p_query: string }
+        Returns: {
+          created_at: string
+          display_name: string
+          email: string
+          last_sign_in_at: string
+          payments: Json
+          plan: string
+          preapproval_id: string
+          subscription_period: string
+          subscription_status: string
+          subscription_updated_at: string
+          user_id: string
+          valid_until: string
+        }[]
+      }
+      admin_funnel: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          people: number
+          source: string
+          step: string
+        }[]
+      }
+      admin_list_affiliates: { Args: { p_status: string }; Returns: Json }
+      admin_list_coupons: { Args: never; Returns: Json }
+      admin_review_affiliate: {
+        Args: {
+          p_bp?: number
+          p_code?: string
+          p_decision: string
+          p_id: string
+          p_mode?: string
+          p_months?: number
+          p_note?: string
+        }
+        Returns: undefined
+      }
+      admin_save_coupon: {
+        Args: { p_coupon: Json; p_id: string }
+        Returns: string
+      }
+      admin_save_lesson: {
+        Args: { p_lesson: Json; p_program_slug: string }
+        Returns: string
+      }
+      admin_set_affiliate_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      admin_set_commission_status: {
+        Args: { p_ids: string[]; p_status: string }
+        Returns: number
+      }
+      admin_set_coupon_active: {
+        Args: { p_active: boolean; p_id: string }
+        Returns: undefined
+      }
+      admin_set_plan_price: {
+        Args: { p_cents: number; p_period: string; p_plan: string }
+        Returns: undefined
+      }
       answer_question: {
         Args: { p_option: string; p_question: string }
+        Returns: Json
+      }
+      apply_subscription_status: {
+        Args: {
+          p_event_at: string
+          p_period: string
+          p_plan: string
+          p_preapproval: string
+          p_source?: string
+          p_status: string
+          p_user: string
+        }
+        Returns: boolean
+      }
+      audit: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_severity?: string
+          p_target?: string
+        }
+        Returns: undefined
+      }
+      claim_referral: {
+        Args: { p_code?: string; p_source?: string }
         Returns: Json
       }
       complete_daily_mission: {
@@ -2208,11 +2227,16 @@ export type Database = {
       }
       get_my_progress: { Args: never; Returns: Json }
       has_active_entitlement: { Args: never; Returns: boolean }
+      has_admin_role: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      hit_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
       }
       import_transactions: {
@@ -2252,6 +2276,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      my_affiliate: { Args: never; Returns: Json }
+      purge_expired: { Args: never; Returns: Json }
+      push_recipients: {
+        Args: never
+        Returns: {
+          reminder_day: number
+          user_id: string
+        }[]
+      }
+      record_consent: {
+        Args: { p_anon: string; p_choice: string; p_version: string }
+        Returns: undefined
+      }
       record_plan_event: {
         Args: {
           p_engine_version: string
@@ -2261,10 +2298,6 @@ export type Database = {
           p_reason: Database["public"]["Enums"]["snapshot_reason"]
         }
         Returns: Json
-      }
-      push_recipients: {
-        Args: never
-        Returns: { reminder_day: number; user_id: string }[]
       }
       reminder_recipients: {
         Args: never
@@ -2284,9 +2317,30 @@ export type Database = {
         Returns: undefined
       }
       start_challenge: { Args: { p_slug: string }; Returns: Json }
+      submit_lead: {
+        Args: {
+          p_email: string
+          p_simulation?: Json
+          p_source: string
+          p_utm_campaign?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+        }
+        Returns: undefined
+      }
       submit_placement: {
         Args: { p_answers: Json; p_unit: number }
         Returns: Json
+      }
+      track_event: {
+        Args: {
+          p_anon: string
+          p_name: string
+          p_path?: string
+          p_props?: Json
+          p_utm?: Json
+        }
+        Returns: undefined
       }
       upsert_asset: {
         Args: {

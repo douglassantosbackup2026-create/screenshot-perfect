@@ -86,7 +86,7 @@ export async function setConsent(choice: ConsentChoice) {
   safe(() => window.localStorage.removeItem(LINKED_KEY), undefined);
   window.dispatchEvent(new Event(OPEN_EVENT + ":changed"));
   try {
-    await supabase.rpc("record_consent", { p_anon: anon, p_choice: choice, p_version: POLICY_VERSION });
+    await supabase.rpc("record_consent", { p_anon: anon as unknown as string, p_choice: choice, p_version: POLICY_VERSION });
   } catch {
     /* sem rede: a escolha local vale; o registro tenta de novo no próximo login */
   }
@@ -100,7 +100,7 @@ export async function linkConsentToUser(userId: string) {
   const choice = getConsent();
   if (!choice || safe(() => window.localStorage.getItem(LINKED_KEY), null) === userId) return;
   try {
-    const { error } = await supabase.rpc("record_consent", { p_anon: choice === "aceito" ? anonId(false) : null, p_choice: choice, p_version: POLICY_VERSION });
+    const { error } = await supabase.rpc("record_consent", { p_anon: (choice === "aceito" ? anonId(false) : null) as unknown as string, p_choice: choice, p_version: POLICY_VERSION });
     if (!error) safe(() => window.localStorage.setItem(LINKED_KEY, userId), undefined);
   } catch {
     /* tenta de novo no próximo login */

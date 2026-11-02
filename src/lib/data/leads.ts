@@ -16,9 +16,9 @@ export async function saveLead(email: string, source: string, simulation: Record
       p_email: email.trim(),
       p_source: source,
       p_simulation: simulation as Json,
-      p_utm_source: utm.source ?? null,
-      p_utm_medium: utm.medium ?? null,
-      p_utm_campaign: utm.campaign ?? null,
+      p_utm_source: utm.source ?? (null as unknown as string),
+      p_utm_medium: utm.medium ?? (null as unknown as string),
+      p_utm_campaign: utm.campaign ?? (null as unknown as string),
     });
     if (!error) {
       track("lead_saved", { source });

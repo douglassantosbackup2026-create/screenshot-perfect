@@ -79,7 +79,7 @@ function AdminAffiliates() {
   const [editing, setEditing] = useState<Affiliate | null>(null);
 
   const load = useCallback(async () => {
-    const [{ data, error }, coupons] = await Promise.all([supabase.rpc("admin_list_affiliates", { p_status: null }), supabase.rpc("admin_list_coupons")]);
+    const [{ data, error }, coupons] = await Promise.all([supabase.rpc("admin_list_affiliates", { p_status: null as unknown as string }), supabase.rpc("admin_list_coupons")]);
     if (error) return void toast.error(errMsg(error));
     // Cupons de cada afiliado, só para mostrar no cartão (o cadastro é em Admin: cupons).
     const byAffiliate = new Map<string, string[]>();
