@@ -458,6 +458,42 @@ export type Database = {
         }
         Relationships: []
       }
+      calc_settings: {
+        Row: {
+          costs: number
+          horizon: number
+          id: boolean
+          inflation: number
+          return_central: number
+          return_conservador: number
+          return_otimista: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          costs?: number
+          horizon?: number
+          id?: boolean
+          inflation?: number
+          return_central?: number
+          return_conservador?: number
+          return_otimista?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          costs?: number
+          horizon?: number
+          id?: boolean
+          inflation?: number
+          return_central?: number
+          return_conservador?: number
+          return_otimista?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -847,14 +883,62 @@ export type Database = {
           },
         ]
       }
+      incidents: {
+        Row: {
+          count: number
+          fingerprint: string
+          first_at: string
+          id: string
+          last_at: string
+          level: string
+          message: string
+          path: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          count?: number
+          fingerprint: string
+          first_at?: string
+          id?: string
+          last_at?: string
+          level?: string
+          message: string
+          path?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source: string
+          status?: string
+        }
+        Update: {
+          count?: number
+          fingerprint?: string
+          first_at?: string
+          id?: string
+          last_at?: string
+          level?: string
+          message?: string
+          path?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           consent_marketing: boolean
           created_at: string
           email: string
           id: string
+          notes: string
+          owner: string | null
           simulation: Json | null
           source: string
+          status: string
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
@@ -864,8 +948,11 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          notes?: string
+          owner?: string | null
           simulation?: Json | null
           source?: string
+          status?: string
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -875,8 +962,11 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          notes?: string
+          owner?: string | null
           simulation?: Json | null
           source?: string
+          status?: string
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -1009,6 +1099,24 @@ export type Database = {
           },
         ]
       }
+      metrics_daily: {
+        Row: {
+          day: string
+          key: string
+          n: number
+        }
+        Insert: {
+          day: string
+          key: string
+          n?: number
+        }
+        Update: {
+          day?: string
+          key?: string
+          n?: number
+        }
+        Relationships: []
+      }
       mission_completions: {
         Row: {
           completed_at: string
@@ -1037,6 +1145,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_events: {
+        Row: {
+          amount_cents: number
+          at: string
+          id: string
+          period: string | null
+          plan: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          at?: string
+          id: string
+          period?: string | null
+          plan?: string | null
+          status: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          at?: string
+          id?: string
+          period?: string | null
+          plan?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       payments: {
         Row: {
@@ -1491,6 +1632,57 @@ export type Database = {
         }
         Relationships: []
       }
+      site_notices: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          link: string | null
+          text: string
+          until: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link?: string | null
+          text: string
+          until?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link?: string | null
+          text?: string
+          until?: string | null
+        }
+        Relationships: []
+      }
+      staff_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount_cents: number | null
@@ -1543,6 +1735,83 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      support_messages: {
+        Row: {
+          at: string
+          author: string
+          author_id: string | null
+          body: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          at?: string
+          author: string
+          author_id?: string | null
+          body: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          at?: string
+          author?: string
+          author_id?: string | null
+          body?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assignee: string | null
+          created_at: string
+          email: string
+          id: string
+          kind: string
+          last_reply_by: string
+          name: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assignee?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          kind: string
+          last_reply_by?: string
+          name?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assignee?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          kind?: string
+          last_reply_by?: string
+          name?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       trades: {
         Row: {
@@ -2063,6 +2332,12 @@ export type Database = {
       }
       _client_ip: { Args: never; Returns: string }
       _daily_mission_kind: { Args: { p_user: string }; Returns: string }
+      _is_super: { Args: never; Returns: boolean }
+      _k: { Args: { p: number }; Returns: number }
+      _legacy_price: {
+        Args: { p_period: string; p_plan: string }
+        Returns: number
+      }
       _lesson_unlocked: {
         Args: { p_lesson: string; p_user: string }
         Returns: boolean
@@ -2084,6 +2359,12 @@ export type Database = {
         Returns: number
       }
       admin_affiliate_commissions: { Args: { p_status: string }; Returns: Json }
+      admin_audit_log: {
+        Args: { p_action?: string; p_limit?: number; p_severity?: string }
+        Returns: Json
+      }
+      admin_billing: { Args: { p_from: string; p_to: string }; Returns: Json }
+      admin_feature_usage: { Args: never; Returns: Json }
       admin_find_users: {
         Args: { p_query: string }
         Returns: {
@@ -2109,8 +2390,21 @@ export type Database = {
           step: string
         }[]
       }
+      admin_incidents: { Args: { p_status?: string }; Returns: Json }
+      admin_leads: {
+        Args: { p_query?: string; p_status?: string }
+        Returns: Json
+      }
       admin_list_affiliates: { Args: { p_status: string }; Returns: Json }
       admin_list_coupons: { Args: never; Returns: Json }
+      admin_list_notices: { Args: never; Returns: Json }
+      admin_log_export: {
+        Args: { p_rows: number; p_what: string }
+        Returns: undefined
+      }
+      admin_marketing: { Args: { p_from: string; p_to: string }; Returns: Json }
+      admin_overview: { Args: { p_from: string; p_to: string }; Returns: Json }
+      admin_resolve_incident: { Args: { p_id: string }; Returns: undefined }
       admin_review_affiliate: {
         Args: {
           p_bp?: number
@@ -2131,10 +2425,25 @@ export type Database = {
         Args: { p_lesson: Json; p_program_slug: string }
         Returns: string
       }
+      admin_save_notice: {
+        Args: {
+          p_active: boolean
+          p_id: string
+          p_link: string
+          p_text: string
+          p_until: string
+        }
+        Returns: string
+      }
       admin_set_affiliate_status: {
         Args: { p_id: string; p_status: string }
         Returns: undefined
       }
+      admin_set_billing_enforced: {
+        Args: { p_on: boolean }
+        Returns: undefined
+      }
+      admin_set_calc_settings: { Args: { p: Json }; Returns: undefined }
       admin_set_commission_status: {
         Args: { p_ids: string[]; p_status: string }
         Returns: number
@@ -2147,6 +2456,34 @@ export type Database = {
         Args: { p_cents: number; p_period: string; p_plan: string }
         Returns: undefined
       }
+      admin_settings: { Args: never; Returns: Json }
+      admin_simulations: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      admin_staff_grant: {
+        Args: { p_email: string; p_role: string }
+        Returns: undefined
+      }
+      admin_staff_list: { Args: never; Returns: Json }
+      admin_staff_revoke: {
+        Args: { p_role: string; p_user: string }
+        Returns: undefined
+      }
+      admin_ticket_reply: {
+        Args: { p_body: string; p_ticket: string }
+        Returns: undefined
+      }
+      admin_ticket_update: {
+        Args: { p_assign_me?: boolean; p_status: string; p_ticket: string }
+        Returns: undefined
+      }
+      admin_tickets: { Args: { p_status?: string }; Returns: Json }
+      admin_update_lead: {
+        Args: { p_id: string; p_notes: string; p_status: string }
+        Returns: undefined
+      }
+      admin_user_card: { Args: { p_user: string }; Returns: Json }
       answer_question: {
         Args: { p_option: string; p_question: string }
         Returns: Json
@@ -2184,6 +2521,7 @@ export type Database = {
       complete_lesson: { Args: { p_lesson: string }; Returns: Json }
       complete_month_close: { Args: never; Returns: Json }
       complete_weekly_mission: { Args: { p_mission: string }; Returns: Json }
+      count_anonymous: { Args: { p_key: string }; Returns: undefined }
       create_goal: {
         Args: {
           p_deadline?: string
@@ -2277,6 +2615,11 @@ export type Database = {
         Returns: undefined
       }
       my_affiliate: { Args: never; Returns: Json }
+      my_staff_status: { Args: never; Returns: Json }
+      open_ticket: {
+        Args: { p_body: string; p_kind: string; p_subject: string }
+        Returns: string
+      }
       purge_expired: { Args: never; Returns: Json }
       push_recipients: {
         Args: never
@@ -2310,12 +2653,26 @@ export type Database = {
           weekly_reminder: boolean
         }[]
       }
+      reply_ticket: {
+        Args: { p_body: string; p_ticket: string }
+        Returns: undefined
+      }
+      report_incident: {
+        Args: {
+          p_level: string
+          p_message: string
+          p_path?: string
+          p_source: string
+        }
+        Returns: undefined
+      }
       seed_default_categories: { Args: never; Returns: undefined }
       set_allocation_targets: { Args: { p_targets: Json }; Returns: Json }
       set_asset_value_from_holdings: {
         Args: { p_asset: string; p_value: number }
         Returns: undefined
       }
+      staff_has: { Args: { p_roles: string[] }; Returns: boolean }
       start_challenge: { Args: { p_slug: string }; Returns: Json }
       submit_lead: {
         Args: {

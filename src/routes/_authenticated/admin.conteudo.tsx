@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { pageHead } from "@/lib/seo";
-import { adminGate } from "@/lib/auth/roles";
+import { requireModule } from "@/lib/admin/modules";
+import { NoticesCard } from "@/components/admin/NoticesCard";
+import { useCanWrite } from "@/components/admin/hooks";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,12 +18,7 @@ import { errMsg } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/conteudo")({
-  beforeLoad: async () => {
-    // Admin sem o segundo fator confirmado vai para o Perfil ativar/confirmar.
-    const gate = await adminGate();
-    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
-    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
-  },
+  beforeLoad: ({ context }) => requireModule(context.staff, "/admin/conteudo"),
   head: () => pageHead("Admin de conteúdo", "Cadastro e revisão de lições, perguntas e missões semanais.", "Cadastro e revisão de lições, perguntas e missões."),
   component: Admin,
 });
@@ -29,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/admin/conteudo")({
 const STATUS_LABEL: Record<ContentStatus, string> = { rascunho: "Rascunho", revisada: "Revisada", publicada: "Publicada" };
 
 function Admin() {
+  const canWrite = useCanWrite("/admin/conteudo");
   const [loaded, setLoaded] = useState<LoadedContent | null>(null);
   const [failed, setFailed] = useState(false);
   const [lessons, setLessons] = useState<EditLesson[]>([]);
@@ -93,14 +91,18 @@ function Admin() {
       setLoaded((c) => (c ? { ...c, fromDb: { ...c.fromDb, missions: true } } : c));
     }, "Missões salvas.");
 
-  if (failed) return <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8"><h1>Conteúdo</h1><p className="mt-2 text-sm text-muted-foreground">Não foi possível carregar o conteúdo do banco. Tente de novo em instantes.</p></main>;
-  if (!loaded) return <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8"><h1>Conteúdo</h1><p className="mt-2 text-sm text-muted-foreground">Carregando…</p></main>;
+  if (failed) return <div className="w-full max-w-3xl"><h1>Conteúdo</h1><p className="mt-2 text-sm text-muted-foreground">Não foi possível carregar o conteúdo do banco. Tente de novo em instantes.</p></div>;
+  if (!loaded) return <div className="w-full max-w-3xl"><h1>Conteúdo</h1><p className="mt-2 text-sm text-muted-foreground">Carregando…</p></div>;
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
-      <h1>Conteúdo</h1>
+    <div className="w-full max-w-3xl">
+      <h1>Conteúdos</h1>
+      <div className="mt-6">
+        <NoticesCard canWrite={canWrite} />
+      </div>
+      <h2 className="mt-8 text-lg">Lições da jornada</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Acesso só para administradores. As mudanças ficam no banco; o app das pessoas ainda usa o texto do arquivo até a jornada voltar.
+        As mudanças ficam no banco; o app das pessoas ainda usa o texto do arquivo até a jornada voltar.
       </p>
       {!loaded.fromDb.lessons && (
         <div className="mt-4 rounded-2xl bg-card p-4 shadow-card">
@@ -112,7 +114,7 @@ function Admin() {
       )}
 
       <Tabs defaultValue="licoes" className="mt-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="licoes">Lições</TabsTrigger>
           <TabsTrigger value="missoes">Missões</TabsTrigger>
         </TabsList>
@@ -155,7 +157,7 @@ function Admin() {
           </Button>
         </TabsContent>
       </Tabs>
-    </main>
+    </div>
   );
 }
 

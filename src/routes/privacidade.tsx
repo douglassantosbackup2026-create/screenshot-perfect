@@ -26,12 +26,27 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Contagem anônima (para todos)",
+    body: [
+      "Somamos quantas visitas cada página pública recebe por dia e quantas simulações da calculadora são começadas e concluídas.",
+      "É só um total por dia: não guardamos quem foi, nem IP, cookie, código do navegador ou o que foi digitado. Não dá para saber nada sobre você a partir disso.",
+    ],
+  },
+  {
     title: "Medição de uso (só se você aceitar)",
     body: [
-      "Se você aceitar no aviso de privacidade, contamos etapas do uso: visitar a página inicial, usar a calculadora, deixar o e-mail, criar a conta, abrir o pagamento e assinar.",
-      "Junto vão a página, a origem da visita (como utm_source de um anúncio) e um código aleatório deste navegador. Nunca vão valores, lançamentos ou o que você digita.",
+      "Se você aceitar no aviso de privacidade, contamos etapas do uso: visitar a página inicial, usar a calculadora, deixar o e-mail, criar a conta, abrir o pagamento e assinar, e quais áreas do app você abre.",
+      "Junto vão a página, a origem da visita (como utm_source de um anúncio), um código aleatório deste navegador e um código da sessão (some ao fechar a aba). Da calculadora vão só faixas (por exemplo, “30–39 anos”), nunca os números que você digita. Nunca vão valores, lançamentos ou patrimônio.",
       "Fica no nosso próprio banco, sem empresas de anúncio ou de métricas. Só a equipe do app vê os números, sempre somados.",
-      "Se recusar, nada é medido e nenhum código é criado. Dá para mudar a escolha quando quiser em “Preferências de privacidade”, aqui embaixo ou no Perfil.",
+      "Se recusar, nada disso é medido e nenhum código é criado (a contagem anônima acima continua). Dá para mudar a escolha quando quiser em “Preferências de privacidade”, aqui embaixo ou no Perfil.",
+    ],
+  },
+  {
+    title: "Atendimento e acesso da equipe",
+    body: [
+      "Mensagens enviadas pelo “Fale conosco” (Perfil) ou pela página de contato ficam guardadas com o seu e-mail para responder e acompanhar o pedido.",
+      "A equipe acessa só o necessário para cada função (financeiro, suporte, marketing…). Ninguém da equipe vê seu patrimônio, seus lançamentos ou suas metas: os relatórios internos são números somados, e grupos com menos de 5 pessoas não aparecem.",
+      "Toda consulta a uma conta e toda ação da equipe ficam registradas na auditoria.",
     ],
   },
   {

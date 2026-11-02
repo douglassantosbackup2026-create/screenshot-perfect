@@ -4,10 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 
 /** Muda quando a política de privacidade muda o que coleta: o banner volta a perguntar. */
-export const POLICY_VERSION = "2026-11";
+export const POLICY_VERSION = "2026-11-02";
 
 export const FUNNEL_EVENTS = ["landing_view", "calculator_used", "lead_saved", "signup_completed", "checkout_started"] as const;
-export type ClientEvent = (typeof FUNNEL_EVENTS)[number];
+export type ClientEvent =
+  | (typeof FUNNEL_EVENTS)[number]
+  | "session_start"
+  | "calculator_started"
+  | "calculator_completed"
+  | "feature_used";
 
 export type ConsentChoice = "aceito" | "recusado";
 type StoredConsent = { choice: ConsentChoice; version: string; at: string };
@@ -112,6 +117,17 @@ export function track(name: ClientEvent, props: Record<string, string | number |
   if (typeof window === "undefined" || getConsent() !== "aceito") return;
   const anon = anonId(true);
   if (!anon) return;
+  // Sessão: id aleatório da aba (some ao fechar), criado só com aceite. O primeiro evento da aba abre a sessão.
+  let session = safe(() => window.sessionStorage.getItem(SESSION_KEY), null);
+  if (!session) {
+    session = crypto.randomUUID();
+    safe(() => window.sessionStorage.setItem(SESSION_KEY, session!), undefined);
+    send(anon, "session_start", { session });
+  }
+  send(anon, name, { ...props, session });
+}
+
+function send(anon: string, name: ClientEvent, props: Record<string, string | number | boolean>) {
   void Promise.resolve(
     supabase.rpc("track_event", {
       p_anon: anon,
@@ -121,6 +137,48 @@ export function track(name: ClientEvent, props: Record<string, string | number |
       p_props: props as Json,
     }),
   ).catch(() => {});
+}
+
+const SESSION_KEY = "mk_session";
+
+/** Páginas públicas cuja visita entra na contagem anônima (a mesma lista do banco, count_anonymous). */
+export const COUNTED_PAGES = ["/", "/calculadora", "/cadastro", "/entrar", "/afiliados", "/planos", "/contato"] as const;
+export type AnonymousKey = `visita:${(typeof COUNTED_PAGES)[number]}` | "simulacao_iniciada" | "simulacao_concluida";
+
+/**
+ * Contagem anônima: soma 1 no total do dia, com ou sem aceite. Não envia id, página fora da lista
+ * nem nada que identifique a pessoa (a tabela só tem dia, chave e total).
+ */
+export function countAnonymous(key: AnonymousKey) {
+  if (typeof window === "undefined") return;
+  void Promise.resolve(supabase.rpc("count_anonymous", { p_key: key })).catch(() => {});
+}
+
+/** Áreas do app medidas em "Uso das funcionalidades" (primeiro trecho da rota → nome da área). */
+const FEATURE_AREAS: Record<string, string> = {
+  hoje: "inicio",
+  diario: "lancamentos",
+  orcamento: "orcamento",
+  contas: "contas",
+  plano: "plano",
+  patrimonio: "patrimonio",
+  evolucao: "progresso",
+  fechamento: "fechamento",
+};
+
+/** Uso de uma área do app (só com aceite), uma vez por área em cada sessão. */
+export function trackFeature(pathname: string) {
+  const area = FEATURE_AREAS[pathname.split("/")[1] ?? ""];
+  if (!area || typeof window === "undefined" || getConsent() !== "aceito") return;
+  const key = `mk_feature_${area}`;
+  if (safe(() => window.sessionStorage.getItem(key), null)) return;
+  safe(() => window.sessionStorage.setItem(key, "1"), undefined);
+  track("feature_used", { area });
+}
+
+/** Conta a visita de uma página pública da lista (outras páginas são ignoradas). */
+export function countVisit(pathname: string) {
+  if ((COUNTED_PAGES as readonly string[]).includes(pathname)) countAnonymous(`visita:${pathname}` as AnonymousKey);
 }
 
 /** Abre o banner de novo (Perfil e rodapé: "Preferências de privacidade"). */

@@ -35,8 +35,23 @@ describe("consentimento", () => {
     const anon = window.localStorage.getItem("mk_anon");
     expect(anon).toBeTruthy();
     track("calculator_used", { comInss: true });
-    expect(rpc).toHaveBeenLastCalledWith("track_event", expect.objectContaining({ p_anon: anon, p_name: "calculator_used", p_utm: { source: "instagram", campaign: "lancamento" }, p_props: { comInss: true } }));
+    // O primeiro evento da aba abre a sessão; todos levam o mesmo código de sessão.
+    const session = window.sessionStorage.getItem("mk_session");
+    expect(session).toBeTruthy();
+    expect(rpc).toHaveBeenCalledWith("track_event", expect.objectContaining({ p_name: "session_start", p_props: { session } }));
+    expect(rpc).toHaveBeenLastCalledWith("track_event", expect.objectContaining({ p_anon: anon, p_name: "calculator_used", p_utm: { source: "instagram", campaign: "lancamento" }, p_props: { comInss: true, session } }));
     expect(currentUtm()).toEqual({ source: "instagram", campaign: "lancamento" });
+  });
+
+  it("contagem anônima: só total do dia, sem id, mesmo sem aceite", async () => {
+    const { countAnonymous, countVisit } = await import("./analytics");
+    rpc.mockClear();
+    countVisit("/perfil"); // página fora da lista: nada
+    expect(rpc).not.toHaveBeenCalled();
+    countVisit("/calculadora");
+    countAnonymous("simulacao_concluida");
+    expect(rpc).toHaveBeenCalledWith("count_anonymous", { p_key: "visita:/calculadora" });
+    expect(rpc).toHaveBeenCalledWith("count_anonymous", { p_key: "simulacao_concluida" });
   });
 
   it("escolha de outra versão da política conta como não escolhida", () => {

@@ -1,4 +1,4 @@
-// Ações de admin sobre a assinatura de outra conta. Cada uma confere is_admin() com a sessão de quem
+// Ações de admin sobre a assinatura de outra conta. Cada uma confere staff_has(financeiro) com a sessão de quem
 // chama antes de usar o service role; sem isso, nada acontece.
 // Toda ação fica no audit_log com o id do admin.
 import { createServerFn } from "@tanstack/react-start";
@@ -10,14 +10,14 @@ import { decidePreapproval, MpPreapprovalSchema } from "@/lib/billing/webhook";
 import { NOT_CONFIGURED, openSubscription, TRY_AGAIN } from "@/lib/billing/open-subscription";
 import { allow, TOO_MANY } from "@/lib/security/rate-limit.server";
 
-const NOT_ADMIN = "Apenas administradores." as const;
+const NOT_ADMIN = "Apenas o financeiro ou o super admin." as const;
 
 /** Gera um link novo de assinatura para a conta `userId` (cancela um pendente antes). */
 export const adminSubscriptionLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ userId: z.string().uuid(), period: z.enum(["mensal", "anual"]) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: admin } = await context.supabase.rpc("is_admin");
+    const { data: admin } = await context.supabase.rpc("staff_has", { p_roles: ["financeiro"] });
     if (admin !== true) return { error: NOT_ADMIN, url: null };
     if (!(await allow([{ key: `admin:user:${context.userId}`, limit: 60, windowSeconds: 3600 }]))) return { error: TOO_MANY, url: null };
 
@@ -49,7 +49,7 @@ export const adminResyncSubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: admin } = await context.supabase.rpc("is_admin");
+    const { data: admin } = await context.supabase.rpc("staff_has", { p_roles: ["financeiro"] });
     if (admin !== true) return { error: NOT_ADMIN, status: null };
     if (!(await allow([{ key: `admin:user:${context.userId}`, limit: 60, windowSeconds: 3600 }]))) return { error: TOO_MANY, status: null };
     const token = mpToken();

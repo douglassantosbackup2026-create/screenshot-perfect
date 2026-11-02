@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { pageHead } from "@/lib/seo";
-import { adminGate } from "@/lib/auth/roles";
+import { requireModule } from "@/lib/admin/modules";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -13,12 +13,7 @@ import { errMsg } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/funil")({
-  beforeLoad: async () => {
-    // Admin sem o segundo fator confirmado vai para o Perfil ativar/confirmar.
-    const gate = await adminGate();
-    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
-    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
-  },
+  beforeLoad: ({ context }) => requireModule(context.staff, "/admin/funil"),
   head: () => pageHead("Funil", "Visitas, calculadora, cadastro e assinatura, de quem aceitou a medição.", "Funil de conversão."),
   component: AdminFunnel,
 });
@@ -51,7 +46,7 @@ function AdminFunnel() {
   const top = steps[0]?.people ?? 0;
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
+    <div className="w-full max-w-3xl">
       <h1>Funil</h1>
       <p className="mt-2 text-sm text-muted-foreground">Pessoas distintas em cada etapa, só de quem aceitou a medição. A origem é a da primeira visita no período.</p>
 
@@ -103,6 +98,6 @@ function AdminFunnel() {
           ))}
         </ol>
       )}
-    </main>
+    </div>
   );
 }

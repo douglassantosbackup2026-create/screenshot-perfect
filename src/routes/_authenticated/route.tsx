@@ -9,12 +9,16 @@ import { attachUser } from "@/lib/data/demo-store";
 import { grantAdminAccess, loadAccess, useAccess } from "@/lib/billing/access";
 import { isAdmin } from "@/lib/auth/roles";
 import { needsMfaStep } from "@/lib/auth/mfa";
+import { trackFeature } from "@/lib/analytics/analytics";
+import { SiteNotice } from "@/components/SiteNotice";
+import { useEffect } from "react";
 
 /**
- * Abrem sem assinatura: a própria Assinatura, o Perfil (exportar dados, excluir a conta, sair) e o
- * painel de afiliado (quem divulga não precisa assinar).
+ * Abrem sem assinatura: a própria Assinatura, o Perfil (exportar dados, excluir a conta, sair), o
+ * painel de afiliado (quem divulga não precisa assinar), e o painel administrativo (a equipe não assina;
+ * o layout /admin confere o perfil).
  */
-const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/afiliado"];
+const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/afiliado", "/admin"];
 
 /** Conta já conferida no servidor nesta aba, e se é admin; trocar de tela não repete essas consultas. */
 let verifiedUser: string | null = null;
@@ -93,9 +97,12 @@ function LoadError({ error }: ErrorComponentProps) {
 function AuthenticatedLayout() {
   const { pathname } = useLocation();
   const { active } = useAccess();
+  // Uso das funcionalidades (só com aceite; uma vez por área em cada sessão).
+  useEffect(() => trackFeature(pathname), [pathname]);
   const hideNav = !active || pathname.startsWith("/onboarding") || pathname.startsWith("/programa");
   return (
     <>
+      <SiteNotice />
       <SaveNotices />
       {!active && <LockedHeader />}
       {!hideNav && <TopNav />}

@@ -1,11 +1,12 @@
-// Erros do navegador em produção: vão para /api/public/client-error, que só registra no log do servidor.
+// Erros do navegador em produção: vão para /api/public/client-error, que registra no log e em incidentes (painel).
 // Manda só mensagem, stack e rota (nunca dados da pessoa) e no máximo MAX_PER_PAGE por página aberta.
 const ENDPOINT = "/api/public/client-error";
 const MAX_PER_PAGE = 10;
 let sent = 0;
 const seen = new Set<string>();
 
-export type ClientErrorKind = "boundary" | "root" | "onerror" | "unhandledrejection";
+/** "save": falha ao salvar o estado no banco (vai para o monitoramento como salvamento). */
+export type ClientErrorKind = "boundary" | "root" | "onerror" | "unhandledrejection" | "save";
 
 export function reportClientError(error: unknown, kind: ClientErrorKind) {
   if (typeof window === "undefined" || import.meta.env.DEV || sent >= MAX_PER_PAGE) return;

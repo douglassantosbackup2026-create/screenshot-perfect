@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { pageHead } from "@/lib/seo";
-import { adminGate } from "@/lib/auth/roles";
+import { requireModule } from "@/lib/admin/modules";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,7 @@ import { usePlanPrices } from "@/lib/billing/prices";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/precos")({
-  beforeLoad: async () => {
-    const gate = await adminGate();
-    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
-    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
-  },
+  beforeLoad: ({ context }) => requireModule(context.staff, "/admin/precos"),
   head: () => pageHead("Admin de preços", "Preços dos planos para novos assinantes.", "Preços dos planos."),
   component: AdminPrices,
 });
@@ -44,7 +40,7 @@ function AdminPrices() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
+    <div className="w-full max-w-3xl">
       <h1>Preços</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Acesso só para administradores. O preço novo vale para quem assinar depois; quem já assina continua pagando o valor do dia em
@@ -92,7 +88,7 @@ function AdminPrices() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }
 

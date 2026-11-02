@@ -2,6 +2,7 @@
 // Na etapa de login, as mesmas operações passam a chamar as RPCs do Supabase (§6.1).
 import { useRef, useSyncExternalStore } from "react";
 import { repairState } from "./state-schema";
+import { reportClientError } from "@/lib/client-errors";
 import { merge3 } from "./merge";
 import { deepFreeze, shareState } from "./share";
 import { ENGINE_VERSION, simulateAll, type PlanInputs } from "@/lib/calc/retirement";
@@ -975,6 +976,7 @@ function saveCloud(): Promise<boolean> {
       writePending();
       if (isOffline()) return (setSaveStatus("offline"), false);
       console.error("Falha ao salvar no banco", e);
+      reportClientError(e, "save");
       setSaveStatus("error");
       scheduleRetry();
       return false;
@@ -1015,6 +1017,7 @@ async function runSave(): Promise<boolean> {
       // Repetir a mesma gravação daria o mesmo erro, então não agenda nova tentativa.
       if (res.error.code === "23514") return (setSaveStatus("too-large"), false);
       if (res.error.code === "42501") return (setSaveStatus("blocked"), false);
+      reportClientError(new Error(`user_state ${res.error.code ?? "?"}: ${res.error.message}`), "save");
       setSaveStatus("error");
       scheduleRetry();
       return false;

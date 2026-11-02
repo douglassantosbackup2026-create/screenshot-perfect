@@ -79,7 +79,7 @@ async function as<T>(who: As, fn: (tx: Transaction) => Promise<T>): Promise<T> {
 
 const rows = async (tx: Transaction, sql: string, params: unknown[] = []) => (await tx.query(sql, params)).rows;
 const denied = async (p: Promise<unknown>) => {
-  await expect(p).rejects.toThrow(/permission denied|row-level security|apenas admin|42501|violates/i);
+  await expect(p).rejects.toThrow(/permission denied|row-level security|apenas |sem acesso|42501|violates/i);
 };
 
 beforeAll(async () => {
@@ -267,5 +267,194 @@ describe("regras específicas", () => {
       );
     });
     expect(blocked).toMatch(/row-level security|violates/i);
+  });
+});
+
+const FIN = "00000000-0000-4000-8000-0000000000f1";
+const MKT = "00000000-0000-4000-8000-0000000000f2";
+const SUP = "00000000-0000-4000-8000-0000000000f3";
+const ANA = "00000000-0000-4000-8000-0000000000f4";
+const call = (sub: string, sql: string) => as({ role: "authenticated", sub }, (tx) => tx.query(sql));
+const allowed = async (sub: string, sql: string) => {
+  await expect(call(sub, sql)).resolves.toBeTruthy();
+};
+const statusOf = async (sub: string, aal: "aal1" | "aal2" = "aal1") => {
+  const r = await as({ role: "authenticated", sub, aal }, (tx) => rows(tx, "select public.my_staff_status() as s"));
+  return (r[0] as { s: { roles: string[]; mfa_needed: boolean } }).s;
+};
+
+describe("painel administrativo: perfis da equipe", () => {
+  beforeAll(async () => {
+    await db.exec(`
+      insert into auth.users (id, email) values
+        ('${FIN}', 'fin@teste.dev'), ('${MKT}', 'mkt@teste.dev'), ('${SUP}', 'sup@teste.dev'), ('${ANA}', 'ana@teste.dev');
+      insert into public.staff_roles (user_id, role) values
+        ('${FIN}', 'financeiro'), ('${MKT}', 'marketing'), ('${SUP}', 'suporte'), ('${ANA}', 'analista');
+    `);
+  });
+
+  it("cada perfil vê o próprio menu", async () => {
+    expect(await statusOf(FIN)).toEqual({ roles: ["financeiro"], mfa_needed: false });
+    expect((await statusOf(ADMIN)).roles).toEqual(["super_admin"]);
+    expect(await statusOf(A)).toEqual({ roles: [], mfa_needed: false });
+  });
+
+  it("financeiro: faturamento e preços sim; leads, atendimento e segurança não", async () => {
+    await allowed(FIN, "select public.admin_billing(current_date - 30, current_date)");
+    await allowed(FIN, "select public.admin_set_plan_price('inteligencia', 'anual', 39900)");
+    await denied(call(FIN, "select public.admin_leads(null, null)"));
+    await denied(call(FIN, "select public.admin_tickets(null)"));
+    await denied(call(FIN, "select public.admin_staff_list()"));
+  });
+
+  it("marketing: leads, simulações e cupons sim; faturamento e preços não", async () => {
+    await allowed(MKT, "select public.admin_leads(null, null)");
+    await allowed(MKT, "select public.admin_simulations(current_date - 30, current_date)");
+    await allowed(MKT, "select public.admin_list_coupons()");
+    await denied(call(MKT, "select public.admin_billing(current_date - 30, current_date)"));
+    await denied(call(MKT, "select public.admin_set_plan_price('inteligencia', 'mensal', 1)"));
+  });
+
+  it("suporte: atendimento, incidentes e ficha sim; leads e resolver incidente não", async () => {
+    await allowed(SUP, "select public.admin_tickets(null)");
+    await allowed(SUP, "select public.admin_incidents(null)");
+    await allowed(SUP, `select public.admin_user_card('${A}')`);
+    await denied(call(SUP, "select public.admin_leads(null, null)"));
+    await denied(call(SUP, "select public.admin_resolve_incident(gen_random_uuid())"));
+  });
+
+  it("analista: lê relatórios agregados, mas não grava nada", async () => {
+    await allowed(ANA, "select public.admin_overview(current_date - 30, current_date)");
+    await allowed(ANA, "select public.admin_feature_usage()");
+    await allowed(ANA, "select public.admin_funnel(current_date - 30, current_date)");
+    for (const sql of [
+      "select public.admin_set_plan_price('inteligencia', 'mensal', 4490)",
+      "select public.admin_save_coupon(null, '{}'::jsonb)",
+      "select public.admin_update_lead(gen_random_uuid(), 'contatado', '')",
+      "select public.admin_save_notice(null, 'Aviso', null, true, null)",
+      "select public.admin_set_calc_settings('{}'::jsonb)",
+      "select public.admin_staff_grant('a@teste.dev', 'super_admin')",
+    ])
+      await denied(call(ANA, sql));
+  });
+
+  it("usuário comum não chama nenhuma função nova do painel", async () => {
+    for (const sql of [
+      "select public.admin_overview(current_date - 7, current_date)",
+      "select public.admin_billing(current_date - 7, current_date)",
+      "select public.admin_feature_usage()",
+      `select public.admin_user_card('${B}')`,
+      "select public.admin_audit_log(null, null, 10)",
+      "select public.admin_tickets(null)",
+    ])
+      await denied(call(A, sql));
+  });
+
+  it("perfil da equipe com segundo fator ativo precisa dele (aal2)", async () => {
+    await db.exec(`insert into auth.mfa_factors (user_id, status) values ('${FIN}', 'verified')`);
+    try {
+      await denied(as({ role: "authenticated", sub: FIN, aal: "aal1" }, (tx) => tx.query("select public.admin_billing(current_date - 7, current_date)")));
+      expect(await statusOf(FIN, "aal1")).toEqual({ roles: [], mfa_needed: true });
+      expect((await statusOf(FIN, "aal2")).roles).toEqual(["financeiro"]);
+    } finally {
+      await db.exec(`delete from auth.mfa_factors where user_id = '${FIN}'`);
+    }
+  });
+
+  it("super admin concede perfis, mas não tira o próprio super admin", async () => {
+    await as({ role: "authenticated", sub: ADMIN }, async (tx) => {
+      await tx.query("select public.admin_staff_grant('b@teste.dev', 'analista')");
+      expect(JSON.stringify(await rows(tx, "select public.admin_staff_list() as l"))).toContain("b@teste.dev");
+    });
+    await expect(call(ADMIN, `select public.admin_staff_revoke('${ADMIN}', 'super_admin')`)).rejects.toThrow(/próprio super admin/);
+  });
+});
+
+describe("painel administrativo: métricas, atendimento e incidentes", () => {
+  it("contagem anônima: só chaves da lista, e a tabela não tem coluna de identificador", async () => {
+    await as({ role: "anon" }, async (tx) => {
+      await tx.query("select public.count_anonymous('visita:/')");
+      await tx.query("select public.count_anonymous('simulacao_concluida')");
+    });
+    await expect(as({ role: "anon" }, (tx) => tx.query("select public.count_anonymous('visita:/perfil?email=x')"))).rejects.toThrow(
+      /chave desconhecida/,
+    );
+    const cols = await db.query<{ column_name: string }>(
+      "select column_name from information_schema.columns where table_name = 'metrics_daily' order by 1",
+    );
+    expect(cols.rows.map((c) => c.column_name)).toEqual(["day", "key", "n"]);
+  });
+
+  it("anon não lê contagens, chamados, incidentes, pagamentos nem a equipe", async () => {
+    for (const t of ["metrics_daily", "support_tickets", "support_messages", "incidents", "payment_events", "staff_roles"])
+      await denied(as({ role: "anon" }, (tx) => tx.query(`select * from public.${t}`)));
+  });
+
+  it("uso das funcionalidades esconde grupos com menos de 5 pessoas", async () => {
+    const r = await as({ role: "authenticated", sub: ADMIN }, (tx) => rows(tx, "select public.admin_feature_usage() as u"));
+    const u = (r[0] as { u: { people: number | null; features: Record<string, number | null> } }).u;
+    // A base de teste tem 2 estados salvos: tudo abaixo de 5 vem nulo.
+    expect(u.people).toBeNull();
+    expect(Object.values(u.features).every((v) => v === null)).toBe(true);
+  });
+
+  it("chamado: a pessoa abre, só ela vê, a equipe responde e a pessoa não muda o status", async () => {
+    const ticket = await as({ role: "service_role" }, async (tx) => {
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "authenticated", sub: A })]);
+      await tx.exec("set local role authenticated");
+      const r = await rows(tx, "select public.open_ticket('erro', 'Tela travou', 'Ao salvar o plano.') as id");
+      const id = (r[0] as { id: string }).id;
+      expect(await rows(tx, "select id from public.support_tickets")).toHaveLength(1);
+      // B não vê o chamado de A.
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "authenticated", sub: B })]);
+      expect(await rows(tx, "select id from public.support_tickets")).toEqual([]);
+      // A equipe responde.
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "authenticated", sub: ADMIN, aal: "aal1" })]);
+      await tx.query("select public.admin_ticket_reply($1, 'Já corrigimos, obrigado!')", [id]);
+      // A não muda o status direto.
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "authenticated", sub: A })]);
+      const changed = await tx.query("update public.support_tickets set status = 'fechado'").then(
+        () => "mudou",
+        (e: Error) => e.message,
+      );
+      expect(changed).toMatch(/permission denied/);
+      return id;
+    });
+    expect(ticket).toBeTruthy();
+  });
+
+  it("incidente: mesma falha soma na mesma linha e reabre depois de resolvido, sem guardar e-mail", async () => {
+    await as({ role: "service_role" }, async (tx) => {
+      await tx.query("select public.report_incident('cliente', 'erro', 'Falhou para maria@exemplo.com no pedido 123456', '/plano')");
+      await tx.query("select public.report_incident('cliente', 'erro', 'Falhou para joao@exemplo.com no pedido 999999', '/plano')");
+      expect(await rows(tx, "select count, message, status from public.incidents")).toEqual([
+        { count: 2, message: "Falhou para <email> no pedido <n>", status: "aberto" },
+      ]);
+      await tx.exec("update public.incidents set status = 'resolvido', resolved_at = now()");
+      await tx.query("select public.report_incident('cliente', 'erro', 'Falhou para x@y.com no pedido 1234', '/plano')");
+      expect(await rows(tx, "select status, count from public.incidents")).toEqual([{ status: "aberto", count: 3 }]);
+    });
+    await denied(call(ADMIN, "select public.report_incident('cliente', 'erro', 'x')"));
+  });
+
+  it("visão geral calcula e conta o que foi registrado", async () => {
+    await as({ role: "anon" }, (tx) => tx.query("select public.count_anonymous('visita:/calculadora')"));
+    await db.exec("insert into public.metrics_daily (day, key, n) values ((now() at time zone 'America/Sao_Paulo')::date, 'visita:/', 3) on conflict (day, key) do update set n = 3");
+    const r = await as({ role: "authenticated", sub: ADMIN }, (tx) => rows(tx, "select public.admin_overview(current_date - 6, current_date) as o"));
+    const o = (r[0] as { o: Record<string, unknown> }).o;
+    expect(Number(o["visits"])).toBe(3);
+    expect(o["series"]).toHaveLength(7);
+    expect(Number(o["users_total"])).toBeGreaterThanOrEqual(3);
+  });
+
+  it("premissas da calculadora: todos leem; super grava só dentro das faixas", async () => {
+    const r = await as({ role: "anon" }, (tx) => rows(tx, "select return_central, horizon from public.calc_settings"));
+    expect(r).toEqual([{ return_central: "0.04", horizon: 95 }]);
+    await expect(
+      call(
+        ADMIN,
+        `select public.admin_set_calc_settings('{"return_conservador":0.02,"return_central":0.5,"return_otimista":0.6,"inflation":0.04,"horizon":95,"costs":0}')`,
+      ),
+    ).rejects.toThrow(/check/);
   });
 });

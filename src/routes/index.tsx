@@ -5,7 +5,7 @@ import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
 import { formatMoney, formatMonthly, formatPercent, formatReais } from "@/lib/calc/format";
 import { fetchPlanPrices } from "@/lib/billing/prices";
-import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
+import { fetchCalcAssumptions } from "@/lib/data/calc-assumptions";
 import { startOnboarding } from "@/lib/data/start-onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { SIMULATION_FOOTER } from "@/lib/labels";
@@ -13,6 +13,8 @@ import { JOURNEY_ENABLED } from "@/lib/features";
 import { ThreeInOne, Problem, HowItWorks, ProductPreview, Curriculum, WhatWeDont, Pricing, Faq } from "@/components/sales/sections";
 import { APP_NAME, APP_TAGLINE } from "@/lib/seo";
 import { openConsentPreferences, track } from "@/lib/analytics/analytics";
+import { useSimulationTracking } from "@/lib/analytics/use-simulation-tracking";
+import { SiteNotice } from "@/components/SiteNotice";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,12 +32,15 @@ export const Route = createFileRoute("/")({
     ],
   }),
   // Preços de hoje já no HTML (SSR); se o banco não responder, os de partida.
-  loader: () => fetchPlanPrices(),
+  loader: async () => {
+    const [prices, assumptions] = await Promise.all([fetchPlanPrices(), fetchCalcAssumptions()]);
+    return { prices, assumptions };
+  },
   component: Index,
 });
 
 function Index() {
-  const prices = Route.useLoaderData();
+  const { prices, assumptions: A } = Route.useLoaderData();
   const monthly = formatMoney(prices.inteligencia.mensal ?? 0);
   const navigate = useNavigate();
   const [age, setAge] = useState<number | null>(30);
@@ -51,8 +56,8 @@ function Index() {
   const result = useMemo(() => {
     if (age == null || retire == null || income == null) return null;
     const i: PlanInputs = {
-      ...DEFAULT_ASSUMPTIONS,
-      returns: { ...DEFAULT_ASSUMPTIONS.returns },
+      ...A,
+      returns: { ...A.returns },
       currentAge: age,
       retirementAge: retire,
       initialWealth: 0,
@@ -63,7 +68,15 @@ function Index() {
     const errors = validateInputs(i);
     if (errors.length) return { errors };
     return { errors: [], r: simulate(i, "central", false) };
-  }, [age, retire, income]);
+  }, [age, retire, income, A]);
+
+  // Simulação iniciada quando a pessoa mexe num campo; concluída no primeiro resultado válido depois disso.
+  const sim = useSimulationTracking();
+  useEffect(() => {
+    if (!touched) return;
+    sim.started();
+    if (result?.r && age != null && income != null) sim.completed({ age, income, monthly: result.r.requiredMonthlyContribution });
+  }, [touched, result, age, income, sim]);
 
   /** A única ação de começar da página: todos os botões levam ao onboarding pelo mesmo caminho. */
   function start() {
@@ -79,6 +92,7 @@ function Index() {
 
   return (
     <>
+      <SiteNotice />
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[480px] items-center justify-between px-5 py-2">
           <span className="flex items-center gap-2 font-semibold tracking-tight">
@@ -127,8 +141,8 @@ function Index() {
               </p>
               {/* As premissas ficam junto do número: sem elas, o resultado parece promessa. */}
               <p className="mt-2 text-xs text-muted-foreground">
-                Estimativa começando do zero, com retorno de {formatPercent(DEFAULT_ASSUMPTIONS.returns.central)} ao ano acima da inflação e
-                o dinheiro durando até os {DEFAULT_ASSUMPTIONS.horizonAge} anos. É uma simulação, não uma garantia de resultado.
+                Estimativa começando do zero, com retorno de {formatPercent(A.returns.central)} ao ano acima da inflação e
+                o dinheiro durando até os {A.horizonAge} anos. É uma simulação, não uma garantia de resultado.
               </p>
             </>
           ) : null}
@@ -166,6 +180,10 @@ function Index() {
           {" · "}
           <Link to="/privacidade" className="underline">
             Privacidade
+          </Link>
+          {" · "}
+          <Link to="/contato" className="underline">
+            Contato
           </Link>
           {" · "}
           <Link to="/afiliados" className="underline">

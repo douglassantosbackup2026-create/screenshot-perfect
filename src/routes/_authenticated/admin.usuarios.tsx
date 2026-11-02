@@ -1,25 +1,23 @@
 import { useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { pageHead } from "@/lib/seo";
-import { adminGate } from "@/lib/auth/roles";
+import { requireModule } from "@/lib/admin/modules";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminResyncSubscription, adminSubscriptionLink } from "@/lib/admin/users.functions";
+import { adminDeleteUser } from "@/lib/admin/panel.functions";
+import { useAdminData, useCanWrite, useStaff } from "@/components/admin/hooks";
+import { TICKET_KIND, TICKET_STATUS, type TicketKind, type TicketStatus } from "@/lib/support/labels";
 import { formatDate } from "@/lib/labels";
 import { formatMoney } from "@/lib/calc/format";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/usuarios")({
-  beforeLoad: async () => {
-    // Admin sem o segundo fator confirmado vai para o Perfil ativar/confirmar.
-    const gate = await adminGate();
-    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
-    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
-  },
+  beforeLoad: ({ context }) => requireModule(context.staff, "/admin/usuarios"),
   head: () => pageHead("Admin de usuários", "Busca de contas, assinatura e cobrança.", "Busca de contas e assinatura."),
   component: AdminUsers,
 });
@@ -64,7 +62,7 @@ function AdminUsers() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
+    <div className="w-full max-w-3xl">
       <h1>Usuários</h1>
       <p className="mt-2 text-sm text-muted-foreground">Acesso só para administradores. A busca mostra até 20 contas.</p>
       <form onSubmit={search} className="mt-6 flex gap-2">
@@ -79,7 +77,7 @@ function AdminUsers() {
           <UserCard key={r.user_id} row={r} onChanged={search} />
         ))}
       </ul>
-    </main>
+    </div>
   );
 }
 
@@ -88,6 +86,9 @@ function UserCard({ row, onChanged }: { row: UserRow; onChanged: () => void }) {
   const resync = useServerFn(adminResyncSubscription);
   const [link, setLink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showCard, setShowCard] = useState(false);
+  // Link de cobrança e ressincronização: financeiro (o suporte só vê a ficha).
+  const canBill = useCanWrite("/admin/usuarios");
   const active = row.valid_until !== null && new Date(row.valid_until) > new Date();
 
   async function generate(period: "mensal" | "anual") {
@@ -164,18 +165,26 @@ function UserCard({ row, onChanged }: { row: UserRow; onChanged: () => void }) {
         </>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => generate("mensal")}>
-          Link de cobrança mensal
-        </Button>
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => generate("anual")}>
-          Link anual
-        </Button>
-        {row.subscription_status && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={sync}>
-            Ressincronizar com o Mercado Pago
-          </Button>
+        {canBill && (
+          <>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => generate("mensal")}>
+              Link de cobrança mensal
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => generate("anual")}>
+              Link anual
+            </Button>
+            {row.subscription_status && (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={sync}>
+                Ressincronizar com o Mercado Pago
+              </Button>
+            )}
+          </>
         )}
+        <Button size="sm" variant="ghost" onClick={() => setShowCard((v) => !v)} aria-expanded={showCard}>
+          {showCard ? "Fechar ficha" : "Ver ficha"}
+        </Button>
       </div>
+      {showCard && <UserSheet userId={row.user_id} email={row.email} onDeleted={onChanged} />}
       {link && (
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-muted p-2">
           <code className="min-w-0 flex-1 truncate text-xs">{link}</code>
@@ -185,5 +194,114 @@ function UserCard({ row, onChanged }: { row: UserRow; onChanged: () => void }) {
         </div>
       )}
     </li>
+  );
+}
+
+type Sheet = {
+  name: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  state_updated_at: string | null;
+  mfa: boolean;
+  whatsapp: boolean;
+  push: boolean;
+  features: Record<string, boolean> | null;
+  tickets: { id: string; kind: TicketKind; subject: string; status: TicketStatus; created_at: string }[];
+};
+
+const FEATURE_LABEL: Record<string, string> = {
+  plano: "Plano de aposentadoria",
+  lancamentos: "Lançamentos",
+  orcamento: "Orçamento",
+  patrimonio: "Patrimônio",
+  metas: "Metas",
+  carteira: "Carteira",
+};
+
+/** Ficha operacional: o que a pessoa usa (sim/não), sem nenhum valor financeiro. A consulta fica na auditoria. */
+function UserSheet({ userId, email, onDeleted }: { userId: string; email: string; onDeleted: () => void }) {
+  const staff = useStaff();
+  const { data: s } = useAdminData<Sheet>(() => supabase.rpc("admin_user_card", { p_user: userId }), [userId]);
+  const remove = useServerFn(adminDeleteUser);
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function del() {
+    setBusy(true);
+    try {
+      const r = await remove({ data: { userId, confirmEmail: confirm } });
+      if (r.error) toast.error(r.error);
+      else {
+        toast.success("Conta excluída.");
+        onDeleted();
+      }
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!s) return <div className="mt-3 h-24 animate-pulse rounded-xl bg-muted" />;
+  return (
+    <div className="mt-3 space-y-3 rounded-xl bg-muted p-3 text-sm">
+      <p className="text-xs text-muted-foreground">
+        Ficha operacional. Patrimônio, lançamentos e metas da pessoa não aparecem para a equipe. Esta consulta fica registrada na auditoria.
+      </p>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
+        <dt className="text-muted-foreground">Nome</dt>
+        <dd>{s.name || "—"}</dd>
+        <dt className="text-muted-foreground">Último salvamento</dt>
+        <dd>{s.state_updated_at ? formatDate(s.state_updated_at) : "nunca"}</dd>
+        <dt className="text-muted-foreground">Segundo fator</dt>
+        <dd>{s.mfa ? "Ativo" : "Não"}</dd>
+        <dt className="text-muted-foreground">WhatsApp / push</dt>
+        <dd>
+          {s.whatsapp ? "WhatsApp ligado" : "Sem WhatsApp"} · {s.push ? "push ligado" : "sem push"}
+        </dd>
+      </dl>
+      <div>
+        <p className="eyebrow">Funcionalidades que usa</p>
+        {s.features ? (
+          <ul className="mt-1 flex flex-wrap gap-1">
+            {Object.entries(FEATURE_LABEL).map(([k, label]) => (
+              <li key={k} className={s.features![k] ? "rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary" : "rounded-full bg-card px-2 py-0.5 text-xs text-muted-foreground"}>
+                {label}: {s.features![k] ? "sim" : "não"}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">Ainda não salvou nada.</p>
+        )}
+      </div>
+      <div>
+        <p className="eyebrow">Atendimento</p>
+        {s.tickets.length ? (
+          <ul className="mt-1 space-y-1">
+            {s.tickets.map((t) => (
+              <li key={t.id}>
+                {formatDate(t.created_at)} · {TICKET_KIND[t.kind]} · {t.subject} · <span className="text-muted-foreground">{TICKET_STATUS[t.status]}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">Nenhum chamado.</p>
+        )}
+      </div>
+      {staff.includes("super_admin") && (
+        <div className="border-t border-border pt-3">
+          <p className="font-semibold text-destructive">Excluir conta a pedido da pessoa</p>
+          <p className="text-xs text-muted-foreground">
+            Apaga a conta e todos os dados dela, sem volta. Use só com o pedido registrado (Atendimento → exclusão de dados). Digite o e-mail da conta para confirmar.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Input className="h-11 min-w-0 flex-1" placeholder={email} aria-label="Confirme o e-mail da conta" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            <Button variant="destructive" disabled={busy || confirm.trim().toLowerCase() !== email.toLowerCase()} onClick={del}>
+              Excluir conta
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

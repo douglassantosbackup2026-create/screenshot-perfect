@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AfiliadosRouteImport } from './routes/afiliados'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as CalculadoraRouteImport } from './routes/calculadora'
+import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
 import { Route as PagamentoRouteImport } from './routes/pagamento'
@@ -21,6 +22,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as VerificarRouteImport } from './routes/verificar'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAfiliadoRouteImport } from './routes/_authenticated/afiliado'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
@@ -34,11 +36,22 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPlanoRouteImport } from './routes/_authenticated/plano'
 import { Route as AuthenticatedPlanosRouteImport } from './routes/_authenticated/planos'
 import { Route as AuthenticatedRevisaoRouteImport } from './routes/_authenticated/revisao'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminAfiliadosRouteImport } from './routes/_authenticated/admin.afiliados'
+import { Route as AuthenticatedAdminAssinaturasRouteImport } from './routes/_authenticated/admin.assinaturas'
+import { Route as AuthenticatedAdminAtendimentoRouteImport } from './routes/_authenticated/admin.atendimento'
+import { Route as AuthenticatedAdminCalculadoraRouteImport } from './routes/_authenticated/admin.calculadora'
+import { Route as AuthenticatedAdminConfiguracoesRouteImport } from './routes/_authenticated/admin.configuracoes'
 import { Route as AuthenticatedAdminConteudoRouteImport } from './routes/_authenticated/admin.conteudo'
 import { Route as AuthenticatedAdminCuponsRouteImport } from './routes/_authenticated/admin.cupons'
 import { Route as AuthenticatedAdminFunilRouteImport } from './routes/_authenticated/admin.funil'
+import { Route as AuthenticatedAdminLeadsRouteImport } from './routes/_authenticated/admin.leads'
+import { Route as AuthenticatedAdminMarketingRouteImport } from './routes/_authenticated/admin.marketing'
+import { Route as AuthenticatedAdminMonitoramentoRouteImport } from './routes/_authenticated/admin.monitoramento'
 import { Route as AuthenticatedAdminPrecosRouteImport } from './routes/_authenticated/admin.precos'
+import { Route as AuthenticatedAdminSegurancaRouteImport } from './routes/_authenticated/admin.seguranca'
+import { Route as AuthenticatedAdminSimulacoesRouteImport } from './routes/_authenticated/admin.simulacoes'
+import { Route as AuthenticatedAdminUsoRouteImport } from './routes/_authenticated/admin.uso'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedProgramaDiaRouteImport } from './routes/_authenticated/programa.$dia'
 import { Route as ApiCronLembretesRouteImport } from './routes/api/cron/lembretes'
@@ -70,6 +83,11 @@ const CadastroRoute = CadastroRouteImport.update({
 const CalculadoraRoute = CalculadoraRouteImport.update({
   id: '/calculadora',
   path: '/calculadora',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContatoRoute = ContatoRouteImport.update({
+  id: '/contato',
+  path: '/contato',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -106,6 +124,11 @@ const VerificarRoute = VerificarRouteImport.update({
   id: '/verificar',
   path: '/verificar',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAfiliadoRoute = AuthenticatedAfiliadoRouteImport.update({
   id: '/afiliado',
@@ -172,40 +195,103 @@ const AuthenticatedRevisaoRoute = AuthenticatedRevisaoRouteImport.update({
   path: '/revisao',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminAfiliadosRoute =
   AuthenticatedAdminAfiliadosRouteImport.update({
-    id: '/admin/afiliados',
-    path: '/admin/afiliados',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/afiliados',
+    path: '/afiliados',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAssinaturasRoute =
+  AuthenticatedAdminAssinaturasRouteImport.update({
+    id: '/assinaturas',
+    path: '/assinaturas',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAtendimentoRoute =
+  AuthenticatedAdminAtendimentoRouteImport.update({
+    id: '/atendimento',
+    path: '/atendimento',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminCalculadoraRoute =
+  AuthenticatedAdminCalculadoraRouteImport.update({
+    id: '/calculadora',
+    path: '/calculadora',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminConfiguracoesRoute =
+  AuthenticatedAdminConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminConteudoRoute =
   AuthenticatedAdminConteudoRouteImport.update({
-    id: '/admin/conteudo',
-    path: '/admin/conteudo',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/conteudo',
+    path: '/conteudo',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminCuponsRoute =
   AuthenticatedAdminCuponsRouteImport.update({
-    id: '/admin/cupons',
-    path: '/admin/cupons',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/cupons',
+    path: '/cupons',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminFunilRoute = AuthenticatedAdminFunilRouteImport.update({
-  id: '/admin/funil',
-  path: '/admin/funil',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/funil',
+  path: '/funil',
+  getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminLeadsRoute = AuthenticatedAdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminMarketingRoute =
+  AuthenticatedAdminMarketingRouteImport.update({
+    id: '/marketing',
+    path: '/marketing',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMonitoramentoRoute =
+  AuthenticatedAdminMonitoramentoRouteImport.update({
+    id: '/monitoramento',
+    path: '/monitoramento',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminPrecosRoute =
   AuthenticatedAdminPrecosRouteImport.update({
-    id: '/admin/precos',
-    path: '/admin/precos',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/precos',
+    path: '/precos',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSegurancaRoute =
+  AuthenticatedAdminSegurancaRouteImport.update({
+    id: '/seguranca',
+    path: '/seguranca',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminSimulacoesRoute =
+  AuthenticatedAdminSimulacoesRouteImport.update({
+    id: '/simulacoes',
+    path: '/simulacoes',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminUsoRoute = AuthenticatedAdminUsoRouteImport.update({
+  id: '/uso',
+  path: '/uso',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminUsuariosRoute =
   AuthenticatedAdminUsuariosRouteImport.update({
-    id: '/admin/usuarios',
-    path: '/admin/usuarios',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/usuarios',
+    path: '/usuarios',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedProgramaDiaRoute =
   AuthenticatedProgramaDiaRouteImport.update({
@@ -252,6 +338,7 @@ export interface FileRoutesByFullPath {
   '/afiliados': typeof AfiliadosRoute
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
+  '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/pagamento': typeof PagamentoRoute
@@ -259,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/verificar': typeof VerificarRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/afiliado': typeof AuthenticatedAfiliadoRoute
   '/contas': typeof AuthenticatedContasRoute
   '/diario': typeof AuthenticatedDiarioRoute
@@ -273,15 +361,26 @@ export interface FileRoutesByFullPath {
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
+  '/admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
+  '/admin/atendimento': typeof AuthenticatedAdminAtendimentoRoute
+  '/admin/calculadora': typeof AuthenticatedAdminCalculadoraRoute
+  '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/admin/cupons': typeof AuthenticatedAdminCuponsRoute
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
+  '/admin/leads': typeof AuthenticatedAdminLeadsRoute
+  '/admin/marketing': typeof AuthenticatedAdminMarketingRoute
+  '/admin/monitoramento': typeof AuthenticatedAdminMonitoramentoRoute
   '/admin/precos': typeof AuthenticatedAdminPrecosRoute
+  '/admin/seguranca': typeof AuthenticatedAdminSegurancaRoute
+  '/admin/simulacoes': typeof AuthenticatedAdminSimulacoesRoute
+  '/admin/uso': typeof AuthenticatedAdminUsoRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/csp-report': typeof ApiPublicCspReportRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -291,6 +390,7 @@ export interface FileRoutesByTo {
   '/afiliados': typeof AfiliadosRoute
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
+  '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/pagamento': typeof PagamentoRoute
@@ -312,15 +412,26 @@ export interface FileRoutesByTo {
   '/planos': typeof AuthenticatedPlanosRoute
   '/revisao': typeof AuthenticatedRevisaoRoute
   '/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
+  '/admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
+  '/admin/atendimento': typeof AuthenticatedAdminAtendimentoRoute
+  '/admin/calculadora': typeof AuthenticatedAdminCalculadoraRoute
+  '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/admin/cupons': typeof AuthenticatedAdminCuponsRoute
   '/admin/funil': typeof AuthenticatedAdminFunilRoute
+  '/admin/leads': typeof AuthenticatedAdminLeadsRoute
+  '/admin/marketing': typeof AuthenticatedAdminMarketingRoute
+  '/admin/monitoramento': typeof AuthenticatedAdminMonitoramentoRoute
   '/admin/precos': typeof AuthenticatedAdminPrecosRoute
+  '/admin/seguranca': typeof AuthenticatedAdminSegurancaRoute
+  '/admin/simulacoes': typeof AuthenticatedAdminSimulacoesRoute
+  '/admin/uso': typeof AuthenticatedAdminUsoRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/csp-report': typeof ApiPublicCspReportRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -332,6 +443,7 @@ export interface FileRoutesById {
   '/afiliados': typeof AfiliadosRoute
   '/cadastro': typeof CadastroRoute
   '/calculadora': typeof CalculadoraRoute
+  '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/pagamento': typeof PagamentoRoute
@@ -339,6 +451,7 @@ export interface FileRoutesById {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/sobre': typeof SobreRoute
   '/verificar': typeof VerificarRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/afiliado': typeof AuthenticatedAfiliadoRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
@@ -353,15 +466,26 @@ export interface FileRoutesById {
   '/_authenticated/planos': typeof AuthenticatedPlanosRoute
   '/_authenticated/revisao': typeof AuthenticatedRevisaoRoute
   '/_authenticated/admin/afiliados': typeof AuthenticatedAdminAfiliadosRoute
+  '/_authenticated/admin/assinaturas': typeof AuthenticatedAdminAssinaturasRoute
+  '/_authenticated/admin/atendimento': typeof AuthenticatedAdminAtendimentoRoute
+  '/_authenticated/admin/calculadora': typeof AuthenticatedAdminCalculadoraRoute
+  '/_authenticated/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/_authenticated/admin/conteudo': typeof AuthenticatedAdminConteudoRoute
   '/_authenticated/admin/cupons': typeof AuthenticatedAdminCuponsRoute
   '/_authenticated/admin/funil': typeof AuthenticatedAdminFunilRoute
+  '/_authenticated/admin/leads': typeof AuthenticatedAdminLeadsRoute
+  '/_authenticated/admin/marketing': typeof AuthenticatedAdminMarketingRoute
+  '/_authenticated/admin/monitoramento': typeof AuthenticatedAdminMonitoramentoRoute
   '/_authenticated/admin/precos': typeof AuthenticatedAdminPrecosRoute
+  '/_authenticated/admin/seguranca': typeof AuthenticatedAdminSegurancaRoute
+  '/_authenticated/admin/simulacoes': typeof AuthenticatedAdminSimulacoesRoute
+  '/_authenticated/admin/uso': typeof AuthenticatedAdminUsoRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/programa/$dia': typeof AuthenticatedProgramaDiaRoute
   '/api/cron/lembretes': typeof ApiCronLembretesRoute
   '/api/public/client-error': typeof ApiPublicClientErrorRoute
   '/api/public/csp-report': typeof ApiPublicCspReportRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/openfinance/webhook': typeof ApiPublicOpenfinanceWebhookRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -373,6 +497,7 @@ export interface FileRouteTypes {
     | '/afiliados'
     | '/cadastro'
     | '/calculadora'
+    | '/contato'
     | '/entrar'
     | '/esqueci-senha'
     | '/pagamento'
@@ -380,6 +505,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/sobre'
     | '/verificar'
+    | '/admin'
     | '/afiliado'
     | '/contas'
     | '/diario'
@@ -394,15 +520,26 @@ export interface FileRouteTypes {
     | '/planos'
     | '/revisao'
     | '/admin/afiliados'
+    | '/admin/assinaturas'
+    | '/admin/atendimento'
+    | '/admin/calculadora'
+    | '/admin/configuracoes'
     | '/admin/conteudo'
     | '/admin/cupons'
     | '/admin/funil'
+    | '/admin/leads'
+    | '/admin/marketing'
+    | '/admin/monitoramento'
     | '/admin/precos'
+    | '/admin/seguranca'
+    | '/admin/simulacoes'
+    | '/admin/uso'
     | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/csp-report'
+    | '/admin/'
     | '/api/public/mercadopago/webhook'
     | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
@@ -412,6 +549,7 @@ export interface FileRouteTypes {
     | '/afiliados'
     | '/cadastro'
     | '/calculadora'
+    | '/contato'
     | '/entrar'
     | '/esqueci-senha'
     | '/pagamento'
@@ -433,15 +571,26 @@ export interface FileRouteTypes {
     | '/planos'
     | '/revisao'
     | '/admin/afiliados'
+    | '/admin/assinaturas'
+    | '/admin/atendimento'
+    | '/admin/calculadora'
+    | '/admin/configuracoes'
     | '/admin/conteudo'
     | '/admin/cupons'
     | '/admin/funil'
+    | '/admin/leads'
+    | '/admin/marketing'
+    | '/admin/monitoramento'
     | '/admin/precos'
+    | '/admin/seguranca'
+    | '/admin/simulacoes'
+    | '/admin/uso'
     | '/admin/usuarios'
     | '/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/csp-report'
+    | '/admin'
     | '/api/public/mercadopago/webhook'
     | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
@@ -452,6 +601,7 @@ export interface FileRouteTypes {
     | '/afiliados'
     | '/cadastro'
     | '/calculadora'
+    | '/contato'
     | '/entrar'
     | '/esqueci-senha'
     | '/pagamento'
@@ -459,6 +609,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/sobre'
     | '/verificar'
+    | '/_authenticated/admin'
     | '/_authenticated/afiliado'
     | '/_authenticated/contas'
     | '/_authenticated/diario'
@@ -473,15 +624,26 @@ export interface FileRouteTypes {
     | '/_authenticated/planos'
     | '/_authenticated/revisao'
     | '/_authenticated/admin/afiliados'
+    | '/_authenticated/admin/assinaturas'
+    | '/_authenticated/admin/atendimento'
+    | '/_authenticated/admin/calculadora'
+    | '/_authenticated/admin/configuracoes'
     | '/_authenticated/admin/conteudo'
     | '/_authenticated/admin/cupons'
     | '/_authenticated/admin/funil'
+    | '/_authenticated/admin/leads'
+    | '/_authenticated/admin/marketing'
+    | '/_authenticated/admin/monitoramento'
     | '/_authenticated/admin/precos'
+    | '/_authenticated/admin/seguranca'
+    | '/_authenticated/admin/simulacoes'
+    | '/_authenticated/admin/uso'
     | '/_authenticated/admin/usuarios'
     | '/_authenticated/programa/$dia'
     | '/api/cron/lembretes'
     | '/api/public/client-error'
     | '/api/public/csp-report'
+    | '/_authenticated/admin/'
     | '/api/public/mercadopago/webhook'
     | '/api/public/openfinance/webhook'
     | '/api/public/whatsapp/webhook'
@@ -493,6 +655,7 @@ export interface RootRouteChildren {
   AfiliadosRoute: typeof AfiliadosRoute
   CadastroRoute: typeof CadastroRoute
   CalculadoraRoute: typeof CalculadoraRoute
+  ContatoRoute: typeof ContatoRoute
   EntrarRoute: typeof EntrarRoute
   EsqueciSenhaRoute: typeof EsqueciSenhaRoute
   PagamentoRoute: typeof PagamentoRoute
@@ -545,6 +708,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalculadoraRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contato': {
+      id: '/contato'
+      path: '/contato'
+      fullPath: '/contato'
+      preLoaderRoute: typeof ContatoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entrar': {
       id: '/entrar'
       path: '/entrar'
@@ -593,6 +763,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/verificar'
       preLoaderRoute: typeof VerificarRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/afiliado': {
       id: '/_authenticated/afiliado'
@@ -685,47 +862,124 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRevisaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/afiliados': {
       id: '/_authenticated/admin/afiliados'
-      path: '/admin/afiliados'
+      path: '/afiliados'
       fullPath: '/admin/afiliados'
       preLoaderRoute: typeof AuthenticatedAdminAfiliadosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/assinaturas': {
+      id: '/_authenticated/admin/assinaturas'
+      path: '/assinaturas'
+      fullPath: '/admin/assinaturas'
+      preLoaderRoute: typeof AuthenticatedAdminAssinaturasRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/atendimento': {
+      id: '/_authenticated/admin/atendimento'
+      path: '/atendimento'
+      fullPath: '/admin/atendimento'
+      preLoaderRoute: typeof AuthenticatedAdminAtendimentoRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/calculadora': {
+      id: '/_authenticated/admin/calculadora'
+      path: '/calculadora'
+      fullPath: '/admin/calculadora'
+      preLoaderRoute: typeof AuthenticatedAdminCalculadoraRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/configuracoes': {
+      id: '/_authenticated/admin/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/admin/configuracoes'
+      preLoaderRoute: typeof AuthenticatedAdminConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/conteudo': {
       id: '/_authenticated/admin/conteudo'
-      path: '/admin/conteudo'
+      path: '/conteudo'
       fullPath: '/admin/conteudo'
       preLoaderRoute: typeof AuthenticatedAdminConteudoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/cupons': {
       id: '/_authenticated/admin/cupons'
-      path: '/admin/cupons'
+      path: '/cupons'
       fullPath: '/admin/cupons'
       preLoaderRoute: typeof AuthenticatedAdminCuponsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/funil': {
       id: '/_authenticated/admin/funil'
-      path: '/admin/funil'
+      path: '/funil'
       fullPath: '/admin/funil'
       preLoaderRoute: typeof AuthenticatedAdminFunilRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/leads': {
+      id: '/_authenticated/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AuthenticatedAdminLeadsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/marketing': {
+      id: '/_authenticated/admin/marketing'
+      path: '/marketing'
+      fullPath: '/admin/marketing'
+      preLoaderRoute: typeof AuthenticatedAdminMarketingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/monitoramento': {
+      id: '/_authenticated/admin/monitoramento'
+      path: '/monitoramento'
+      fullPath: '/admin/monitoramento'
+      preLoaderRoute: typeof AuthenticatedAdminMonitoramentoRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/precos': {
       id: '/_authenticated/admin/precos'
-      path: '/admin/precos'
+      path: '/precos'
       fullPath: '/admin/precos'
       preLoaderRoute: typeof AuthenticatedAdminPrecosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/seguranca': {
+      id: '/_authenticated/admin/seguranca'
+      path: '/seguranca'
+      fullPath: '/admin/seguranca'
+      preLoaderRoute: typeof AuthenticatedAdminSegurancaRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/simulacoes': {
+      id: '/_authenticated/admin/simulacoes'
+      path: '/simulacoes'
+      fullPath: '/admin/simulacoes'
+      preLoaderRoute: typeof AuthenticatedAdminSimulacoesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/uso': {
+      id: '/_authenticated/admin/uso'
+      path: '/uso'
+      fullPath: '/admin/uso'
+      preLoaderRoute: typeof AuthenticatedAdminUsoRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/usuarios': {
       id: '/_authenticated/admin/usuarios'
-      path: '/admin/usuarios'
+      path: '/usuarios'
       fullPath: '/admin/usuarios'
       preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/programa/$dia': {
       id: '/_authenticated/programa/$dia'
@@ -779,7 +1033,51 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminAfiliadosRoute: typeof AuthenticatedAdminAfiliadosRoute
+  AuthenticatedAdminAssinaturasRoute: typeof AuthenticatedAdminAssinaturasRoute
+  AuthenticatedAdminAtendimentoRoute: typeof AuthenticatedAdminAtendimentoRoute
+  AuthenticatedAdminCalculadoraRoute: typeof AuthenticatedAdminCalculadoraRoute
+  AuthenticatedAdminConfiguracoesRoute: typeof AuthenticatedAdminConfiguracoesRoute
+  AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
+  AuthenticatedAdminCuponsRoute: typeof AuthenticatedAdminCuponsRoute
+  AuthenticatedAdminFunilRoute: typeof AuthenticatedAdminFunilRoute
+  AuthenticatedAdminLeadsRoute: typeof AuthenticatedAdminLeadsRoute
+  AuthenticatedAdminMarketingRoute: typeof AuthenticatedAdminMarketingRoute
+  AuthenticatedAdminMonitoramentoRoute: typeof AuthenticatedAdminMonitoramentoRoute
+  AuthenticatedAdminPrecosRoute: typeof AuthenticatedAdminPrecosRoute
+  AuthenticatedAdminSegurancaRoute: typeof AuthenticatedAdminSegurancaRoute
+  AuthenticatedAdminSimulacoesRoute: typeof AuthenticatedAdminSimulacoesRoute
+  AuthenticatedAdminUsoRoute: typeof AuthenticatedAdminUsoRoute
+  AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminAfiliadosRoute: AuthenticatedAdminAfiliadosRoute,
+  AuthenticatedAdminAssinaturasRoute: AuthenticatedAdminAssinaturasRoute,
+  AuthenticatedAdminAtendimentoRoute: AuthenticatedAdminAtendimentoRoute,
+  AuthenticatedAdminCalculadoraRoute: AuthenticatedAdminCalculadoraRoute,
+  AuthenticatedAdminConfiguracoesRoute: AuthenticatedAdminConfiguracoesRoute,
+  AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
+  AuthenticatedAdminCuponsRoute: AuthenticatedAdminCuponsRoute,
+  AuthenticatedAdminFunilRoute: AuthenticatedAdminFunilRoute,
+  AuthenticatedAdminLeadsRoute: AuthenticatedAdminLeadsRoute,
+  AuthenticatedAdminMarketingRoute: AuthenticatedAdminMarketingRoute,
+  AuthenticatedAdminMonitoramentoRoute: AuthenticatedAdminMonitoramentoRoute,
+  AuthenticatedAdminPrecosRoute: AuthenticatedAdminPrecosRoute,
+  AuthenticatedAdminSegurancaRoute: AuthenticatedAdminSegurancaRoute,
+  AuthenticatedAdminSimulacoesRoute: AuthenticatedAdminSimulacoesRoute,
+  AuthenticatedAdminUsoRoute: AuthenticatedAdminUsoRoute,
+  AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAfiliadoRoute: typeof AuthenticatedAfiliadoRoute
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedDiarioRoute: typeof AuthenticatedDiarioRoute
@@ -793,16 +1091,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlanoRoute: typeof AuthenticatedPlanoRoute
   AuthenticatedPlanosRoute: typeof AuthenticatedPlanosRoute
   AuthenticatedRevisaoRoute: typeof AuthenticatedRevisaoRoute
-  AuthenticatedAdminAfiliadosRoute: typeof AuthenticatedAdminAfiliadosRoute
-  AuthenticatedAdminConteudoRoute: typeof AuthenticatedAdminConteudoRoute
-  AuthenticatedAdminCuponsRoute: typeof AuthenticatedAdminCuponsRoute
-  AuthenticatedAdminFunilRoute: typeof AuthenticatedAdminFunilRoute
-  AuthenticatedAdminPrecosRoute: typeof AuthenticatedAdminPrecosRoute
-  AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedProgramaDiaRoute: typeof AuthenticatedProgramaDiaRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAfiliadoRoute: AuthenticatedAfiliadoRoute,
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedDiarioRoute: AuthenticatedDiarioRoute,
@@ -816,12 +1109,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlanoRoute: AuthenticatedPlanoRoute,
   AuthenticatedPlanosRoute: AuthenticatedPlanosRoute,
   AuthenticatedRevisaoRoute: AuthenticatedRevisaoRoute,
-  AuthenticatedAdminAfiliadosRoute: AuthenticatedAdminAfiliadosRoute,
-  AuthenticatedAdminConteudoRoute: AuthenticatedAdminConteudoRoute,
-  AuthenticatedAdminCuponsRoute: AuthenticatedAdminCuponsRoute,
-  AuthenticatedAdminFunilRoute: AuthenticatedAdminFunilRoute,
-  AuthenticatedAdminPrecosRoute: AuthenticatedAdminPrecosRoute,
-  AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
   AuthenticatedProgramaDiaRoute: AuthenticatedProgramaDiaRoute,
 }
 
@@ -834,6 +1121,7 @@ const rootRouteChildren: RootRouteChildren = {
   AfiliadosRoute: AfiliadosRoute,
   CadastroRoute: CadastroRoute,
   CalculadoraRoute: CalculadoraRoute,
+  ContatoRoute: ContatoRoute,
   EntrarRoute: EntrarRoute,
   EsqueciSenhaRoute: EsqueciSenhaRoute,
   PagamentoRoute: PagamentoRoute,

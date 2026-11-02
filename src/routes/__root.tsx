@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -13,7 +14,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { AchievementSheet } from "@/components/feedback";
 import { ConsentBanner } from "@/components/ConsentBanner";
-import { captureUtm, linkConsentToUser } from "@/lib/analytics/analytics";
+import { captureUtm, countVisit, linkConsentToUser } from "@/lib/analytics/analytics";
 import { captureCoupon, captureRef, claimPendingRef } from "@/lib/affiliates/ref";
 import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
@@ -134,6 +135,9 @@ function RootComponent() {
 
   // Só para poder instalar o app; fora do preview do editor (iframe) e do ambiente de desenvolvimento.
   useEffect(() => installClientErrorReporting(), []);
+  // Contagem anônima de visitas às páginas públicas (sem id nem cookie: só o total do dia por página).
+  const { pathname } = useLocation();
+  useEffect(() => countVisit(pathname), [pathname]);
   // Analytics: UTMs da página de entrada e, depois do login, a escolha do banner vai para a conta.
   // Afiliados: o ?ref= da entrada fica guardado e, depois do login, liga a conta ao afiliado.
   useEffect(() => {

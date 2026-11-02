@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { pageHead } from "@/lib/seo";
-import { adminGate } from "@/lib/auth/roles";
+import { requireModule } from "@/lib/admin/modules";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,7 @@ import { usePlanPrices } from "@/lib/billing/prices";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/cupons")({
-  beforeLoad: async () => {
-    const gate = await adminGate();
-    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
-    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
-  },
+  beforeLoad: ({ context }) => requireModule(context.staff, "/admin/cupons"),
   head: () => pageHead("Admin de cupons", "Cupons de desconto da assinatura, com afiliado opcional.", "Cupons de desconto da assinatura."),
   component: AdminCoupons,
 });
@@ -71,7 +67,7 @@ function AdminCoupons() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
+    <div className="w-full max-w-3xl">
       <div className="flex items-center justify-between gap-3">
         <h1>Cupons</h1>
         <Button onClick={() => setEditing("new")}>Novo cupom</Button>
@@ -125,7 +121,7 @@ function AdminCoupons() {
           onSaved={() => void load()}
         />
       )}
-    </main>
+    </div>
   );
 }
 

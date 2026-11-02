@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isAdmin } from "@/lib/auth/roles";
+import { staffStatus } from "@/lib/auth/roles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { ACHIEVEMENTS, LEVELS } from "@/lib/gamification/rules";
 import { cn } from "@/lib/utils";
 import { ChangePassword } from "@/components/auth/ChangePassword";
 import { TwoFactor } from "@/components/auth/TwoFactor";
+import { SupportSection } from "@/components/support/SupportSection";
 import { Field } from "@/components/auth/AuthShell";
 import { confirmIdentity, usesPassword } from "@/lib/auth/reauth";
 import { verifiedTotpId } from "@/lib/auth/mfa";
@@ -77,7 +78,8 @@ function Profile() {
   }, [delOpen]);
   const [admin, setAdmin] = useState(false);
   useEffect(() => {
-    void isAdmin().then(setAdmin);
+    // Qualquer perfil da equipe (ou segundo fator a confirmar) vê o link do painel.
+    void staffStatus().then((s) => setAdmin(s.roles.length > 0 || s.mfaNeeded));
   }, []);
   // Mesma escolha do aviso de privacidade (src/lib/analytics): mudar aqui ou lá vale para os dois.
   const [consent, setConsentState] = useState(getConsent);
@@ -210,6 +212,8 @@ function Profile() {
 
       <TwoFactor />
 
+      <SupportSection />
+
       <section className="mt-10 divide-y divide-border">
         <h2 className="pb-2 text-lg">Privacidade</h2>
         <Row label="Ocultar valores por padrão" hint="Lançamentos, Patrimônio e Progresso abrem com os valores escondidos.">
@@ -234,12 +238,7 @@ function Profile() {
         <Link to="/afiliado" className="min-h-11 py-3">Programa de afiliados</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
-        {admin && <Link to="/admin/conteudo" className="min-h-11 py-3">Admin de conteúdo</Link>}
-        {admin && <Link to="/admin/usuarios" className="min-h-11 py-3">Admin de usuários</Link>}
-        {admin && <Link to="/admin/funil" className="min-h-11 py-3">Admin: funil</Link>}
-        {admin && <Link to="/admin/afiliados" className="min-h-11 py-3">Admin: afiliados</Link>}
-        {admin && <Link to="/admin/cupons" className="min-h-11 py-3">Admin: cupons</Link>}
-        {admin && <Link to="/admin/precos" className="min-h-11 py-3">Admin: preços</Link>}
+        {admin && <Link to="/admin" className="min-h-11 py-3 font-semibold text-primary">Painel administrativo</Link>}
         <ChangePassword />
         <button type="button" className="min-h-11 py-3 text-left font-semibold text-primary" onClick={signOut}>
           Sair

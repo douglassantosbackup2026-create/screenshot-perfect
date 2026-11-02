@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { pageHead } from "@/lib/seo";
-import { adminGate } from "@/lib/auth/roles";
+import { requireModule } from "@/lib/admin/modules";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,11 +27,7 @@ import { usePlanPrices } from "@/lib/billing/prices";
 import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/afiliados")({
-  beforeLoad: async () => {
-    const gate = await adminGate();
-    if (gate === "mfa") throw redirect({ to: "/perfil", hash: "seguranca", replace: true });
-    if (gate === "no") throw redirect({ to: "/hoje", replace: true });
-  },
+  beforeLoad: ({ context }) => requireModule(context.staff, "/admin/afiliados"),
   head: () => pageHead("Admin de afiliados", "Inscrições, aprovação e comissões de afiliados.", "Inscrições e comissões de afiliados."),
   component: AdminAffiliates,
 });
@@ -93,13 +89,14 @@ function AdminAffiliates() {
   const pending = by("pendente");
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-8">
+    <div className="w-full max-w-3xl">
       <h1>Afiliados</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Acesso só para administradores. A inscrição é pública em /afiliados; o afiliado vê o painel entrando com o mesmo e-mail.
       </p>
       <Tabs defaultValue="pendentes" className="mt-6">
-        <TabsList>
+        {/* No celular, as quatro abas quebram em duas linhas em vez de passar da tela. */}
+        <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="pendentes">Pendentes{pending.length ? ` (${pending.length})` : ""}</TabsTrigger>
           <TabsTrigger value="aprovados">Aprovados</TabsTrigger>
           <TabsTrigger value="recusados">Recusados</TabsTrigger>
@@ -119,7 +116,7 @@ function AdminAffiliates() {
         </TabsContent>
       </Tabs>
       {editing && <ReviewDialog affiliate={editing} onClose={() => setEditing(null)} onSaved={load} />}
-    </main>
+    </div>
   );
 }
 

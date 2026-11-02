@@ -30,6 +30,23 @@ O app **não movimenta dinheiro**: não há PIX, saque nem transferência entre 
 
 `audit_log` não aceita `update`, `delete` nem `truncate`. Linhas com mais de 5 anos só saem por `purge_expired()`. Severidade `high`: pagamento recusado por valor/referência, mudança de papel ou de `app_settings`.
 
+### Painel administrativo: perfis e privacidade (`painel_admin`)
+
+Perfis da equipe em `staff_roles`; o admin de `user_roles` vale como super admin. Toda função do painel confere `staff_has(...)` no banco (a tela só esconde). Quem ativou o segundo fator precisa dele (`_mfa_ok`). Conceder ou tirar perfil: só super admin, auditado como `high`. A matriz perfil × função é testada em `src/test/rls.test.ts`.
+
+| Perfil | Pode |
+|---|---|
+| Super admin | Tudo: perfis, auditoria, configurações, premissas da calculadora, resolver incidentes, excluir conta a pedido |
+| Financeiro | Assinaturas, conciliação com o Mercado Pago, preços, cupons, comissões, links de cobrança |
+| Marketing | Leads (com exportação auditada), campanhas, simulações, conteúdos, aviso no app, cupons e afiliados |
+| Suporte | Atendimento, ficha operacional do usuário, incidentes (só leitura) |
+| Analista | Só leitura de relatórios agregados |
+
+- **Dados financeiros pessoais nunca saem para a equipe**: a ficha mostra só "usa / não usa" cada área; uso das funcionalidades sai em contagens, e grupos com menos de 5 pessoas viram nulo (`_k`). Toda abertura de ficha fica na auditoria.
+- **Contagem anônima** (`metrics_daily`): só dia, chave (lista fixa) e total; sem id, IP ou cookie. Limite por IP.
+- **Incidentes**: só o servidor registra (`report_incident`); e-mails e números longos são cortados da mensagem.
+- **Exclusão de conta pela equipe**: só super admin, com o e-mail digitado de novo; recusada se houver assinatura ativa; auditada como `high`.
+
 ## Configurar nos painéis (não é código)
 
 **Supabase → Authentication**

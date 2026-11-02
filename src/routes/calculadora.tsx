@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs, type ScenarioResult } from "@/lib/calc/retirement";
 import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
-import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
+import { fetchCalcAssumptions } from "@/lib/data/calc-assumptions";
 import { startOnboarding } from "@/lib/data/start-onboarding";
 import { INSS_HELP, SIMULATION_FOOTER } from "@/lib/labels";
 import { APP_NAME } from "@/lib/seo";
 import { saveLead } from "@/lib/data/leads";
 import { track } from "@/lib/analytics/analytics";
+import { useSimulationTracking } from "@/lib/analytics/use-simulation-tracking";
 
 export const Route = createFileRoute("/calculadora")({
   head: () => ({
@@ -25,10 +26,13 @@ export const Route = createFileRoute("/calculadora")({
       { property: "og:description", content: "Quanto falta para me aposentar sem o INSS? Faça a conta em um minuto." },
     ],
   }),
+  // Premissas de hoje (painel → Calculadora); sem o banco, as padrão.
+  loader: () => fetchCalcAssumptions(),
   component: Calculator,
 });
 
 function Calculator() {
+  const A = Route.useLoaderData();
   const navigate = useNavigate();
   const [age, setAge] = useState<number | null>(30);
   const [retire, setRetire] = useState<number | null>(60);
@@ -44,8 +48,8 @@ function Calculator() {
   const calc = useMemo(() => {
     if (age == null || retire == null || income == null) return { errors: ["Preencha idade, idade para se aposentar e renda."] };
     const i: PlanInputs = {
-      ...DEFAULT_ASSUMPTIONS,
-      returns: { ...DEFAULT_ASSUMPTIONS.returns },
+      ...A,
+      returns: { ...A.returns },
       currentAge: age,
       retirementAge: retire,
       initialWealth: wealth ?? 0,
@@ -56,18 +60,25 @@ function Calculator() {
     const errors = validateInputs(i);
     if (errors.length) return { errors };
     return { errors: [] as string[], i, sem: simulate(i, "central", false), com: i.inssEstimate ? simulate(i, "central", true) : null };
-  }, [age, retire, income, wealth, monthly, inss]);
+  }, [age, retire, income, wealth, monthly, inss, A]);
 
   // Funil: conta uma vez por visita, quando a pessoa mexe nos números e o resultado aparece.
   const counted = useRef<"mount" | "waiting" | "done">("mount");
+  const sim = useSimulationTracking();
   const valid = calc.errors.length === 0;
   useEffect(() => {
-    if (counted.current === "mount") counted.current = "waiting";
-    else if (counted.current === "waiting" && valid) {
+    if (counted.current === "mount") {
+      counted.current = "waiting";
+      return;
+    }
+    sim.started();
+    if (counted.current === "waiting" && valid && calc.sem) {
       counted.current = "done";
       track("calculator_used", { comInss: !!inss });
+      sim.completed({ age: age ?? 0, income: income ?? 0, monthly: calc.sem.requiredMonthlyContribution });
     }
-  }, [age, retire, income, wealth, monthly, inss, valid]);
+    // calc muda junto com qualquer campo: é o que dispara esta conta.
+  }, [calc, valid, age, income, inss, sim]);
 
   // Leva tudo o que foi digitado para o onboarding, que já abre preenchido (antes ia para um login desativado).
   function start() {
@@ -112,7 +123,7 @@ function Calculator() {
           calc.sem && (
             <>
               <h2>Cenário central, sem INSS</h2>
-              <Result r={calc.sem} monthly={monthly} horizon={DEFAULT_ASSUMPTIONS.horizonAge} />
+              <Result r={calc.sem} monthly={monthly} horizon={A.horizonAge} />
               <Assumptions />
             </>
           )
@@ -210,10 +221,11 @@ function Compare({ title, r }: { title: string; r: ScenarioResult }) {
 }
 
 function Assumptions() {
-  const a = DEFAULT_ASSUMPTIONS;
+  const a = Route.useLoaderData();
   return (
     <p className="mt-4 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
-      Premissas: retorno real de {formatPercent(a.returns.central)} ao ano, dinheiro até os {a.horizonAge} anos, sem custos, sem INSS.
+      Premissas: retorno real de {formatPercent(a.returns.central)} ao ano, dinheiro até os {a.horizonAge} anos,{" "}
+      {a.costsAA > 0 ? `custos de ${formatPercent(a.costsAA)} ao ano` : "sem custos"}, sem INSS.
       Valores em reais de hoje.
     </p>
   );

@@ -11,6 +11,8 @@ import {
   type Decision,
 } from "@/lib/billing/webhook";
 import { shouldRevert } from "@/lib/calc/coupon";
+import { parseReference, toCents } from "@/lib/billing/catalog";
+import { reportIncident } from "@/lib/monitoring/incidents.server";
 
 // Notificação do Mercado Pago. Só confia na assinatura e nos dados lidos direto da API.
 // Eventos: payment (cobranças), subscription_preapproval (status da assinatura) e
@@ -55,6 +57,27 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
   },
 });
 
+/**
+ * Todo pagamento lido do Mercado Pago (aprovado, pendente, recusado, estornado) vai para payment_events, para o
+ * painel de faturamento e a conciliação. Só registro: a decisão de crédito continua em decidePayment.
+ */
+async function recordPaymentEvent(supabaseAdmin: Admin, p: { id: number; status: string; amount: number; reference: string | null }) {
+  const ref = parseReference(p.reference);
+  const { error } = await supabaseAdmin.from("payment_events").upsert(
+    {
+      id: `mp_${p.id}`,
+      user_id: ref?.userId ?? null,
+      status: p.status.slice(0, 40),
+      amount_cents: toCents(p.amount),
+      plan: ref?.plan ?? null,
+      period: ref?.period ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+  if (error) console.error("payment_events upsert failed", error.message);
+}
+
 /** Cupom com prazo: depois da última cobrança com desconto, a assinatura no Mercado Pago volta ao preço cheio. */
 async function revertCouponIfDone(supabaseAdmin: Admin, token: string, userId: string) {
   const { data: sub, error } = await supabaseAdmin
@@ -71,6 +94,7 @@ async function revertCouponIfDone(supabaseAdmin: Admin, token: string, userId: s
   });
   if (!res) {
     console.error("coupon revert failed", sub.preapproval_id);
+    await reportIncident("pagamento", "Não voltou a assinatura ao preço cheio depois do cupom (tenta de novo na próxima cobrança)", { level: "aviso" });
     return;
   }
   const saved = await supabaseAdmin.from("subscriptions").update({ amount_cents: sub.full_cents }).eq("user_id", userId);
@@ -90,6 +114,7 @@ async function handle(supabaseAdmin: Admin, token: string, type: string | undefi
     const p = await mpRequest(token, `/v1/payments/${dataId}`, MpPaymentSchema);
     if (!p) return upstreamError();
     decision = decidePayment(p);
+    await recordPaymentEvent(supabaseAdmin, { id: p.id, status: p.status, amount: p.transaction_amount, reference: p.external_reference ?? null });
   } else if (type === "subscription_authorized_payment") {
     const ap = await mpRequest(token, `/authorized_payments/${dataId}`, MpAuthorizedPaymentSchema);
     if (!ap) return upstreamError();
@@ -100,6 +125,8 @@ async function handle(supabaseAdmin: Admin, token: string, type: string | undefi
       fallbackRef = pre.external_reference ?? null;
     }
     decision = decideAuthorizedPayment(ap, fallbackRef);
+    if (ap.payment)
+      await recordPaymentEvent(supabaseAdmin, { id: ap.payment.id, status: ap.payment.status, amount: ap.transaction_amount, reference: ap.external_reference || fallbackRef });
   } else if (type === "subscription_preapproval") {
     const pre = await mpRequest(token, `/preapproval/${encodeURIComponent(dataId)}`, MpPreapprovalSchema);
     if (!pre) return upstreamError();
@@ -133,6 +160,7 @@ async function handle(supabaseAdmin: Admin, token: string, type: string | undefi
     });
     if (error) {
       console.error("credit_payment failed", error.message);
+      await reportIncident("pagamento", `credit_payment falhou: ${error.message}`, { level: "critico" });
       return new Response("db error", { status: 500 });
     }
     // O pagamento já está creditado: falha aqui só fica no log e tenta de novo na próxima notificação.
@@ -151,6 +179,7 @@ async function handle(supabaseAdmin: Admin, token: string, type: string | undefi
   });
   if (error) {
     console.error("subscription status failed", error.message);
+    await reportIncident("pagamento", `status da assinatura não gravado: ${error.message}`);
     return new Response("db error", { status: 500 });
   }
   if (!applied) return new Response("stale");
