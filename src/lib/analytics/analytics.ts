@@ -86,7 +86,7 @@ export async function setConsent(choice: ConsentChoice) {
   safe(() => window.localStorage.removeItem(LINKED_KEY), undefined);
   window.dispatchEvent(new Event(OPEN_EVENT + ":changed"));
   try {
-    await supabase.rpc("record_consent", { p_anon: anon, p_choice: choice, p_version: POLICY_VERSION });
+    await supabase.rpc("record_consent", { p_anon: anon as unknown as string, p_choice: choice, p_version: POLICY_VERSION });
   } catch {
     /* sem rede: a escolha local vale; o registro tenta de novo no próximo login */
   }
