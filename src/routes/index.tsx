@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { NumberField, LegalNote } from "@/components/forms";
 import { simulate, validateInputs, type PlanInputs } from "@/lib/calc/retirement";
-import { formatMoney, formatMonthly } from "@/lib/calc/format";
+import { formatMoney, formatMonthly, formatPercent, formatReais } from "@/lib/calc/format";
 import { fetchPlanPrices } from "@/lib/billing/prices";
 import { DEFAULT_ASSUMPTIONS } from "@/lib/data/demo-store";
 import { startOnboarding } from "@/lib/data/start-onboarding";
@@ -118,12 +118,19 @@ function Index() {
           {result?.errors.length ? (
             <p className="text-sm text-destructive">{result.errors[0]}</p>
           ) : result?.r ? (
-            <p className="text-lg leading-7">
-              Para ter <strong className="money">{formatMonthly(income!)}</strong> por mês a partir dos {retire}, sem contar com o
-              INSS, você precisaria guardar cerca de{" "}
-              <strong className="money font-display text-2xl text-primary">{formatMonthly(result.r.requiredMonthlyContribution)}</strong>{" "}
-              por mês.
-            </p>
+            <>
+              <p className="text-lg leading-7">
+                Para ter <strong className="money">{formatReais(income! * 100)}</strong> por mês a partir dos {retire}, sem contar com o
+                INSS, você precisaria guardar cerca de{" "}
+                <strong className="money font-display text-2xl text-primary">{formatMonthly(result.r.requiredMonthlyContribution)}</strong>{" "}
+                por mês.
+              </p>
+              {/* As premissas ficam junto do número: sem elas, o resultado parece promessa. */}
+              <p className="mt-2 text-xs text-muted-foreground">
+                Estimativa começando do zero, com retorno de {formatPercent(DEFAULT_ASSUMPTIONS.returns.central)} ao ano acima da inflação e
+                o dinheiro durando até os {DEFAULT_ASSUMPTIONS.horizonAge} anos. É uma simulação, não uma garantia de resultado.
+              </p>
+            </>
           ) : null}
         </div>
         <Button className="mt-5 w-full" onClick={start}>

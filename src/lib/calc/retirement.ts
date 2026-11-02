@@ -92,18 +92,26 @@ export function depletionAge(wealth: number, withdrawal: number, rm: number, ret
   return age >= horizonAge ? null : age;
 }
 
+/** Maior valor aceito em qualquer campo em reais (R$ 1 trilhão): acima disso é erro de digitação. */
+export const MAX_AMOUNT = 1e12;
+/** Maior idade aceita para aposentadoria e horizonte. */
+export const MAX_AGE = 120;
+
+const amountOk = (v: number) => Number.isFinite(v) && v >= 0 && v <= MAX_AMOUNT;
+
 export function validateInputs(i: PlanInputs): string[] {
   const e: string[] = [];
   if (!(i.currentAge >= 16 && i.currentAge <= 90)) e.push('Informe uma idade atual entre 16 e 90 anos.');
-  if (!(i.retirementAge > i.currentAge)) e.push('A idade de aposentadoria precisa ser maior que a idade atual.');
-  if (!(i.horizonAge > i.retirementAge)) e.push('O horizonte precisa ser maior que a idade de aposentadoria.');
-  if (!(i.desiredMonthlyIncome > 0)) e.push('Informe a renda mensal desejada.');
-  if (i.initialWealth < 0 || i.monthlyContribution < 0) e.push('Valores não podem ser negativos.');
-  if (i.inssEstimate !== null && i.inssEstimate < 0) e.push('A estimativa do INSS não pode ser negativa.');
-  for (const k of SCENARIOS) {
-    if (!(i.returns[k] >= -0.05 && i.returns[k] <= 0.15)) e.push('Use retornos reais entre -5% e 15% ao ano.');
-  }
+  // A conta anda em meses inteiros: uma diferença que arredonda para 0 mês daria "guarde R$ 0" com falta.
+  if (!(Math.round((i.retirementAge - i.currentAge) * 12) >= 1)) e.push('A idade de aposentadoria precisa ser maior que a idade atual.');
+  if (!(Math.round((i.horizonAge - i.retirementAge) * 12) >= 1)) e.push('O horizonte precisa ser maior que a idade de aposentadoria.');
+  if (!(i.horizonAge <= MAX_AGE)) e.push(`Use um horizonte de até ${MAX_AGE} anos.`);
+  if (!(i.desiredMonthlyIncome > 0 && i.desiredMonthlyIncome <= MAX_AMOUNT)) e.push('Informe a renda mensal desejada.');
+  if (!amountOk(i.initialWealth) || !amountOk(i.monthlyContribution)) e.push('Valores não podem ser negativos.');
+  if (i.inssEstimate !== null && !amountOk(i.inssEstimate)) e.push('A estimativa do INSS não pode ser negativa.');
+  if (!SCENARIOS.every((k) => i.returns[k] >= -0.05 && i.returns[k] <= 0.15)) e.push('Use retornos reais entre -5% e 15% ao ano.');
   if (!(i.costsAA >= 0 && i.costsAA < 0.1)) e.push('Use um custo anual entre 0% e 10%.');
+  if (!(i.inflationAA >= -0.05 && i.inflationAA <= 0.3)) e.push('Use uma inflação entre -5% e 30% ao ano.');
   return e;
 }
 

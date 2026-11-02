@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatMonthly, formatWealth, formatPercent, formatAge, formatAgeMonths, formatMoney, annualPerMonthCents } from './format';
+import { formatMonthly, formatWealth, formatPercent, formatAge, formatAgeMonths, formatMoney, annualPerMonthCents, formatAxis } from './format';
 
 // Intl usa espaço não separável entre "R$" e o número; normaliza para comparar.
 const plain = (s: string) => s.replace(/\s/g, ' ');
@@ -52,5 +52,14 @@ describe('annualPerMonthCents', () => {
   it('anual dividido em 12, em reais inteiros', () => {
     expect(annualPerMonthCents(39900)).toBe(3300);
     expect(annualPerMonthCents(44900)).toBe(3700);
+  });
+});
+
+describe('formatAxis', () => {
+  it('milhões com vírgula, milhares inteiros', () => {
+    expect(formatAxis(1_800_000)).toBe('1,8 mi');
+    expect(formatAxis(2_000_000)).toBe('2 mi');
+    expect(formatAxis(718_400)).toBe('718 mil');
+    expect(formatAxis(0)).toBe('0');
   });
 });

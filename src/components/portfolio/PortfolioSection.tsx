@@ -41,7 +41,7 @@ export function PortfolioSection({ s, showValues }: { s: DemoState; showValues: 
           <h2 className="text-xl">Investimentos</h2>
           <p className="mt-1 text-sm text-muted-foreground">Posições dentro dos seus itens. Com operações lançadas, o item passa a valer o que elas valem.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setTargetsOpen(true)}>
             <Target size={16} aria-hidden /> Metas de alocação
           </Button>

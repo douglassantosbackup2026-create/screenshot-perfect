@@ -80,7 +80,7 @@ function Diary() {
     <ShowValuesProvider value={showValues}>
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <AreaTabs />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Lançamentos</h1>
         <HideValuesToggle showValues={showValues} onToggle={toggleValues} />
       </div>

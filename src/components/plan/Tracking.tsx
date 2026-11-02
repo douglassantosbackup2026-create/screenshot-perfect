@@ -19,7 +19,7 @@ import { HIDDEN } from "@/lib/labels";
 import { demo, type DemoState } from "@/lib/data/demo-store";
 import { progressTracking } from "@/lib/data/selectors";
 import type { VerdictCode } from "@/lib/calc/tracking";
-import { formatPercent, formatWealth } from "@/lib/calc/format";
+import { formatAxis, formatPercent, formatWealth } from "@/lib/calc/format";
 import { formatDate, monthShort, monthYear } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -130,7 +130,7 @@ export function ProjectedVsReal({ s, showValues }: { s: DemoState; showValues: b
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(x: number) =>
-                          x >= 1e6 ? `${(x / 1e6).toFixed(1)} mi` : `${Math.round(x / 1e3)} mil`
+                          formatAxis(x)
                         }
                       />
                       {showValues && (

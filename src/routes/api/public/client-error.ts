@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { allow, clientIp } from "@/lib/security/rate-limit.server";
+import { readLimitedText } from "@/lib/security/body";
 
 // Recebe erros do navegador (src/lib/client-errors.ts) e só registra no log do servidor.
 // Não grava nada nem responde dados: o pior que um abuso faz é encher o log, e o corpo tem tamanho limitado
@@ -17,8 +18,8 @@ export const Route = createFileRoute("/api/public/client-error")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const text = await request.text().catch(() => "");
-        if (!text || text.length > MAX_BODY) return new Response(null, { status: 204 });
+        const text = await readLimitedText(request, MAX_BODY);
+        if (!text) return new Response(null, { status: 204 });
         if (!(await allow([{ key: `client-error:ip:${clientIp(request)}`, limit: 30, windowSeconds: 60 }]))) return new Response(null, { status: 204 });
         try {
           const r = Report.parse(JSON.parse(text));

@@ -14,7 +14,7 @@ O app **não movimenta dinheiro**: não há PIX, saque nem transferência entre 
 | Pagamento duplicado / replay | `credit_payment` idempotente pelo id do pagamento; `webhook_receipts` por `x-request-id`; janela de 5 min na assinatura HMAC | migrations `assinaturas`, `security_hardening_2` |
 | Status de assinatura fora de ordem | `apply_subscription_status` só grava evento mais novo (`last_event_at`) | `security_hardening_2` |
 | Acesso a dados de outra pessoa | RLS em todas as tabelas; gatilhos conferem dono de conta/categoria/transferência/recorrência/aporte | migrations |
-| Escalação de privilégio | Papéis em `user_roles` (cliente só lê); `has_role` só responde sobre a própria conta; admin não exige MFA (decisão de produto) | `security_hardening_2`, `admin_sem_mfa` |
+| Escalação de privilégio | Papéis em `user_roles` (cliente só lê); `has_role` só responde sobre a própria conta; MFA opcional para admin, mas quem o ativou precisa de `aal2` também nas funções de admin | `security_hardening_2`, `auditoria` |
 | Account takeover | MFA TOTP opcional para todos, inclusive admin; com MFA ativo, o banco esconde os dados sem `aal2`; excluir conta exige senha recente (+ código) | `src/lib/auth/mfa.ts`, `_mfa_ok`, `_recent_auth` |
 | Brute force / abuso | Limite por IP, usuário e número em `hit_rate_limit` (rotas públicas, server functions, código do WhatsApp, leads, analytics) | `src/lib/security/rate-limit.server.ts` |
 | Enumeração de e-mail | `submit_lead` responde igual para e-mail novo ou repetido | `security_hardening_2` |
@@ -42,7 +42,7 @@ O app **não movimenta dinheiro**: não há PIX, saque nem transferência entre 
 - [ ] URL Configuration: só os domínios do app em Redirect URLs.
 - [ ] Captcha (Turnstile): adiado por decisão. Ligar se aparecer ataque de credenciais.
 
-**Antes do deploy desta versão:** o admin precisa ativar a verificação em duas etapas em Perfil. Sem ela, o back-office não abre.
+**Recomendado:** o admin ativar a verificação em duas etapas em Perfil. Não é obrigatório (20261108120000), mas com ela ativa o back-office passa a exigir o código (20261112120000).
 
 **Supabase → Database / Backups**
 - [ ] PITR ligado (backups criptografados em repouso, AES-256, pelo Supabase).

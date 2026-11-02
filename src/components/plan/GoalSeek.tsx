@@ -36,7 +36,9 @@ export function GoalSeekCard({
               Guardando <span className="money">{formatMonthly(inputs.monthlyContribution)}</span>{" "}
               por mês, nessa idade o patrimônio chega a cerca de{" "}
               <span className="money">{formatWealth(r.result.projectedWealthAtRetirement)}</span> e
-              já paga <span className="money">{formatMonthly(inputs.desiredMonthlyIncome)}</span>{" "}
+              {/* Com INSS, o patrimônio só precisa cobrir a diferença até a renda desejada. */}
+              {r.result.incomeNeededFromWealth < inputs.desiredMonthlyIncome ? ", junto com o INSS," : ""} já paga{" "}
+              <span className="money">{formatMonthly(inputs.desiredMonthlyIncome)}</span>{" "}
               por mês até os {inputs.horizonAge} anos. Você planejou parar aos{" "}
               {inputs.retirementAge}.
             </p>

@@ -23,7 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { DestinationShare, MonthlyAmount } from "@/lib/calc/progress";
 import type { GoalPlan, GoalTemplate } from "@/lib/calc/goals";
-import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
+import { formatAxis, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { DESTINATIONS, formatDate, HIDDEN, monthShort, monthYear } from "@/lib/labels";
 import type { ActivityItem, GoalSource, GoalView } from "@/lib/data/selectors";
 import type { Destination } from "@/lib/data/demo-store";
@@ -115,7 +115,7 @@ function ChartError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const compact = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : v >= 1e3 ? `${Math.round(v / 1e3)} mil` : String(Math.round(v)));
+const compact = formatAxis;
 
 /** Barras de aporte por mês com a meta do plano tracejada. O mês atual fica em amarelo cheio. */
 function ContributionsChartView({ series, target, showValues }: { series: MonthlyAmount[]; target: number | null; showValues: boolean }) {

@@ -65,11 +65,12 @@ export function AreaTabs({ className }: { className?: string }) {
             to={t.to}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-10 flex-1 items-center justify-center rounded-full px-3 text-sm transition-colors",
+              // Em 320px, cada aba toma a largura do próprio nome (flex-auto) para "Lançamentos" caber; do sm em diante, larguras iguais.
+              "flex min-h-10 min-w-0 flex-auto items-center justify-center rounded-full px-2 text-xs transition-colors min-[360px]:text-sm sm:flex-1 sm:px-3",
               active ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {t.label}
+            <span className="truncate">{t.label}</span>
           </Link>
         );
       })}

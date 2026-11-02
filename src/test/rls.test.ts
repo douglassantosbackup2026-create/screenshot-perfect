@@ -1,0 +1,271 @@
+// @vitest-environment node
+// Permissões do banco testadas num Postgres de verdade (PGlite, em WASM): aplica todas as migrations de
+// supabase/migrations em ordem e confere RLS, grants e funções como cada papel do Supabase.
+// O esquema `auth` é simulado (users, mfa_factors, uid(), jwt()), e as tabelas novas recebem os privilégios
+// padrão que o Supabase dá a anon/authenticated (o pior caso: o que proteger, tem de ser pelo RLS/revoke).
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { beforeAll, describe, expect, it } from "vitest";
+import { PGlite, type Transaction } from "@electric-sql/pglite";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
+
+const MIGRATIONS = join(process.cwd(), "supabase", "migrations");
+
+const SUPABASE_BOOTSTRAP = `
+create role anon nologin;
+create role authenticated nologin;
+create role service_role nologin bypassrls;
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
+
+create schema auth;
+grant usage on schema auth to anon, authenticated, service_role;
+create table auth.users (
+  id uuid primary key,
+  email text,
+  phone text,
+  raw_user_meta_data jsonb default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  email_confirmed_at timestamptz default now(),
+  last_sign_in_at timestamptz
+);
+create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null, status text not null);
+create function auth.jwt() returns jsonb language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+$$;
+create function auth.uid() returns uuid language sql stable as $$ select nullif(auth.jwt()->>'sub', '')::uuid $$;
+create function auth.role() returns text language sql stable as $$ select auth.jwt()->>'role' $$;
+grant execute on all functions in schema auth to anon, authenticated, service_role;
+-- Função que o Supabase cria em projetos novos (a migration security_hardening revoga o acesso a ela).
+create function public.rls_auto_enable() returns void language sql as $$ select $$;
+-- A conta do admin real, que a migration 20261024131835 promove (antes de existirem os gatilhos de perfil).
+insert into auth.users (id, email) values ('64103b17-e90c-4bb9-a040-57badfe00074', 'admin-real@teste.dev');
+`;
+
+const A = "00000000-0000-4000-8000-00000000000a";
+const B = "00000000-0000-4000-8000-00000000000b";
+const ADMIN = "00000000-0000-4000-8000-0000000000ad";
+
+let db: PGlite;
+const applied: string[] = [];
+
+type As = { role: "anon" | "authenticated" | "service_role"; sub?: string; aal?: "aal1" | "aal2" };
+
+/** Roda `fn` como um papel do Supabase, numa transação desfeita no fim (os testes não se afetam). */
+async function as<T>(who: As, fn: (tx: Transaction) => Promise<T>): Promise<T> {
+  let out: T;
+  let failure: unknown;
+  try {
+    await db.transaction(async (tx) => {
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ role: who.role, sub: who.sub, aal: who.aal ?? "aal1" }),
+      ]);
+      await tx.exec(`set local role ${who.role}`);
+      try {
+        out = await fn(tx);
+      } catch (e) {
+        failure = e;
+      }
+      await tx.rollback();
+    });
+  } catch {
+    /* o rollback acima encerra a transação */
+  }
+  if (failure) throw failure;
+  return out!;
+}
+
+const rows = async (tx: Transaction, sql: string, params: unknown[] = []) => (await tx.query(sql, params)).rows;
+const denied = async (p: Promise<unknown>) => {
+  await expect(p).rejects.toThrow(/permission denied|row-level security|apenas admin|42501|violates/i);
+};
+
+beforeAll(async () => {
+  db = new PGlite({ extensions: { pgcrypto } });
+  await db.exec(SUPABASE_BOOTSTRAP);
+  for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql")).sort()) {
+    try {
+      await db.exec(readFileSync(join(MIGRATIONS, file), "utf8"));
+      applied.push(file);
+    } catch (e) {
+      throw new Error(`migration ${file} falhou: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  // Três contas: o gatilho handle_new_user cria perfil, estatísticas e papel 'user'.
+  await db.exec(`
+    insert into auth.users (id, email) values
+      ('${A}', 'a@teste.dev'), ('${B}', 'b@teste.dev'), ('${ADMIN}', 'admin@teste.dev');
+    insert into public.user_roles (user_id, role) values ('${ADMIN}', 'admin');
+    insert into public.user_state (user_id, data) values ('${A}', '{"x":1}'), ('${B}', '{"x":2}');
+  `);
+}, 120_000);
+
+describe("migrations", () => {
+  it("todas aplicam em ordem num Postgres limpo", () => {
+    expect(applied.length).toBe(readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql")).length);
+  });
+
+  it("todas as tabelas de public têm RLS ligado", async () => {
+    const off = await db.query<{ relname: string }>(
+      `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity order by 1`,
+    );
+    expect(off.rows.map((r) => r.relname)).toEqual([]);
+  });
+
+  it("toda função SECURITY DEFINER de public fixa o search_path", async () => {
+    const loose = await db.query<{ proname: string }>(
+      `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and p.prosecdef
+          and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%') order by 1`,
+    );
+    expect(loose.rows.map((r) => r.proname)).toEqual([]);
+  });
+});
+
+describe("dados de cada pessoa", () => {
+  it("A só lê o próprio estado; B fica invisível", async () => {
+    const got = await as({ role: "authenticated", sub: A }, (tx) => rows(tx, "select user_id from public.user_state"));
+    expect(got).toEqual([{ user_id: A }]);
+  });
+
+  it("A não altera nem apaga o estado de B", async () => {
+    const changed = await as({ role: "authenticated", sub: A }, async (tx) => {
+      const u = await tx.query(`update public.user_state set data = '{"hack":1}' where user_id = $1`, [B]);
+      return u.affectedRows;
+    });
+    expect(changed).toBe(0);
+  });
+
+  it("A não cria estado em nome de B", async () => {
+    await denied(as({ role: "authenticated", sub: A }, (tx) => tx.query(`insert into public.user_state (user_id, data) values ($1, '{}')`, [B])));
+  });
+
+  it("anon não lê dados pessoais", async () => {
+    for (const t of ["user_state", "profiles", "payments", "subscriptions", "entitlements", "transactions", "audit_log"]) {
+      const r = await as({ role: "anon" }, (tx) => rows(tx, `select * from public.${t}`)).catch(() => []);
+      expect(r, t).toEqual([]);
+    }
+  });
+
+  it("ninguém fora do servidor lê tabelas internas (afiliados, cupons, configurações, analytics)", async () => {
+    for (const role of ["anon", "authenticated"] as const)
+      for (const t of ["affiliates", "referrals", "affiliate_commissions", "coupons", "coupon_redemptions", "app_settings", "analytics_events", "consent_log"])
+        await denied(as({ role, sub: A }, (tx) => tx.query(`select * from public.${t}`)));
+  });
+
+  it("A não se promove a admin", async () => {
+    await denied(as({ role: "authenticated", sub: A }, (tx) => tx.query(`insert into public.user_roles (user_id, role) values ($1, 'admin')`, [A])));
+  });
+});
+
+describe("admin", () => {
+  const adminRpcs = [
+    "select public.admin_list_affiliates(null)",
+    "select public.admin_list_coupons()",
+    "select public.admin_affiliate_commissions(null)",
+    "select public.admin_set_plan_price('inteligencia', 'mensal', 4490)",
+  ];
+
+  it("usuário comum é recusado em todas as funções de admin", async () => {
+    for (const sql of adminRpcs) await denied(as({ role: "authenticated", sub: A }, (tx) => tx.query(sql)));
+  });
+
+  it("anon nem consegue chamar as funções de admin", async () => {
+    for (const sql of adminRpcs) await denied(as({ role: "anon" }, (tx) => tx.query(sql)));
+  });
+
+  it("admin sem segundo fator entra", async () => {
+    const r = await as({ role: "authenticated", sub: ADMIN, aal: "aal1" }, (tx) => rows(tx, "select public.is_admin() as ok"));
+    expect(r).toEqual([{ ok: true }]);
+  });
+
+  it("admin que ativou o segundo fator precisa dele (aal2) também nas funções de admin", async () => {
+    await db.exec(`insert into auth.mfa_factors (user_id, status) values ('${ADMIN}', 'verified')`);
+    try {
+      await denied(as({ role: "authenticated", sub: ADMIN, aal: "aal1" }, (tx) => tx.query("select public.admin_list_coupons()")));
+      const ok = await as({ role: "authenticated", sub: ADMIN, aal: "aal2" }, (tx) => rows(tx, "select public.is_admin() as ok"));
+      expect(ok).toEqual([{ ok: true }]);
+    } finally {
+      await db.exec(`delete from auth.mfa_factors where user_id = '${ADMIN}'`);
+    }
+  });
+});
+
+describe("regras específicas", () => {
+  it("preços: todos leem, ninguém além do admin grava", async () => {
+    const r = await as({ role: "anon" }, (tx) => rows(tx, "select plan, period, cents from public.plan_prices order by 1, 2"));
+    expect(r).toHaveLength(3);
+    for (const role of ["anon", "authenticated"] as const)
+      await denied(as({ role, sub: A }, (tx) => tx.query("update public.plan_prices set cents = 1")));
+    const saved = await as({ role: "authenticated", sub: ADMIN }, async (tx) => {
+      await tx.query("select public.admin_set_plan_price('inteligencia', 'mensal', 4490)");
+      return rows(tx, "select cents from public.plan_prices where plan = 'inteligencia' and period = 'mensal'");
+    });
+    expect(saved).toEqual([{ cents: 4490 }]);
+  });
+
+  it("WhatsApp: a pessoa muda as preferências, mas não o telefone nem a verificação", async () => {
+    await db.exec(`insert into public.whatsapp_links (user_id, phone) values ('${A}', '5511999990000') on conflict do nothing`);
+    await denied(as({ role: "authenticated", sub: A }, (tx) => tx.query(`update public.whatsapp_links set phone = '5511888880000'`)));
+    await denied(as({ role: "authenticated", sub: A }, (tx) => tx.query(`update public.whatsapp_links set verified_at = now()`)));
+    const n = await as({ role: "authenticated", sub: A }, async (tx) => (await tx.query(`update public.whatsapp_links set discreet = true`)).affectedRows);
+    expect(n).toBe(1);
+  });
+
+  it("pagamento de indicado com cupom: comissão sobre o valor pago e um ciclo de desconto contado", async () => {
+    const result = await as({ role: "service_role" }, async (tx) => {
+      await tx.exec(`
+        insert into public.affiliates (id, name, email, status, code, commission_mode, commission_bp, commission_months)
+          values ('11111111-1111-4111-8111-111111111111', 'Afiliada', 'afiliada@teste.dev', 'aprovado', 'AFIL10', 'meses', 2000, 12);
+        insert into public.referrals (user_id, affiliate_id, code, source)
+          values ('${B}', '11111111-1111-4111-8111-111111111111', 'AFIL10', 'link');
+        insert into public.coupons (id, code, kind, value, duration, cycles)
+          values ('22222222-2222-4222-8222-222222222222', 'BEMVINDO', 'percent', 2000, 'meses', 2);
+        insert into public.subscriptions (user_id, preapproval_id, plan, period, status, coupon_id, amount_cents, full_cents, coupon_cycles)
+          values ('${B}', 'pre_b', 'inteligencia', 'mensal', 'authorized', '22222222-2222-4222-8222-222222222222', 3192, 3990, 2);
+      `);
+      await tx.query("select public.credit_payment('mp_1', $1, 'inteligencia', 'mensal', 3192)", [B]);
+      await tx.query("select public.credit_payment('mp_1', $1, 'inteligencia', 'mensal', 3192)", [B]); // repetido: não conta de novo
+      await tx.query("select public.credit_payment('mp_2', $1, 'inteligencia', 'mensal', 3192)", [B]);
+      return {
+        commissions: await rows(tx, "select payment_id, commission_cents from public.affiliate_commissions order by 1"),
+        sub: await rows(tx, `select cycles_used from public.subscriptions where user_id = '${B}'`),
+        uses: await rows(tx, "select count(*)::int as n from public.coupon_redemptions"),
+      };
+    });
+    expect(result.commissions).toEqual([
+      { payment_id: "mp_1", commission_cents: 638 },
+      { payment_id: "mp_2", commission_cents: 638 },
+    ]);
+    expect(result.sub).toEqual([{ cycles_used: 2 }]);
+    expect(result.uses).toEqual([{ n: 1 }]);
+  });
+
+  it("ninguém usa o próprio código de afiliado", async () => {
+    const r = await as({ role: "service_role" }, async (tx) => {
+      await tx.exec(`
+        insert into public.affiliates (name, email, status, code, commission_months) values ('Ana', 'a@teste.dev', 'aprovado', 'PROPRIO1', 12);
+      `);
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "authenticated", sub: A })]);
+      await tx.exec("set local role authenticated");
+      return rows(tx, "select public.claim_referral('PROPRIO1', 'cupom') as r");
+    });
+    expect((r[0] as { r: unknown }).r).toMatchObject({ ok: false, reason: "proprio codigo" });
+  });
+
+  it("com a cobrança ligada, só quem tem assinatura grava o próprio estado", async () => {
+    const blocked = await as({ role: "service_role" }, async (tx) => {
+      await tx.exec("update public.app_settings set billing_enforced = true");
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role: "authenticated", sub: A })]);
+      await tx.exec("set local role authenticated");
+      return tx.query(`update public.user_state set data = '{"y":1}' where user_id = $1`, [A]).then(
+        () => "gravou",
+        (e: Error) => e.message,
+      );
+    });
+    expect(blocked).toMatch(/row-level security|violates/i);
+  });
+});

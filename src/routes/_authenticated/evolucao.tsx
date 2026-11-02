@@ -30,7 +30,7 @@ import type { GoalTemplate } from "@/lib/calc/goals";
 import { lastMonths } from "@/lib/data/thread";
 import { memoBySlices } from "@/lib/data/memo-by-slices";
 import { contributionsByDestination, fiProgress, monthlyContributionSeries, projectMonthlyPath, selfComparison, wealthTimeline } from "@/lib/calc/progress";
-import { formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
+import { formatAxis, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { levelFromXp } from "@/lib/gamification/rules";
 import { unitProgress } from "@/lib/journey/journey";
 import { UNITS } from "@/content/journey";
@@ -342,7 +342,7 @@ function TimelineChart({ s, showValues }: { s: DemoState; showValues: boolean })
               tick={showValues ? AXIS_TICK : false}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : `${Math.round(v / 1e3)} mil`)}
+              tickFormatter={formatAxis}
             />
             {showValues && (
               <Tooltip

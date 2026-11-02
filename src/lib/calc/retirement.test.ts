@@ -8,7 +8,7 @@ const base: PlanInputs = {
 };
 const close = (got: number, exp: number, tol = 0.05) => expect(Math.abs(got - exp)).toBeLessThanOrEqual(tol);
 
-describe('motor de aposentadoria calc-1.0.0', () => {
+describe('motor de aposentadoria calc-1.1.0', () => {
   it('A: sem INSS', () => {
     const r = simulate(base, 'central', false);
     close(r.projectedWealthAtRetirement, 717704.54);

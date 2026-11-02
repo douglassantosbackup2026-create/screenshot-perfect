@@ -22,3 +22,6 @@ export const formatMoney = (cents: number) => brlExact.format(cents / 100 + 0);
 export const annualPerMonthCents = (annualCents: number) => Math.round(annualCents / 1200) * 100;
 /** Centavos em reais inteiros, sem casas: 3300 → "R$ 33". */
 export const formatReais = (cents: number) => brl.format(Math.round(cents / 100));
+/** Eixo de gráfico de patrimônio, em reais: 1_800_000 → "1,8 mi", 718_000 → "718 mil", 500 → "500". */
+export const formatAxis = (v: number) =>
+  v >= 1e6 ? `${(v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi` : v >= 1e3 ? `${Math.round(v / 1e3)} mil` : String(Math.round(v));

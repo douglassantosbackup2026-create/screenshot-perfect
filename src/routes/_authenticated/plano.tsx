@@ -18,7 +18,7 @@ import { PensionTaxCard } from "@/components/plan/PensionTax";
 import { ENGINE_VERSION, projectSeries, sensitivity, simulateAll, validateInputs, type PlanInputs, type ScenarioKey } from "@/lib/calc/retirement";
 import { summarizeAssets } from "@/lib/calc/assets";
 import { sinceLastReview } from "@/lib/data/selectors";
-import { formatAge, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
+import { formatAge, formatAxis, formatMonthly, formatPercent, formatWealth } from "@/lib/calc/format";
 import { demo, inputsFromProfile, planAgeDays, useDemo, type SnapshotReason } from "@/lib/data/demo-store";
 import { formatDate, INSS_HELP, REASON_LABEL, SIMULATION_FOOTER } from "@/lib/labels";
 import { CardBoundary } from "@/components/ErrorBoundary";
@@ -177,10 +177,12 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
                     <XAxis dataKey="age" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                     <YAxis
                       width={48}
+                      // O alvo costuma passar do pico projetado: o eixo vai até ele para o ponto da legenda aparecer.
+                      domain={[0, (dataMax: number) => Math.max(dataMax, r.targetWealth)]}
                       tick={AXIS_TICK}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)} mi` : `${Math.round(v / 1e3)} mil`)}
+                      tickFormatter={formatAxis}
                     />
                     <Tooltip formatter={(v: number) => [formatWealth(v), "Patrimônio"]} labelFormatter={(a) => `${a} anos`} contentStyle={TOOLTIP_STYLE} />
                     <Area type="monotone" dataKey="wealth" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.12} strokeWidth={2} isAnimationActive={false} />
@@ -243,7 +245,7 @@ function PlanView({ initial, isNew }: { initial: PlanInputs; isNew: boolean }) {
             )}
             <CardBoundary>
               <GoalSeekCard
-                inputs={draft}
+                inputs={calc}
                 scenario={scenario}
                 includeInss={includeInss}
                 onUseAge={(age) => {
