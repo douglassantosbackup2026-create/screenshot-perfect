@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { pageHead } from "@/lib/seo";
 import { requireModule } from "@/lib/admin/modules";
+import { suggestCode } from "@/lib/affiliates/ref";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,18 +226,6 @@ function AffiliateCard({ a, onEdit, onChanged }: { a: Affiliate; onEdit: () => v
       </div>
     </li>
   );
-}
-
-/** Código sugerido: primeiro nome sem acento + 2 dígitos. */
-function suggestCode(name: string): string {
-  const base = name
-    .normalize("NFD")
-    .replace(/[^A-Za-z0-9 ]/g, "")
-    .trim()
-    .split(/\s+/)[0]
-    ?.toUpperCase()
-    .slice(0, 12);
-  return `${base && base.length >= 2 ? base : "AFIL"}${Math.floor(10 + Math.random() * 90)}`;
 }
 
 function ReviewDialog({ affiliate: a, onClose, onSaved }: { affiliate: Affiliate; onClose: () => void; onSaved: () => void }) {

@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminResyncSubscription, adminSubscriptionLink } from "@/lib/admin/users.functions";
 import { adminDeleteUser } from "@/lib/admin/panel.functions";
+import { NewUserDialog } from "@/components/admin/NewUserDialog";
+import { usePlanPrices } from "@/lib/billing/prices";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAdminData, useCanWrite, useStaff } from "@/components/admin/hooks";
 import { TICKET_KIND, TICKET_STATUS, type TicketKind, type TicketStatus } from "@/lib/support/labels";
 import { formatDate } from "@/lib/labels";
@@ -41,6 +44,10 @@ const SUB_LABEL: Record<string, string> = { pending: "Aguardando autorização",
 const day = (iso: string | null) => (iso ? formatDate(iso) : "—");
 
 function AdminUsers() {
+  // Criar conta: só super admin (pode dar perfil de equipe, cortesia e afiliado).
+  const isSuper = useStaff().includes("super_admin");
+  const [creating, setCreating] = useState(false);
+  const { prices } = usePlanPrices();
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<UserRow[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,8 +70,19 @@ function AdminUsers() {
 
   return (
     <div className="w-full max-w-3xl">
-      <h1>Usuários</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Acesso só para administradores. A busca mostra até 20 contas.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1>Usuários</h1>
+        {isSuper && <Button onClick={() => setCreating(true)}>Novo cadastro</Button>}
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">A busca mostra até 20 contas.</p>
+      {isSuper && (
+        <NewUserDialog
+          open={creating}
+          onClose={() => setCreating(false)}
+          onCreated={() => setRows(null)}
+          monthlyPriceCents={prices.inteligencia.mensal ?? 0}
+        />
+      )}
       <form onSubmit={search} className="mt-6 flex gap-2">
         <Input aria-label="E-mail ou id da conta" placeholder="E-mail ou id da conta" value={query} onChange={(e) => setQuery(e.target.value)} />
         <Button type="submit" disabled={busy}>
@@ -218,6 +236,45 @@ const FEATURE_LABEL: Record<string, string> = {
   carteira: "Carteira",
 };
 
+/** Libera o plano sem pagamento por alguns meses (super admin e financeiro; auditado no banco). */
+function CourtesyForm({ userId }: { userId: string }) {
+  const [months, setMonths] = useState("3");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function grant() {
+    setBusy(true);
+    const { data, error } = await supabase.rpc("admin_grant_courtesy", { p_user: userId, p_months: Number(months), p_reason: reason.trim() });
+    setBusy(false);
+    if (error) return void toast.error(errMsg(error));
+    toast.success(`Cortesia aplicada: acesso até ${formatDate(String(data))}.`);
+    setReason("");
+  }
+  return (
+    <div className="border-t border-border pt-3">
+      <p className="font-semibold">Dar cortesia</p>
+      <p className="text-xs text-muted-foreground">Plano Inteligência sem pagamento; soma ao acesso que a pessoa já tem.</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Select value={months} onValueChange={setMonths}>
+          <SelectTrigger className="h-11 w-32 rounded-xl bg-card" aria-label="Meses de cortesia">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {["1", "3", "6", "12"].map((m) => (
+              <SelectItem key={m} value={m}>
+                {m} {m === "1" ? "mês" : "meses"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input className="h-11 min-w-0 flex-1" maxLength={200} placeholder="Motivo" aria-label="Motivo da cortesia" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <Button variant="outline" disabled={busy} onClick={grant}>
+          Aplicar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Ficha operacional: o que a pessoa usa (sim/não), sem nenhum valor financeiro. A consulta fica na auditoria. */
 function UserSheet({ userId, email, onDeleted }: { userId: string; email: string; onDeleted: () => void }) {
   const staff = useStaff();
@@ -288,6 +345,7 @@ function UserSheet({ userId, email, onDeleted }: { userId: string; email: string
           <p className="text-muted-foreground">Nenhum chamado.</p>
         )}
       </div>
+      {(staff.includes("super_admin") || staff.includes("financeiro")) && <CourtesyForm userId={userId} />}
       {staff.includes("super_admin") && (
         <div className="border-t border-border pt-3">
           <p className="font-semibold text-destructive">Excluir conta a pedido da pessoa</p>

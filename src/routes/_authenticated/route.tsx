@@ -58,6 +58,12 @@ export const Route = createFileRoute("/_authenticated")({
     // então nada é carregado (nem gravado) antes do código.
     if (await needsMfaStep()) throw redirect({ to: "/verificar", search: { redirect: location.pathname } });
     const s = await attachUser(userId);
+    // Conta criada pelo painel com senha temporária: só o Perfil abre até a pessoa definir a própria senha.
+    const { data: sess } = await supabase.auth.getSession();
+    if (sess.session?.user.user_metadata?.["must_change_password"] === true) {
+      if (!location.pathname.startsWith("/perfil")) throw redirect({ to: "/perfil", hash: "senha" });
+      return;
+    }
     // Não existe plano grátis: sem assinatura, só a Assinatura e o Perfil. Admin entra sempre.
     const access = await loadAccess(userId);
     if (!access.active) {

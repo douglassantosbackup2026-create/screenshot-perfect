@@ -77,6 +77,11 @@ function Profile() {
     void verifiedTotpId().then((id) => setWithCode(!!id), () => setWithCode(false));
   }, [delOpen]);
   const [admin, setAdmin] = useState(false);
+  // Conta criada pelo painel: precisa trocar a senha temporária antes de usar o app.
+  const [mustChange, setMustChange] = useState(false);
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => setMustChange(data.session?.user.user_metadata?.["must_change_password"] === true));
+  }, []);
   useEffect(() => {
     // Qualquer perfil da equipe (ou segundo fator a confirmar) vê o link do painel.
     void staffStatus().then((s) => setAdmin(s.roles.length > 0 || s.mfaNeeded));
@@ -117,6 +122,21 @@ function Profile() {
   return (
     <main className="mx-auto w-full max-w-[480px] px-5 pb-32 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <h1>{s.profile.displayName || "Perfil"}</h1>
+      {mustChange && (
+        <section id="senha" className="mt-6 rounded-2xl bg-card p-5 shadow-card ring-1 ring-primary" aria-label="Defina sua senha">
+          <h2 className="text-lg">Defina uma senha sua para continuar</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sua conta foi criada pela equipe com uma senha temporária. Troque agora: depois disso, o app inteiro fica liberado.
+          </p>
+          <ChangePassword
+            required
+            onDone={() => {
+              setMustChange(false);
+              navigate({ to: "/hoje" });
+            }}
+          />
+        </section>
+      )}
 
       {JOURNEY_ENABLED && (
       <>

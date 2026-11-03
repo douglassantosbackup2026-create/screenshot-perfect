@@ -110,3 +110,57 @@ test("contato público abre sem conta", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Fale com a equipe" })).toBeVisible();
   await expect(page.getByLabel("E-mail")).toBeVisible();
 });
+
+test("novo cadastro: só o super admin vê; senha temporária gerada e validada; cortesia ou link, não os dois", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, makeSeed(), { admin: true });
+  await page.goto("/admin/usuarios");
+  await page.getByRole("button", { name: "Novo cadastro" }).click();
+  const dialog = page.getByRole("dialog", { name: "Novo cadastro" });
+  const pass = dialog.getByLabel("Senha temporária");
+  const first = await pass.inputValue();
+  expect(first).toMatch(/^(?=.*[A-Za-z])(?=.*\d).{14}$/);
+  await dialog.getByRole("button", { name: "Gerar outra senha" }).click();
+  await expect(pass).not.toHaveValue(first);
+
+  // Acesso ao plano: escolher um desmarca o outro.
+  const access = dialog.getByRole("radiogroup", { name: "Acesso ao plano" });
+  await access.getByRole("radio", { name: "Cortesia" }).click();
+  await access.getByRole("radio", { name: "Link de assinatura" }).click();
+  await expect(access.getByRole("radio", { name: "Cortesia" })).toHaveAttribute("aria-checked", "false");
+  await expect(access.getByRole("radio", { name: "Link de assinatura" })).toHaveAttribute("aria-checked", "true");
+
+  // Validação antes de chamar o servidor.
+  await dialog.getByLabel("Nome").fill("Maria Souza");
+  await dialog.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page.getByText("Informe um e-mail válido.")).toBeVisible();
+  await dialog.getByLabel("E-mail").fill("maria@exemplo.com");
+  await pass.fill("fraca");
+  await dialog.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page.getByText("Use pelo menos 8 caracteres.")).toBeVisible();
+
+  // Afiliado: código sugerido pelo nome e prévia da comissão.
+  await dialog.getByLabel("Já cadastrar como afiliado aprovado").check();
+  await expect(dialog.getByLabel("Código")).toHaveAttribute("placeholder", /^MARIA\d{2}$/);
+  await expect(dialog.getByText(/de cada pagamento/)).toBeVisible();
+});
+
+test("financeiro vê usuários, mas não o novo cadastro", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, makeSeed(), { staff: ["financeiro"] });
+  await page.goto("/admin/usuarios");
+  await expect(page.getByRole("heading", { name: "Usuários" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Novo cadastro" })).toHaveCount(0);
+});
+
+test("conta criada pelo painel: só o Perfil abre até trocar a senha temporária", async ({ page }) => {
+  await signIn(page, makeSeed(), { userMetadata: { must_change_password: true } });
+  await page.goto("/hoje");
+  await expect(page).toHaveURL(/\/perfil/);
+  const box = page.getByRole("region", { name: "Defina sua senha" });
+  await expect(box).toBeVisible();
+  await expect(box.getByLabel("Senha temporária")).toBeVisible();
+  await expect(box.getByRole("button", { name: "Cancelar" })).toHaveCount(0);
+  await page.goto("/plano");
+  await expect(page).toHaveURL(/\/perfil/);
+});

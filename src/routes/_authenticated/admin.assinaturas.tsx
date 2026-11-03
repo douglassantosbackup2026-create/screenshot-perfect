@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/admin/assinaturas")({
 type BillingData = {
   by_plan: { plan: string; period: string; status: string; n: number }[];
   active_subscribers: number;
+  courtesy_active?: number;
   registered_without_subscription: number;
   mrr_cents: number;
   revenue_cents: number;
@@ -87,7 +88,7 @@ function Billing() {
       ) : (
         <>
           <StatGrid>
-            <Stat label="Assinantes ativos" value={b.active_subscribers.toLocaleString("pt-BR")} note={`${b.registered_without_subscription.toLocaleString("pt-BR")} cadastrados sem assinatura`} />
+            <Stat label="Assinantes ativos" value={b.active_subscribers.toLocaleString("pt-BR")} note={`${b.courtesy_active ? `+${b.courtesy_active} com cortesia · ` : ""}${b.registered_without_subscription.toLocaleString("pt-BR")} cadastrados sem assinatura`} />
             <Stat label="Receita recorrente (MRR)" value={formatMoney(b.mrr_cents)} note="Anuais divididos por 12" />
             <Stat label="Recebido no período" value={formatMoney(b.revenue_cents)} note={`${b.first_payments} primeiro(s) pagamento(s) · ${b.renewals} renovação(ões)`} />
             <Stat label="Cancelamentos" value={String(b.cancellations)} note={`Churn: ${formatRate(churn(b.cancellations, b.active_at_start))} dos ativos no início`} />

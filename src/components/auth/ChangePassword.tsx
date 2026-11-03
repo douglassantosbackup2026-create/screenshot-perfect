@@ -5,8 +5,12 @@ import { Field } from "@/components/auth/AuthShell";
 import { supabase } from "@/integrations/supabase/client";
 import { authErrorMessage, passwordProblems } from "@/lib/auth/password";
 
-export function ChangePassword() {
-  const [open, setOpen] = useState(false);
+/**
+ * Trocar senha (pede a atual). `required`: primeiro acesso de conta criada pelo painel com senha temporária;
+ * o formulário já vem aberto, sem "Cancelar", e ao salvar tira a marca de troca obrigatória.
+ */
+export function ChangePassword({ required = false, onDone }: { required?: boolean; onDone?: () => void }) {
+  const [open, setOpen] = useState(required);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,8 +23,10 @@ export function ChangePassword() {
     const { error } = await supabase.auth.updateUser({ password: next, current_password: current });
     setBusy(false);
     if (error) { toast.error(authErrorMessage(error.message)); return; }
+    if (required) await supabase.auth.updateUser({ data: { must_change_password: false } });
     toast.success("Senha alterada.");
-    setOpen(false); setCurrent(""); setNext("");
+    setOpen(required); setCurrent(""); setNext("");
+    onDone?.();
   }
 
   if (!open)
@@ -31,11 +37,11 @@ export function ChangePassword() {
     );
   return (
     <form className="space-y-3 py-3" onSubmit={submit}>
-      <Field id="cur-pass" label="Senha atual" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+      <Field id="cur-pass" label={required ? "Senha temporária" : "Senha atual"} type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
       <Field id="new-pass" label="Nova senha" type="password" required autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
       <div className="flex gap-2">
         <Button type="submit" disabled={busy}>{busy ? "Salvando…" : "Salvar"}</Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+        {!required && <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>}
       </div>
     </form>
   );

@@ -25,14 +25,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 const ADMIN_RPC: Record<string, (db: FakeDb) => unknown> = {
   admin_overview: () => ({
     visits: 1200, visits_prev: 1000, sim_started: 300, sim_completed: 210, sim_completed_prev: 180, unique_visitors: 400, sessions: 520,
-    leads: 40, leads_prev: 35, signups: 25, signups_prev: 20, users_total: 310, active_subscribers: 120, mrr_cents: 478800,
+    leads: 40, leads_prev: 35, signups: 25, signups_prev: 20, users_total: 310, active_subscribers: 120, courtesy_active: 4, mrr_cents: 478800,
     new_subscriptions: 12, new_subscriptions_prev: 9, cancellations: 2, revenue_cents: 51870, payments_refused: 1, active_7d: 80, active_30d: 150,
     incidents_open: 1, tickets_open: 2, tickets_waiting_24h: 1,
     funnel: { sim_completed: 210, leads: 40, signups: 25, subscriptions: 12 },
     series: [{ day: today(), visits: 40, sims: 7, signups: 1, leads: 2 }],
   }),
   admin_billing: () => ({
-    by_plan: [{ plan: "inteligencia", period: "mensal", status: "authorized", n: 100 }], active_subscribers: 120, registered_without_subscription: 190,
+    by_plan: [{ plan: "inteligencia", period: "mensal", status: "authorized", n: 100 }], active_subscribers: 120, courtesy_active: 4, registered_without_subscription: 190,
     mrr_cents: 478800, revenue_cents: 51870, payments_by_status: { approved: 13, rejected: 1 }, renewals: 10, first_payments: 3, cancellations: 2, active_at_start: 110,
     recent_payments: [{ id: "mp_1", email: "cliente@exemplo.com", status: "approved", amount_cents: 3990, plan: "inteligencia", period: "mensal", at: new Date().toISOString() }],
   }),
@@ -65,7 +65,7 @@ const json = (route: Route, body: unknown, status = 200) =>
 export async function signIn(
   page: Page,
   data: unknown | null,
-  opts: { admin?: boolean; entitlement?: Entitlement | null; staff?: string[] } = {},
+  opts: { admin?: boolean; entitlement?: Entitlement | null; staff?: string[]; userMetadata?: Record<string, unknown> } = {},
 ): Promise<FakeDb> {
   const db: FakeDb = {
     row: data ? { user_id: USER.id, data, updated_at: stamp() } : null,
@@ -77,13 +77,14 @@ export async function signIn(
     tickets: [],
     messages: [],
   };
+  const user = { ...USER, user_metadata: opts.userMetadata ?? {} };
   const session = {
     access_token: "e2e-token",
     token_type: "bearer",
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,
     refresh_token: "e2e-refresh",
-    user: USER,
+    user,
   };
   await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [`sb-${REF}-auth-token`, JSON.stringify(session)]);
 
@@ -91,7 +92,7 @@ export async function signIn(
     const req = route.request();
     const url = new URL(req.url());
     const path = url.pathname;
-    if (path === "/auth/v1/user") return json(route, USER);
+    if (path === "/auth/v1/user") return json(route, user);
     if (path === "/auth/v1/logout") return route.fulfill({ status: 204 });
     if (path === "/rest/v1/rpc/is_admin") return json(route, db.admin);
     if (path === "/rest/v1/rpc/has_admin_role") return json(route, db.admin);

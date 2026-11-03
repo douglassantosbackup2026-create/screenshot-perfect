@@ -16,6 +16,18 @@ const safe = <T,>(fn: () => T, fallback: T): T => {
   }
 };
 
+/** Código de afiliado sugerido: primeiro nome sem acento + 2 dígitos (ex.: "MARIA42"). */
+export function suggestCode(name: string): string {
+  const base = name
+    .normalize("NFD")
+    .replace(/[^A-Za-z0-9 ]/g, "")
+    .trim()
+    .split(/\s+/)[0]
+    ?.toUpperCase()
+    .slice(0, 12);
+  return `${base && base.length >= 2 ? base : "AFIL"}${Math.floor(10 + Math.random() * 90)}`;
+}
+
 export function normalizeRef(code: string): string | null {
   const c = code.trim().toUpperCase();
   return /^[A-Z0-9]{4,20}$/.test(c) ? c : null;

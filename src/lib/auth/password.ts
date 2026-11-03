@@ -9,6 +9,21 @@ export function passwordProblems(p: string): string[] {
 
 export const isStrongPassword = (p: string) => passwordProblems(p).length === 0;
 
+// Sem letras e números parecidos (0/O, 1/l/I), para ditar ou copiar sem erro.
+const LETTERS = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+const DIGITS = "23456789";
+
+/** Senha temporária aleatória (cadastro pelo painel): 14 caracteres, sempre com letra e número. */
+export function generatePassword(length = 14): string {
+  const all = LETTERS + DIGITS;
+  const bytes = crypto.getRandomValues(new Uint32Array(length));
+  const chars = Array.from(bytes, (b) => all[b % all.length]!);
+  // Garante a regra: a primeira posição é letra e a segunda é número.
+  chars[0] = LETTERS[bytes[0]! % LETTERS.length]!;
+  chars[1] = DIGITS[bytes[1]! % DIGITS.length]!;
+  return chars.join("");
+}
+
 /**
  * Só aceita caminhos do próprio app. O navegador trata "\" como "/", então "/\mal.com" viraria
  * "//mal.com" (outro site); por isso a barra invertida e caracteres de controle ficam de fora.

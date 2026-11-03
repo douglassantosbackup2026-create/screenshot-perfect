@@ -458,3 +458,43 @@ describe("painel administrativo: métricas, atendimento e incidentes", () => {
     ).rejects.toThrow(/check/);
   });
 });
+
+describe("cadastro pelo painel: acesso de cortesia", () => {
+  it("só financeiro e super admin dão cortesia", async () => {
+    for (const who of [MKT, ANA, SUP, A]) await denied(call(who, `select public.admin_grant_courtesy('${B}', 3, 'teste')`));
+    await allowed(FIN, `select public.admin_grant_courtesy('${B}', 3, 'parceiro')`);
+  });
+
+  it("libera o plano, registra quem deu e fora da faixa é recusado", async () => {
+    await as({ role: "authenticated", sub: ADMIN }, async (tx) => {
+      await tx.query(`select public.admin_grant_courtesy('${A}', 6, 'imprensa')`);
+      await tx.exec("set local role service_role"); // só o servidor lê as tabelas internas
+      const e = await rows(tx, `select plan, valid_until > now() + interval '5 months' as ok from public.entitlements where user_id = '${A}'`);
+      expect(e).toEqual([{ plan: "inteligencia", ok: true }]);
+      const g = await rows(tx, `select months, reason, granted_by from public.courtesy_grants where user_id = '${A}'`);
+      expect(g).toEqual([{ months: 6, reason: "imprensa", granted_by: ADMIN }]);
+    });
+    await expect(call(ADMIN, `select public.admin_grant_courtesy('${A}', 0, '')`)).rejects.toThrow(/1 a 24/);
+    await expect(call(ADMIN, `select public.admin_grant_courtesy('${A}', 25, '')`)).rejects.toThrow(/1 a 24/);
+  });
+
+  it("cortesia não conta como assinante pagante na visão geral nem no faturamento", async () => {
+    const r = await as({ role: "authenticated", sub: ADMIN }, async (tx) => {
+      // B paga; A só tem cortesia (dados montados como servidor; consultas como admin).
+      await tx.exec("set local role service_role");
+      await tx.exec(`insert into public.entitlements (user_id, plan, valid_until) values ('${B}', 'inteligencia', now() + interval '20 days')
+                     on conflict (user_id) do update set valid_until = excluded.valid_until`);
+      await tx.exec(`delete from public.courtesy_grants where user_id = '${B}'`);
+      await tx.exec("set local role authenticated");
+      await tx.query(`select public.admin_grant_courtesy('${A}', 3, 'teste')`);
+      return {
+        o: (await rows(tx, "select public.admin_overview(current_date - 6, current_date) as o"))[0] as { o: Record<string, number> },
+        b: (await rows(tx, "select public.admin_billing(current_date - 6, current_date) as b"))[0] as { b: Record<string, number> },
+      };
+    });
+    expect(Number(r.o.o["active_subscribers"])).toBe(1);
+    expect(Number(r.o.o["courtesy_active"])).toBe(1);
+    expect(Number(r.b.b["active_subscribers"])).toBe(1);
+    expect(Number(r.b.b["courtesy_active"])).toBe(1);
+  });
+});

@@ -2616,6 +2616,7 @@ export type Database = {
       }
       my_affiliate: { Args: never; Returns: Json }
       my_staff_status: { Args: never; Returns: Json }
+      admin_grant_courtesy: { Args: { p_months: number; p_reason?: string; p_user: string }; Returns: string }
       open_ticket: {
         Args: { p_body: string; p_kind: string; p_subject: string }
         Returns: string

@@ -1,4 +1,4 @@
-// Ações do painel que precisam do servidor: conciliação com o Mercado Pago, estado das integrações e exclusão
+// Ações do painel que precisam do servidor: conciliação com o Mercado Pago, estado das integrações, cadastro e exclusão
 // de conta a pedido. Cada uma confere o perfil no banco (staff_has) com a sessão de quem chama antes de usar o
 // service role, e fica no audit_log.
 import { createServerFn } from "@tanstack/react-start";
@@ -8,6 +8,9 @@ import { mpRequest, mpToken } from "@/lib/billing/mercadopago";
 import { toCents } from "@/lib/billing/catalog";
 import { allow, TOO_MANY } from "@/lib/security/rate-limit.server";
 import { reconcile, type ReconcileIssue } from "./reconcile";
+import { getRequest } from "@tanstack/react-start/server";
+import { passwordProblems } from "@/lib/auth/password";
+import { openSubscription } from "@/lib/billing/open-subscription";
 
 const NO_ACCESS = "Seu perfil não tem acesso a esta ação." as const;
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -115,4 +118,108 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     const del = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (del.error) return { error: "Não foi possível excluir agora. Tente de novo." };
     return { error: null };
+  });
+
+const STAFF_ROLES = ["super_admin", "financeiro", "marketing", "suporte", "analista"] as const;
+
+export const CreateUserInput = z
+  .object({
+    name: z.string().trim().min(2, "Informe o nome.").max(120),
+    email: z.string().trim().toLowerCase().email("E-mail inválido.").max(254),
+    password: z.string().min(8).max(72).refine((p) => passwordProblems(p).length === 0, "Senha fraca: use 8 caracteres com letra e número."),
+    staffRole: z.enum(STAFF_ROLES).nullable(),
+    courtesyMonths: z.number().int().min(1).max(24).nullable(),
+    courtesyReason: z.string().trim().max(200).default(""),
+    subscription: z.enum(["mensal", "anual"]).nullable(),
+    affiliate: z
+      .object({
+        code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/, "Código de afiliado: 4 a 20 letras ou números."),
+        mode: z.enum(["primeiro", "meses", "sempre"]),
+        bp: z.number().int().min(0).max(10000),
+        months: z.number().int().min(1).max(120).nullable(),
+      })
+      .nullable(),
+  })
+  .refine((d) => !(d.courtesyMonths && d.subscription), "Escolha cortesia ou link de assinatura, não os dois.");
+
+/**
+ * Cadastro feito pela equipe (só super admin): cria a conta já confirmada, com senha temporária que a pessoa troca
+ * no primeiro acesso, e aplica as opções escolhidas. A conta é o essencial; uma opção que falha (ex.: código de
+ * afiliado em uso) vira aviso em vez de desfazer o cadastro. A senha nunca vai para o log nem para a auditoria.
+ */
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => CreateUserInput.parse(d))
+  .handler(async ({ data, context }): Promise<{ error: string | null; userId: string | null; link: string | null; warnings: string[] }> => {
+    const fail = (error: string) => ({ error, userId: null, link: null, warnings: [] });
+    const { data: ok } = await context.supabase.rpc("staff_has", { p_roles: ["super_admin"] });
+    if (ok !== true) return fail("Só o super admin cria contas.");
+    if (!(await allow([{ key: `admin:create-user:${context.userId}`, limit: 30, windowSeconds: 3600 }]))) return fail(TOO_MANY);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const created = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { name: data.name, display_name: data.name, must_change_password: true },
+    });
+    if (created.error || !created.data.user) {
+      const msg = created.error?.message.toLowerCase() ?? "";
+      return fail(msg.includes("already") || msg.includes("exists") ? "Já existe uma conta com este e-mail." : "Não foi possível criar a conta agora.");
+    }
+    const userId = created.data.user.id;
+    const warnings: string[] = [];
+    let link: string | null = null;
+
+    if (data.staffRole) {
+      const r = await supabaseAdmin.from("staff_roles").insert({ user_id: userId, role: data.staffRole, granted_by: context.userId });
+      if (r.error) warnings.push("O perfil da equipe não foi concedido. Conceda em Segurança.");
+    }
+    if (data.courtesyMonths) {
+      // Pela sessão do admin: vale a checagem de perfil e a auditoria do próprio banco.
+      const r = await context.supabase.rpc("admin_grant_courtesy", { p_user: userId, p_months: data.courtesyMonths, p_reason: data.courtesyReason || "cadastro pelo painel" });
+      if (r.error) warnings.push("A cortesia não foi aplicada. Aplique pela ficha do usuário.");
+    }
+    if (data.affiliate) {
+      const a = data.affiliate;
+      const r = await supabaseAdmin.from("affiliates").insert({
+        name: data.name,
+        email: data.email,
+        status: "aprovado",
+        code: a.code,
+        commission_mode: a.mode,
+        commission_bp: a.bp,
+        commission_months: a.mode === "meses" ? (a.months ?? 12) : null,
+        reviewed_by: context.userId,
+        reviewed_at: new Date().toISOString(),
+      });
+      if (r.error) warnings.push(r.error.code === "23505" ? "Afiliado não criado: código ou e-mail já usado por outro afiliado." : "Afiliado não criado. Cadastre em Afiliados.");
+    }
+    if (data.subscription) {
+      const opened = await openSubscription({
+        userId,
+        email: data.email,
+        plan: "inteligencia",
+        period: data.subscription,
+        origin: new URL(getRequest().url).origin,
+        existing: null,
+      });
+      if (opened.url) link = opened.url;
+      else warnings.push(`Link de assinatura não gerado: ${opened.error}`);
+    }
+
+    await supabaseAdmin.rpc("audit", {
+      p_action: "admin_user_created",
+      p_target: userId,
+      p_details: {
+        admin: context.userId,
+        staff_role: data.staffRole,
+        courtesy_months: data.courtesyMonths,
+        subscription: data.subscription,
+        affiliate: data.affiliate ? data.affiliate.code : null,
+        warnings,
+      },
+      p_severity: "high",
+    });
+    return { error: null, userId, link, warnings };
   });

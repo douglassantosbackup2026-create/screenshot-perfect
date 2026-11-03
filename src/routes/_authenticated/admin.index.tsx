@@ -29,6 +29,7 @@ type Overview = {
   signups_prev: number;
   users_total: number;
   active_subscribers: number;
+  courtesy_active?: number;
   mrr_cents: number;
   new_subscriptions: number;
   new_subscriptions_prev: number;
@@ -91,7 +92,7 @@ function Overview() {
           <StatGrid>
             <Stat label="Visitas" value={n(o.visits)} delta={delta(o.visits, o.visits_prev)} note={ANON} />
             <Stat label="Cadastros" value={n(o.signups)} delta={delta(o.signups, o.signups_prev)} note={`${n(o.users_total)} contas no total`} />
-            <Stat label="Assinantes ativos" value={n(o.active_subscribers)} note={`${n(o.new_subscriptions)} novos · ${n(o.cancellations)} cancelados no período`} />
+            <Stat label="Assinantes ativos" value={n(o.active_subscribers)} note={`${n(o.new_subscriptions)} novos · ${n(o.cancellations)} cancelados no período${o.courtesy_active ? ` · +${n(o.courtesy_active)} com cortesia` : ""}`} />
             <Stat label="Receita recorrente (MRR)" value={formatMoney(o.mrr_cents)} note={`Recebido no período: ${formatMoney(o.revenue_cents)}`} />
           </StatGrid>
           <Card title="Visitas por dia" note={ANON}>
