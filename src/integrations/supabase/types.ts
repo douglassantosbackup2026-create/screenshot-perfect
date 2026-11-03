@@ -737,6 +737,36 @@ export type Database = {
           },
         ]
       }
+      courtesy_grants: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          months: number
+          reason: string
+          user_id: string
+          valid_until: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          months: number
+          reason?: string
+          user_id: string
+          valid_until: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          months?: number
+          reason?: string
+          user_id?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
       daily_mission_completions: {
         Row: {
           completed_at: string
@@ -2332,6 +2362,10 @@ export type Database = {
       }
       _client_ip: { Args: never; Returns: string }
       _daily_mission_kind: { Args: { p_user: string }; Returns: string }
+      _is_courtesy: {
+        Args: { p_user: string; p_valid_until: string }
+        Returns: boolean
+      }
       _is_super: { Args: never; Returns: boolean }
       _k: { Args: { p: number }; Returns: number }
       _legacy_price: {
@@ -2389,6 +2423,10 @@ export type Database = {
           source: string
           step: string
         }[]
+      }
+      admin_grant_courtesy: {
+        Args: { p_months: number; p_reason?: string; p_user: string }
+        Returns: string
       }
       admin_incidents: { Args: { p_status?: string }; Returns: Json }
       admin_leads: {
