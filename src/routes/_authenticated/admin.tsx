@@ -69,7 +69,7 @@ function AdminLayout() {
       {/* No celular, as seções viram um seletor no topo. */}
       <div className="mb-6 lg:hidden">
         <p className="text-xs text-muted-foreground">Painel administrativo · {staff.map((r) => ROLE_LABEL[r]).join(" · ")}</p>
-        <Select value={current?.path} onValueChange={(v) => navigate({ to: v })}>
+        <Select value={current?.path ?? ""} onValueChange={(v) => navigate({ to: v })}>
           <SelectTrigger className="mt-1 h-11 rounded-xl bg-card" aria-label="Seção do painel">
             <SelectValue />
           </SelectTrigger>
