@@ -9,7 +9,7 @@ import { safePath } from "@/lib/auth/password";
 import { needsMfaStep, verifiedTotpId, verifyTotp } from "@/lib/auth/mfa";
 import { pageHead } from "@/lib/seo";
 
-// Segunda etapa do login: quem ativou a verificação em duas etapas cai aqui depois da senha (ou do Google).
+// Segunda etapa do login: quem ativou a verificação em duas etapas cai aqui depois da senha.
 export const Route = createFileRoute("/verificar")({
   ssr: false,
   validateSearch: z.object({ redirect: z.string().optional() }),

@@ -12,7 +12,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "O que guardamos",
     body: [
-      "Sua conta: e-mail e senha (ou o login do Google). A senha fica com o serviço de autenticação; nós não a vemos.",
+      "Sua conta: e-mail e senha. A senha fica com o serviço de autenticação; nós não a vemos.",
       "O que você informa no app: perfil, plano de aposentadoria, aportes, lançamentos, contas, orçamento, patrimônio, metas e preferências.",
       "Na calculadora, o e-mail só é guardado se você pedir para receber novidades e marcar o consentimento.",
     ],
