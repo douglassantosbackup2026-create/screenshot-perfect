@@ -114,7 +114,7 @@ function Profile() {
     const blob = new Blob([JSON.stringify(demo.exportData(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "meus-dados-mitikos.json";
+    a.download = "meus-dados-planeja-facil.json";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 0);
   }

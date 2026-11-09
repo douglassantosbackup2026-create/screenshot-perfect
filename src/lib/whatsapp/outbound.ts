@@ -1,4 +1,4 @@
-// O que o Mitikos responde no WhatsApp, e a tradução para o formato da Cloud API.
+// O que o Planeja Fácil responde no WhatsApp, e a tradução para o formato da Cloud API.
 // Limites da Meta: até 3 botões (título com 20 caracteres), lista com até 10 linhas (título com 24).
 
 export type Outbound =
