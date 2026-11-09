@@ -256,6 +256,13 @@ describe("regras específicas", () => {
     expect((r[0] as { r: unknown }).r).toMatchObject({ ok: false, reason: "proprio codigo" });
   });
 
+  it("inscrição pública de afiliado é salva, com comissão padrão de 12 meses", async () => {
+    const r = await as({ role: "service_role" }, (tx) =>
+      rows(tx, "insert into public.affiliates (name, email) values ('Thais', 't@teste.dev') returning commission_mode, commission_months"),
+    );
+    expect(r).toEqual([{ commission_mode: "meses", commission_months: 12 }]);
+  });
+
   it("com a cobrança ligada, só quem tem assinatura grava o próprio estado", async () => {
     const blocked = await as({ role: "service_role" }, async (tx) => {
       await tx.exec("update public.app_settings set billing_enforced = true");

@@ -1,0 +1,2 @@
+alter table public.affiliates alter column commission_months set default 12;
+delete from public.rate_limits where key in ('affiliate:apply:email:tfsaraujo@hotmail.com','affiliate:apply:ip:138.117.63.154');
