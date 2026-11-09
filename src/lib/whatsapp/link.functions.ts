@@ -1,4 +1,4 @@
-// Conectar o WhatsApp a partir do Perfil: gera um código curto que a pessoa manda para o número do Mitikos.
+// Conectar o WhatsApp a partir do Perfil: gera um código curto que a pessoa manda para o número do Planeja Fácil.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { allow, TOO_MANY } from "@/lib/security/rate-limit.server";
@@ -38,6 +38,6 @@ export const createWhatsAppLink = createServerFn({ method: "POST" })
       console.error("whatsapp link code failed", error.message);
       return { error: "Não foi possível gerar o código agora. Tente de novo." as const, code: null, url: null };
     }
-    const message = `MITIKOS-${code}`;
+    const message = `PLANEJA-${code}`;
     return { error: null, code: message, url: `https://wa.me/${number}?text=${encodeURIComponent(message)}` };
   });

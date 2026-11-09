@@ -7,9 +7,9 @@
 // - Ícones, manifest e fontes do próprio site: cache e atualiza por trás.
 // Nunca guarda /api/ nem nada de outro domínio (Supabase, Mercado Pago, fontes).
 const VERSION = "v2";
-const PAGES = `mitikos-pages-${VERSION}`;
-const ASSETS = "mitikos-assets";
-const STATIC = `mitikos-static-${VERSION}`;
+const PAGES = `planeja-facil-pages-${VERSION}`;
+const ASSETS = "planeja-facil-assets";
+const STATIC = `planeja-facil-static-${VERSION}`;
 const KEEP = new Set([PAGES, ASSETS, STATIC]);
 const FALLBACK_PAGE = "/hoje";
 
@@ -80,11 +80,11 @@ self.addEventListener("push", (event) => {
     msg = { body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(msg.title || "Mitikos", {
+    self.registration.showNotification(msg.title || "Planeja Fácil", {
       body: msg.body || "",
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      tag: msg.tag || "mitikos",
+      tag: msg.tag || "planeja-facil",
       data: { url: typeof msg.url === "string" && msg.url.startsWith("/") ? msg.url : "/hoje" },
     }),
   );

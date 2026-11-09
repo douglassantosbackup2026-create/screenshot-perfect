@@ -7,7 +7,7 @@ import { entitlementFromCache, resolveAccess, type Access, type Entitlement } fr
 export const BILLING_ENABLED = import.meta.env["VITE_BILLING_ENABLED"] === "true";
 /** Só em desenvolvimento: localStorage "pi_tier_preview" = nenhum | inteligencia | pro simula a assinatura. */
 const PREVIEW_KEY = "pi_tier_preview";
-const CACHE_KEY = (userId: string) => `mitikos_access_${userId}`;
+const CACHE_KEY = (userId: string) => `planeja_facil_access_${userId}`;
 
 const OPEN: Access = resolveAccess({ billingEnabled: false, entitlement: null });
 let current: Access = BILLING_ENABLED ? { tier: null, active: false, billingOff: false } : OPEN;

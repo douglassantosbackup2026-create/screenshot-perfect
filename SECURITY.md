@@ -1,4 +1,4 @@
-# Segurança do Mitikos
+# Segurança do Planeja Fácil
 
 O que o código já garante, o que precisa ser configurado nos painéis (Supabase, Lovable/Cloudflare, GitHub) e as rotinas de operação. Mudou uma proteção? Atualize aqui.
 

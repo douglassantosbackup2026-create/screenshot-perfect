@@ -1,4 +1,4 @@
-// Os três apps que o Mitikos junta. Mesmo texto na landing e no onboarding.
+// Os três apps que o Planeja Fácil junta. Mesmo texto na landing e no onboarding.
 // `where` diz onde cada um fica no menu (src/components/nav/areas.tsx).
 
 export type Pillar = {

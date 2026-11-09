@@ -16,7 +16,7 @@ describe("headers de segurança", () => {
 
   it("deixa o preview do Lovable abrir o app num iframe e bloqueia o resto", () => {
     expect(ENFORCED_CSP).toContain("frame-ancestors 'self' https://lovable.dev");
-    // Qualquer pessoa publica app em *.lovable.app: ele não pode embutir o Mitikos.
+    // Qualquer pessoa publica app em *.lovable.app: ele não pode embutir o Planeja Fácil.
     expect(ENFORCED_CSP).not.toContain("lovable.app");
     expect(withSecurityHeaders(new Response()).headers.get("x-frame-options")).toBeNull();
   });

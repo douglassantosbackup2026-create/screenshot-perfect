@@ -108,12 +108,12 @@ test("página de privacidade é pública", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Privacidade" })).toBeVisible();
 });
 
-test("sem conta, 'Assinar o Mitikos' leva ao cadastro, não ao login", async ({ page }) => {
+test("sem conta, 'Assinar o Planeja Fácil' leva ao cadastro, não ao login", async ({ page }) => {
   await page.goto("/");
   // O botão já vem no HTML do servidor; espera a página ligar os cliques.
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(/grátis/i).filter({ hasNotText: "Tem plano grátis?" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Assinar o Mitikos" }).first().click();
+  await page.getByRole("button", { name: "Assinar o Planeja Fácil" }).first().click();
   await expect(page).toHaveURL(/\/cadastro\?redirect=%2Fonboarding/);
   await expect(page.getByRole("heading", { name: /^Criar conta$|Salve seu plano/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continuar com Google" })).toBeVisible();
@@ -123,7 +123,7 @@ test("sem assinatura, o app leva à Assinatura e esconde o menu; o Perfil contin
   await signIn(page, makeSeed(), { entitlement: null });
   await page.goto("/hoje");
   await expect(page).toHaveURL(/\/planos$/);
-  await expect(page.getByRole("heading", { name: "Assine para usar o Mitikos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assine para usar o Planeja Fácil" })).toBeVisible();
   await expect(page.getByText("Seus dados estão guardados. Assine para voltar a usar.")).toBeVisible();
   await expect(page.getByRole("button", { name: /Assinar mensal/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Assinar anual/ })).toBeVisible();
@@ -145,7 +145,7 @@ test("conta nova: assina, a volta do Mercado Pago confirma e segue para o onboar
   const db = await signIn(page, null, { entitlement: null });
   await page.goto("/onboarding");
   await expect(page).toHaveURL(/\/planos$/);
-  await expect(page.getByRole("heading", { name: "Assine para usar o Mitikos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Assine para usar o Planeja Fácil" })).toBeVisible();
 
   // O webhook do Mercado Pago grava a assinatura enquanto a pessoa volta para /pagamento.
   await page.goto("/pagamento");
@@ -154,7 +154,7 @@ test("conta nova: assina, a volta do Mercado Pago confirma e segue para o onboar
   await expect(page.getByRole("heading", { name: "Assinatura confirmada" })).toBeVisible();
   await page.getByRole("link", { name: "Continuar" }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByRole("heading", { name: "Boas-vindas ao Mitikos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Boas-vindas ao Planeja Fácil" })).toBeVisible();
 });
 
 test("se a consulta da assinatura falha, não libera o app (falha fechado)", async ({ page }) => {
@@ -162,7 +162,7 @@ test("se a consulta da assinatura falha, não libera o app (falha fechado)", asy
   db.entitlementDown = true;
   // Mesmo com um status "ativo" forjado no aparelho.
   await page.addInitScript(() =>
-    window.localStorage.setItem("mitikos_access_00000000-0000-4000-8000-0000000000e2", JSON.stringify({ tier: "pro", active: true, billingOff: false })),
+    window.localStorage.setItem("planeja_facil_access_00000000-0000-4000-8000-0000000000e2", JSON.stringify({ tier: "pro", active: true, billingOff: false })),
   );
   await page.goto("/hoje");
   // A trava roda no navegador: espera a página ligar antes de conferir para onde foi.
@@ -176,9 +176,9 @@ test("admin entra sem assinatura", async ({ page }) => {
   await expect(page).toHaveURL(/\/hoje$/);
 });
 
-test("a landing apresenta o Mitikos como orçamento, patrimônio e aposentadoria num app só", async ({ page }) => {
+test("a landing apresenta o Planeja Fácil como orçamento, patrimônio e aposentadoria num app só", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle(/^Mitikos — /);
+  await expect(page).toHaveTitle(/^Planeja Fácil — /);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("num app só");
   const threeInOne = page.getByRole("region", { name: "Três apps em um" });
   for (const pillar of ["Orçamento", "Patrimônio", "Aposentadoria"]) await expect(threeInOne.getByText(pillar, { exact: true })).toBeVisible();
@@ -188,7 +188,7 @@ test("a landing apresenta o Mitikos como orçamento, patrimônio e aposentadoria
 test("conta nova: boas-vindas com os três pilares, onboarding de 4 etapas e Início com número do mês, próximo passo e checklist", async ({ page }) => {
   const db = await signIn(page, null);
   await page.goto("/onboarding");
-  await expect(page.getByRole("heading", { name: "Boas-vindas ao Mitikos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Boas-vindas ao Planeja Fácil" })).toBeVisible();
   for (const pillar of ["Orçamento", "Patrimônio", "Aposentadoria"]) await expect(page.getByText(pillar, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Começar" }).click();
   await page.getByLabel("Como você quer ser chamado?").fill("Bia");
@@ -218,23 +218,23 @@ test("as três frentes pelo menu: Dinheiro, Futuro e Progresso, com o nome do me
   const go = async (link: string, url: RegExp, title: string) => {
     await page.getByRole("link", { name: link, exact: true }).first().click();
     await expect(page).toHaveURL(url);
-    await expect(page).toHaveTitle(`${title} — Mitikos`);
+    await expect(page).toHaveTitle(`${title} — Planeja Fácil`);
   };
 
   await nav.getByRole("link", { name: "Dinheiro" }).click();
   await expect(page).toHaveURL(/\/diario$/);
-  await expect(page).toHaveTitle("Lançamentos — Mitikos");
+  await expect(page).toHaveTitle("Lançamentos — Planeja Fácil");
   await go("Orçamento", /\/orcamento$/, "Orçamento");
   await go("Contas", /\/contas$/, "Contas");
 
   await nav.getByRole("link", { name: "Futuro" }).click();
   await expect(page).toHaveURL(/\/plano$/);
-  await expect(page).toHaveTitle("Plano — Mitikos");
+  await expect(page).toHaveTitle("Plano — Planeja Fácil");
   await go("Patrimônio", /\/patrimonio$/, "Patrimônio");
 
   await nav.getByRole("link", { name: "Progresso" }).click();
   await expect(page).toHaveURL(/\/evolucao$/);
-  await expect(page).toHaveTitle("Progresso — Mitikos");
+  await expect(page).toHaveTitle("Progresso — Planeja Fácil");
 });
 
 test("/planos para quem assina: sem plano grátis, sem botão de assinar e o Pro na lista de espera", async ({ page }) => {

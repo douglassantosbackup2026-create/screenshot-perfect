@@ -74,7 +74,7 @@ export function WhatsAppSection() {
       ) : link ? (
         <div className="mt-3 divide-y divide-border">
           <p className="pb-3 text-sm text-muted-foreground">
-            Conectado: {maskPhone(link.phone)}. Mande "gastei 62 na farmácia" ou "resumo" para o Mitikos.
+            Conectado: {maskPhone(link.phone)}. Mande "gastei 62 na farmácia" ou "resumo" para o Planeja Fácil.
           </p>
           <label className="flex min-h-12 items-center justify-between gap-4 py-2">
             <span>
@@ -104,7 +104,7 @@ export function WhatsAppSection() {
           </Button>
           {code && (
             <p className="mt-3 text-muted-foreground">
-              Se o WhatsApp não abriu, mande <strong className="text-foreground">{code}</strong> para o número do Mitikos. O código vale 10
+              Se o WhatsApp não abriu, mande <strong className="text-foreground">{code}</strong> para o número do Planeja Fácil. O código vale 10
               minutos.{" "}
               <button type="button" className="min-h-11 font-semibold text-primary" onClick={() => void load()}>
                 Já mandei

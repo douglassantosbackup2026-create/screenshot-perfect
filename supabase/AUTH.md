@@ -51,7 +51,7 @@ URL da API: `https://nzhzmuhjdqcdjoltrsik.supabase.co`
 
 - Webhook: `GET/POST /api/public/whatsapp/webhook`. No app da Meta (produto WhatsApp → Configuração), use essa URL, o mesmo `WHATSAPP_VERIFY_TOKEN` e assine o campo `messages`.
 - Segredos do servidor: `WHATSAPP_TOKEN` (token permanente de usuário do sistema), `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` (confere a assinatura `X-Hub-Signature-256`), `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_DISPLAY_NUMBER` (o número com DDI, para o link wa.me) e, opcional, `WHATSAPP_GRAPH_VERSION`.
-- No app: `VITE_WHATSAPP_ENABLED=true` mostra Perfil › WhatsApp. A pessoa gera um código (vale 10 min) e manda `MITIKOS-XXXXXX` para o número; o webhook liga o número à conta (`whatsapp_links`).
+- No app: `VITE_WHATSAPP_ENABLED=true` mostra Perfil › WhatsApp. A pessoa gera um código (vale 10 min) e manda `PLANEJA-XXXXXXXX` para o número; o webhook liga o número à conta (`whatsapp_links`).
 - Migration `20261105120000_whatsapp.sql`. Mensagens não são guardadas, só o id (`whatsapp_messages`) para não lançar duas vezes.
 - O lançamento é gravado em `user_state` com as mesmas funções do app (`addTransactionTo`, `deleteTransactionIn`, `updateTransactionIn` em `src/lib/data/demo-store.ts`) e a mesma conferência de `updated_at`. O app recarrega ao voltar para a aba.
 - Teste local sem a Meta: `WHATSAPP_APP_SECRET=... node scripts/whatsapp-sim.mjs 5511999990000 "gastei 62 na farmácia"` com `npm run dev` rodando.

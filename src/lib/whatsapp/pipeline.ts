@@ -24,7 +24,7 @@ export type Plan =
   | { kind: "delete"; txId: string }
   | { kind: "setCategory"; txId: string; categoryId: string };
 
-const LINK = /^mitikos-([a-z0-9]{8})$/i;
+const LINK = /^(?:planeja|mitikos)-([a-z0-9]{8})$/i;
 const HELP = /^(ajuda|menu|help|oi|ol[aá]|bom dia|boa tarde|boa noite|come[cç]ar)\b/i;
 
 export function planText(s: DemoState, text: string, ctx: Ctx): Plan {
@@ -52,7 +52,7 @@ export function planText(s: DemoState, text: string, ctx: Ctx): Plan {
   };
 }
 
-/** Toque num botão ou numa linha de lista que o Mitikos enviou. */
+/** Toque num botão ou numa linha de lista que o Planeja Fácil enviou. */
 export function planReply(s: DemoState, id: string): Plan {
   const [action, txId, categoryId] = id.split(":");
   if (!txId) return reply("Esse botão expirou. Mande a mensagem de novo.");

@@ -39,8 +39,9 @@ describe("lançar por texto", () => {
 
   it("código de conexão, ajuda, desfazer e resumo", () => {
     const s = makeSeed(now);
-    expect(planText(s, "MITIKOS-ab12cd34", ctx)).toEqual({ kind: "link", code: "AB12CD34" });
-    expect(planText(s, "MITIKOS-ab12cd", ctx).kind).not.toBe("link"); // códigos antigos, de 6, não valem mais
+    expect(planText(s, "PLANEJA-ab12cd34", ctx)).toEqual({ kind: "link", code: "AB12CD34" });
+    expect(planText(s, "MITIKOS-ab12cd34", ctx)).toEqual({ kind: "link", code: "AB12CD34" }); // gerado antes da troca de nome
+    expect(planText(s, "PLANEJA-ab12cd", ctx).kind).not.toBe("link"); // códigos antigos, de 6, não valem mais
     expect(planText(s, "oi", ctx).kind).toBe("reply");
     expect(planText(s, "desfazer", ctx).kind).toBe("reply"); // nada recente
     expect(planText(s, "desfazer", { ...ctx, lastTxId: "t1" })).toEqual({ kind: "delete", txId: "t1" });
