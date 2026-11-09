@@ -78,26 +78,12 @@ function SignUp() {
     navigate({ to: next, replace: true });
   }
 
-  async function google() {
-    if (!keepRef()) return;
-    // Volta por /entrar, que já leva quem tem sessão para o destino.
-    const back = `${window.location.origin}/entrar?redirect=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: back } });
-    if (error) toast.error("O acesso com Google ainda não está disponível. Use e-mail e senha.");
-  }
-
   return (
     <AuthShell
       title={fromCalc ? "Salve seu plano" : "Criar conta"}
       subtitle={fromCalc ? "Seu cálculo já está pronto. Crie sua conta e assine para guardar e acompanhar todo mês." : "Leva menos de um minuto. Depois, você escolhe seu plano."}
     >
-      <Button variant="outline" className="mt-6 w-full" onClick={google}>
-        Continuar com Google
-      </Button>
-      <div className="my-6 flex items-center gap-3 text-sm text-muted-foreground">
-        <span className="h-px flex-1 bg-border" /> ou com e-mail <span className="h-px flex-1 bg-border" />
-      </div>
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="mt-6 space-y-4" onSubmit={submit}>
         <Field id="name" label="Seu nome" required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
         <Field id="email" label="E-mail" type="email" required autoComplete="email" placeholder="voce@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         <div>

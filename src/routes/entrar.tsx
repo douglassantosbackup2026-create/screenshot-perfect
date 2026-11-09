@@ -10,7 +10,7 @@ import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/entrar")({
   validateSearch: z.object({ redirect: z.string().optional() }),
-  head: () => pageHead("Entrar", "Entre com seu e-mail e senha ou com sua conta Google.", "Entre com seu e-mail e senha."),
+  head: () => pageHead("Entrar", "Entre com seu e-mail e senha.", "Entre com seu e-mail e senha."),
   component: SignIn,
 });
 
@@ -36,12 +36,6 @@ function SignIn() {
     navigate({ to: safePath(target), replace: true });
   }
 
-  async function google() {
-    const back = `${window.location.origin}/entrar?redirect=${encodeURIComponent(safePath(target))}`;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: back } });
-    if (error) toast.error("O acesso com Google ainda não está disponível.");
-  }
-
   return (
     <AuthShell title="Entrar" subtitle="Use seu e-mail e senha.">
       {target === "/onboarding" && (
@@ -63,10 +57,6 @@ function SignIn() {
         </div>
         <Button type="submit" className="w-full" disabled={busy}>{busy ? "Entrando…" : "Entrar"}</Button>
       </form>
-      <div className="my-6 flex items-center gap-3 text-sm text-muted-foreground">
-        <span className="h-px flex-1 bg-border" /> ou <span className="h-px flex-1 bg-border" />
-      </div>
-      <Button variant="outline" className="w-full" onClick={google}>Continuar com Google</Button>
       <p className="mt-6 text-center text-sm">
         Ainda não tem conta?{" "}
         <Link to="/cadastro" search={{ redirect: target }} className="font-semibold text-primary">Criar conta</Link>
