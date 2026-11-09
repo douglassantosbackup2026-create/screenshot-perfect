@@ -26,6 +26,7 @@ import {
 import { PLAN_NAMES } from "@/lib/billing/catalog";
 import { usePlanPrices } from "@/lib/billing/prices";
 import { errMsg } from "@/lib/errors";
+import { useStaff } from "@/components/admin/hooks";
 
 export const Route = createFileRoute("/_authenticated/admin/afiliados")({
   beforeLoad: ({ context }) => requireModule(context.staff, "/admin/afiliados"),
@@ -346,6 +347,10 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
   const [rows, setRows] = useState<Commission[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  // Pagar ou cancelar comissão é só do financeiro (o banco recusa os demais); marketing só consulta.
+  const staff = useStaff();
+  const canPay = staff.includes("super_admin") || staff.includes("financeiro");
+  const selectable = canPay && status === "pendente";
 
   const load = useCallback(async () => {
     setRows(null);
@@ -395,7 +400,7 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
             <SelectItem value="cancelada">Canceladas</SelectItem>
           </SelectContent>
         </Select>
-        {status === "pendente" && (
+        {selectable && (
           <>
             <Button size="sm" disabled={busy || !selected.size} onClick={() => apply("paga")}>
               Marcar como pagas ({selected.size})
@@ -421,7 +426,7 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
                 </div>
                 <span className="money shrink-0 text-primary">{formatMoney(list.reduce((t, c) => t + c.commission_cents, 0))}</span>
               </div>
-              {status === "pendente" && (
+              {selectable && (
                 <label className="mt-3 flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={all}
@@ -442,7 +447,7 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
               <ul className="mt-2 divide-y divide-border text-sm">
                 {list.map((c) => (
                   <li key={c.id} className="flex items-center gap-2 py-2">
-                    {status === "pendente" && (
+                    {selectable && (
                       <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label="Selecionar comissão" />
                     )}
                     <span className="min-w-0 flex-1 truncate">
