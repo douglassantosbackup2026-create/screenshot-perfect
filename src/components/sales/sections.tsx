@@ -14,7 +14,7 @@ import { saveLead } from "@/lib/data/leads";
 
 export function ThreeInOne() {
   return (
-    <section className="mt-16" aria-label="Três apps em um">
+    <section id="tres-em-um" className="mt-16 scroll-mt-20" aria-label="Três apps em um">
       <h2>Três apps em um</h2>
       <p className="mt-2 text-sm text-muted-foreground">
         O {APP_NAME} junta o que hoje fica espalhado em apps e planilhas diferentes.
