@@ -1,4 +1,4 @@
-// O que chega no webhook do WhatsApp (Cloud API da Meta), já reduzido ao que o Mitikos usa.
+// O que chega no webhook do WhatsApp (Cloud API da Meta), já reduzido ao que o Planeja Fácil usa.
 // Payload da Meta: { entry: [{ changes: [{ field: "messages", value: { messages: [...] } }] }] }.
 // Status de entrega (statuses) e campos que não usamos são ignorados.
 import { z } from "zod";

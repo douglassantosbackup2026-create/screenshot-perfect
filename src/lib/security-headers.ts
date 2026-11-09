@@ -6,7 +6,7 @@
 
 /**
  * Quem pode exibir o app num iframe: o próprio app e o editor do Lovable (o preview roda dentro de lovable.dev).
- * *.lovable.app fica de fora: qualquer pessoa publica um app lá, e ele poderia embutir o Mitikos (clickjacking).
+ * *.lovable.app fica de fora: qualquer pessoa publica um app lá, e ele poderia embutir o Planeja Fácil (clickjacking).
  */
 const FRAME_ANCESTORS = "'self' https://lovable.dev https://*.lovable.dev";
 
