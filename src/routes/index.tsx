@@ -85,6 +85,8 @@ function Index() {
   }
 
   const [signedIn, setSignedIn] = useState(false);
+  /** Com conta, os botões da página levam ao bloco seguinte em vez de sair dela. */
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
     track("landing_view");
@@ -116,10 +118,10 @@ function Index() {
           : `Controle os gastos do mês, acompanhe seu patrimônio e saiba quanto falta para se aposentar. Sem vender nada para você: ${monthly} por mês, cancele quando quiser.`}
       </p>
       <div className="mt-6 flex flex-col gap-2">
-        <Button onClick={start}>{signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}</Button>
+        <Button onClick={() => (signedIn ? scrollTo("calculadora-rapida") : start())}>{signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}</Button>
       </div>
 
-      <section aria-label="Calculadora rápida" className="mt-6 rounded-2xl bg-card shadow-card p-5">
+      <section id="calculadora-rapida" aria-label="Calculadora rápida" className="scroll-mt-20 mt-6 rounded-2xl bg-card shadow-card p-5">
         <h2 className="mb-4 text-lg">Quanto falta para você se aposentar?</h2>
         <div className="grid grid-cols-2 gap-4">
           <NumberField label="Sua idade" value={age} onChange={edit(setAge)} suffix="anos" min={16} max={90} />
@@ -147,12 +149,18 @@ function Index() {
             </>
           ) : null}
         </div>
-        <Button className="mt-5 w-full" onClick={start}>
+        <Button className="mt-5 w-full" onClick={() => (signedIn ? scrollTo("tres-em-um") : start())}>
           {signedIn ? "Abrir o app" : "Montar meu plano"}
         </Button>
-        <Link to="/calculadora" className="mt-3 block text-center text-sm font-semibold text-primary">
-          Ver a conta completa
-        </Link>
+        {signedIn ? (
+          <button type="button" onClick={() => scrollTo("tres-em-um")} className="mt-3 block w-full text-center text-sm font-semibold text-primary">
+            Ver a conta completa
+          </button>
+        ) : (
+          <Link to="/calculadora" className="mt-3 block text-center text-sm font-semibold text-primary">
+            Ver a conta completa
+          </Link>
+        )}
       </section>
 
       <ThreeInOne />
@@ -166,7 +174,7 @@ function Index() {
 
       <section className="mt-16 rounded-2xl bg-card shadow-card p-6 text-center">
         <h2>Comece hoje. Leva 5 minutos.</h2>
-        <Button className="mt-5 w-full" onClick={start}>
+        <Button className="mt-5 w-full" onClick={() => (signedIn ? scrollTo("planos") : start())}>
           {signedIn ? "Abrir o app" : `Assinar o ${APP_NAME}`}
         </Button>
       </section>
