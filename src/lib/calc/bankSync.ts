@@ -39,3 +39,37 @@ export function syncSince(today: string, lastSyncedAt: string | null, firstDays 
   d.setUTCDate(d.getUTCDate() - firstDays);
   return d.toISOString().slice(0, 10);
 }
+
+/** Prefixo das "contas" que são investimentos no agregador (só saldo, sem lançamentos). */
+export const INVESTMENT_PREFIX = "inv:";
+
+/** Tipo de conta do Pluggy → tipo de conta do app. */
+export function pluggyAccountKind(type: string, subtype: string | null): "corrente" | "poupanca" | "cartao" {
+  if (type === "CREDIT" || subtype === "CREDIT_CARD") return "cartao";
+  if (subtype === "SAVINGS_ACCOUNT") return "poupanca";
+  return "corrente";
+}
+
+/** Investimento do Pluggy → previdência (PGBL/VGBL/fundo de pensão) ou investimento. */
+export function pluggyInvestmentKind(type: string, name: string): "previdencia" | "investimento" {
+  return type === "PENSION" || /\b(pgbl|vgbl|previd)/i.test(name) ? "previdencia" : "investimento";
+}
+
+/** Valor de um lançamento do Pluggy em centavos com sinal (saída negativa), qualquer que seja o sinal enviado. */
+export function pluggyTxCents(amount: number, type: string | null): number {
+  const cents = Math.round(Math.abs(amount) * 100);
+  if (type === "DEBIT") return -cents;
+  if (type === "CREDIT") return cents;
+  return Math.round(amount * 100);
+}
+
+/** Saída de dinheiro que parece ir para previdência ou investimento: vira "Possível aporte". Só sugere, nunca registra. */
+export function looksLikeContribution(amountCents: number, description: string): boolean {
+  if (amountCents >= 0) return false;
+  return /\b(pgbl|vgbl|previd[eê]ncia|prev\b|aplica[cç][aã]o|aplic\b|invest|tesouro|cdb|lci|lca|brasilprev|icatu|caixa vida)/i.test(description);
+}
+
+/** Saldo inicial que faz o saldo de uma conta só-saldo (investimento) bater com o do banco hoje. */
+export function syncedOpeningBalance(balanceCents: number, existingAmounts: number[]): number {
+  return balanceCents - existingAmounts.reduce((t, x) => t + x, 0);
+}
