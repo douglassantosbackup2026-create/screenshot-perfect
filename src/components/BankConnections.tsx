@@ -1,5 +1,4 @@
-// Bancos conectados por Open Finance (Contas). Atrás de VITE_OPEN_FINANCE_ENABLED: hoje só o provedor de
-// teste existe, então fica desligado em produção até um agregador ser contratado.
+// Bancos conectados por Open Finance (Contas), via Pluggy. Desligue com VITE_OPEN_FINANCE_ENABLED=false.
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,7 +13,7 @@ import { errMsg } from "@/lib/errors";
 
 const PluggyWidget = lazy(() => import("./PluggyWidget"));
 
-export const OPEN_FINANCE_ENABLED = import.meta.env["VITE_OPEN_FINANCE_ENABLED"] === "true";
+export const OPEN_FINANCE_ENABLED = import.meta.env["VITE_OPEN_FINANCE_ENABLED"] !== "false";
 
 type Conn = { id: string; institution: string | null; status: string; last_synced_at: string | null };
 const STATUS: Record<string, string> = { ativa: "Conectado", erro: "Com erro na última sincronização", revogada: "Autorização encerrada" };
