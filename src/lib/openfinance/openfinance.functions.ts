@@ -50,3 +50,18 @@ export const syncBank = createServerFn({ method: "POST" })
     const { syncConnection } = await import("./sync.server");
     return syncConnection(supabaseAdmin, provider, conn);
   });
+
+/** Abre o widget do agregador: devolve o token de conexão (Pluggy) ou "mock" no provedor de teste. */
+export const getConnectToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const provider = await providerFromEnv();
+    if (!provider) return { error: OFF, provider: null, token: null };
+    if (!(await allow([{ key: `bank-token:user:${context.userId}`, limit: 20, windowSeconds: 3600 }]))) return { error: TOO_MANY, provider: null, token: null };
+    try {
+      return { error: null, provider: provider.name, token: await provider.createConnectToken(context.userId) };
+    } catch (e) {
+      console.error("open finance connect token failed", e instanceof Error ? e.message : e);
+      return { error: "Não foi possível abrir a conexão com o banco agora.", provider: null, token: null };
+    }
+  });
