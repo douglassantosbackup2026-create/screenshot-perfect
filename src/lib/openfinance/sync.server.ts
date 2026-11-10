@@ -2,7 +2,7 @@
 // com as mesmas regras do extrato (dedupe, regras de categoria). Só no servidor.
 import { connectedAccountIn, importTransactionsInto } from "@/lib/data/demo-store";
 import { updateState, type Admin } from "@/lib/data/server-state";
-import { openingBalanceFor, syncSince, toImportedRows } from "@/lib/calc/bankSync";
+import { INVESTMENT_PREFIX, looksLikeContribution, openingBalanceFor, syncSince, syncedOpeningBalance, toImportedRows } from "@/lib/calc/bankSync";
 import { spDate } from "@/lib/gamification/rules";
 import type { OpenFinanceProvider } from "./provider";
 
@@ -30,7 +30,13 @@ export async function syncConnection(db: Admin, provider: OpenFinanceProvider, c
         { connectionId: conn.id, externalId: pa.id, name: pa.name, kind: pa.kind, openingBalance: openingBalanceFor(pa.balanceCents, list) },
         now,
       );
-      added += importTransactionsInto(s, acc.id, toImportedRows(list), now).added;
+      if (pa.id.startsWith(INVESTMENT_PREFIX)) {
+        // Só saldo: atualiza para bater com o valor de hoje no banco.
+        acc.openingBalance = syncedOpeningBalance(pa.balanceCents, s.transactions.filter((t) => t.accountId === acc.id).map((t) => t.amount));
+        return;
+      }
+      const marked = list.map((t) => (looksLikeContribution(t.amountCents, t.description) ? { ...t, memo: ["Possível aporte", t.memo].filter(Boolean).join(" · ") } : t));
+      added += importTransactionsInto(s, acc.id, toImportedRows(marked), now).added;
     });
     return added;
   });

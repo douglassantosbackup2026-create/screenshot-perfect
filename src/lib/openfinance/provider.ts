@@ -2,7 +2,7 @@
 // Hoje só existe o provedor de teste (mock.ts); um provedor real é mais uma implementação desta interface.
 import type { AccountKind } from "@/lib/calc/ledger";
 
-export type ProviderName = "mock";
+export type ProviderName = "mock" | "pluggy";
 
 /** Conta como o agregador informa. Saldo em centavos, positivo = dinheiro da pessoa (no cartão, negativo = fatura). */
 export type ProviderAccount = { id: string; name: string; kind: AccountKind; balanceCents: number };
@@ -28,5 +28,6 @@ export interface OpenFinanceProvider {
 export async function providerFromEnv(): Promise<OpenFinanceProvider | null> {
   const name = process.env["OPEN_FINANCE_PROVIDER"];
   if (name === "mock") return (await import("./mock")).mockProvider;
+  if (name === "pluggy") return (await import("./pluggy")).pluggyProvider;
   return null;
 }

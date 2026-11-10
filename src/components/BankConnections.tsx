@@ -1,17 +1,19 @@
-// Bancos conectados por Open Finance (Contas). Atrás de VITE_OPEN_FINANCE_ENABLED: hoje só o provedor de
-// teste existe, então fica desligado em produção até um agregador ser contratado.
-import { useCallback, useEffect, useState } from "react";
+// Bancos conectados por Open Finance (Contas), via Pluggy. Desligue com VITE_OPEN_FINANCE_ENABLED=false.
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { ClientOnly } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { supabase } from "@/integrations/supabase/client";
-import { connectBank, syncBank } from "@/lib/openfinance/openfinance.functions";
+import { connectBank, getConnectToken, syncBank } from "@/lib/openfinance/openfinance.functions";
 import { reloadFromCloudNow } from "@/lib/data/demo-store";
 import { formatDate } from "@/lib/labels";
 import { errMsg } from "@/lib/errors";
 
-export const OPEN_FINANCE_ENABLED = import.meta.env["VITE_OPEN_FINANCE_ENABLED"] === "true";
+const PluggyWidget = lazy(() => import("./PluggyWidget"));
+
+export const OPEN_FINANCE_ENABLED = import.meta.env["VITE_OPEN_FINANCE_ENABLED"] !== "false";
 
 type Conn = { id: string; institution: string | null; status: string; last_synced_at: string | null };
 const STATUS: Record<string, string> = { ativa: "Conectado", erro: "Com erro na última sincronização", revogada: "Autorização encerrada" };
@@ -21,6 +23,25 @@ export function BankConnections() {
   const sync = useServerFn(syncBank);
   const [conns, setConns] = useState<Conn[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const tokenFn = useServerFn(getConnectToken);
+  const [widgetToken, setWidgetToken] = useState<string | null>(null);
+
+  async function startConnect() {
+    setBusy(true);
+    try {
+      const r = await tokenFn();
+      if (r.error || !r.token) return void toast.error(r.error ?? "Não foi possível abrir a conexão.");
+      if (r.provider === "mock") {
+        setBusy(false);
+        return void run(() => connect({ data: { itemId: crypto.randomUUID(), institution: "Banco Teste" } }));
+      }
+      setWidgetToken(r.token);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from("bank_connections").select("id, institution, status, last_synced_at").order("created_at");
@@ -47,7 +68,6 @@ export function BankConnections() {
   }
 
   async function disconnect(id: string) {
-    // As contas e os lançamentos já trazidos ficam; só param de atualizar.
     const { error } = await supabase.from("bank_connections").delete().eq("id", id);
     if (error) toast.error("Não foi possível desconectar agora.");
     await load();
@@ -57,8 +77,12 @@ export function BankConnections() {
     <section className="mt-8 rounded-2xl bg-card p-5 shadow-card" aria-label="Bancos conectados">
       <h2 className="text-base">Bancos conectados</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Pelo Open Finance, os lançamentos chegam sozinhos, com as mesmas regras da importação de extrato. Versão de teste: usa um banco
-        fictício.
+        Pelo Open Finance, saldo, extrato, previdência e investimentos chegam sozinhos. Saídas que parecem aporte aparecem marcadas como
+        "Possível aporte"; você decide se registra.
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        O app só lê seus dados, nunca movimenta dinheiro. A autorização é feita no seu banco, pela Pluggy, e você pode encerrar quando
+        quiser. Esses valores não vão para métricas nem são compartilhados.
       </p>
       <ul className="mt-3 divide-y divide-border">
         {conns?.map((c) => (
@@ -83,10 +107,24 @@ export function BankConnections() {
         className="mt-3 w-full"
         variant="outline"
         disabled={busy}
-        onClick={() => void run(() => connect({ data: { itemId: crypto.randomUUID(), institution: "Banco Teste" } }))}
+        onClick={() => void startConnect()}
       >
-        Conectar banco de teste
+        Conectar meu banco
       </Button>
+      {widgetToken && (
+        <ClientOnly fallback={null}>
+          <Suspense fallback={null}>
+            <PluggyWidget
+              token={widgetToken}
+              onClose={() => setWidgetToken(null)}
+              onSuccess={(itemId, institution) => {
+                setWidgetToken(null);
+                void run(() => connect({ data: { itemId, institution } }));
+              }}
+            />
+          </Suspense>
+        </ClientOnly>
+      )}
     </section>
   );
 }
