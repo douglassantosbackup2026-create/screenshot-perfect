@@ -11,3 +11,4 @@
 - [ ] 12 Analytics and final review
 - [ ] Publish + Supabase redirect URLs + Mercado Pago webhook (user action)
 - [ ] Move per-user saved data into the normalized tables/RPCs (gamification source of truth)
+- [x] Open Finance via Pluggy (sandbox); production access pending Pluggy approval
