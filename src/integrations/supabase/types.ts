@@ -120,6 +120,42 @@ export type Database = {
           },
         ]
       }
+      affiliate_managers: {
+        Row: {
+          active: boolean
+          code: string
+          commission_bp: number
+          created_at: string
+          email: string
+          id: string
+          name: string
+          pix_key: string
+          whatsapp: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          commission_bp?: number
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          pix_key?: string
+          whatsapp?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          commission_bp?: number
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          pix_key?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       affiliates: {
         Row: {
           code: string | null
@@ -130,6 +166,7 @@ export type Database = {
           email: string
           id: string
           instagram: string
+          manager_id: string | null
           message: string
           name: string
           pix_key: string
@@ -148,6 +185,7 @@ export type Database = {
           email: string
           id?: string
           instagram?: string
+          manager_id?: string | null
           message?: string
           name: string
           pix_key?: string
@@ -166,6 +204,7 @@ export type Database = {
           email?: string
           id?: string
           instagram?: string
+          manager_id?: string | null
           message?: string
           name?: string
           pix_key?: string
@@ -175,7 +214,15 @@ export type Database = {
           status?: string
           whatsapp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "affiliates_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_managers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       allocation_targets: {
         Row: {
@@ -1125,6 +1172,63 @@ export type Database = {
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_commissions: {
+        Row: {
+          affiliate_id: string | null
+          commission_cents: number
+          created_at: string
+          id: string
+          manager_id: string
+          paid_at: string | null
+          paid_by: string | null
+          payment_cents: number
+          payment_id: string
+          referred_user: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          commission_cents: number
+          created_at?: string
+          id?: string
+          manager_id: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_cents: number
+          payment_id: string
+          referred_user?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          commission_cents?: number
+          created_at?: string
+          id?: string
+          manager_id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_cents?: number
+          payment_id?: string
+          referred_user?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_commissions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_managers"
             referencedColumns: ["id"]
           },
         ]
@@ -2435,6 +2539,7 @@ export type Database = {
       }
       admin_list_affiliates: { Args: { p_status: string }; Returns: Json }
       admin_list_coupons: { Args: never; Returns: Json }
+      admin_list_managers: { Args: never; Returns: Json }
       admin_list_notices: { Args: never; Returns: Json }
       admin_log_export: {
         Args: { p_rows: number; p_what: string }
@@ -2463,6 +2568,10 @@ export type Database = {
         Args: { p_lesson: Json; p_program_slug: string }
         Returns: string
       }
+      admin_save_manager: {
+        Args: { p_id: string; p_manager: Json }
+        Returns: string
+      }
       admin_save_notice: {
         Args: {
           p_active: boolean
@@ -2472,6 +2581,10 @@ export type Database = {
           p_until: string
         }
         Returns: string
+      }
+      admin_set_affiliate_manager: {
+        Args: { p_affiliate: string; p_manager: string }
+        Returns: undefined
       }
       admin_set_affiliate_status: {
         Args: { p_id: string; p_status: string }
@@ -2653,6 +2766,7 @@ export type Database = {
         Returns: undefined
       }
       my_affiliate: { Args: never; Returns: Json }
+      my_manager: { Args: never; Returns: Json }
       my_staff_status: { Args: never; Returns: Json }
       open_ticket: {
         Args: { p_body: string; p_kind: string; p_subject: string }
