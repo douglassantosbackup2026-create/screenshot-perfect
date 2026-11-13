@@ -139,7 +139,7 @@ function RootComponent() {
   const { pathname } = useLocation();
   useEffect(() => countVisit(pathname), [pathname]);
   // Analytics: UTMs da página de entrada e, depois do login, a escolha do banner vai para a conta.
-  // Afiliados: o ?ref= da entrada fica guardado e, depois do login, liga a conta ao afiliado.
+  // Parceiros: o ?ref= da entrada fica guardado e, depois do login, liga a conta ao parceiro.
   useEffect(() => {
     captureUtm(window.location.search);
     captureRef(window.location.search);

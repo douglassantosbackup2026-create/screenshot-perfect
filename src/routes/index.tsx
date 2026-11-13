@@ -194,8 +194,8 @@ function Index() {
             Contato
           </Link>
           {" · "}
-          <Link to="/afiliados" className="underline">
-            Seja afiliado
+          <Link to="/parceiros" className="underline">
+            Seja parceiro
           </Link>
           {" · "}
           <button type="button" className="underline" onClick={openConsentPreferences}>

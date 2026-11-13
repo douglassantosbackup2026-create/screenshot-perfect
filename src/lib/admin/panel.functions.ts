@@ -133,7 +133,7 @@ export const CreateUserInput = z
     subscription: z.enum(["mensal", "anual"]).nullable(),
     affiliate: z
       .object({
-        code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/, "Código de afiliado: 4 a 20 letras ou números."),
+        code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/, "Código de parceiro: 4 a 20 letras ou números."),
         mode: z.enum(["primeiro", "meses", "sempre"]),
         bp: z.number().int().min(0).max(10000),
         months: z.number().int().min(1).max(120).nullable(),
@@ -145,7 +145,7 @@ export const CreateUserInput = z
 /**
  * Cadastro feito pela equipe (só super admin): cria a conta já confirmada, com senha temporária que a pessoa troca
  * no primeiro acesso, e aplica as opções escolhidas. A conta é o essencial; uma opção que falha (ex.: código de
- * afiliado em uso) vira aviso em vez de desfazer o cadastro. A senha nunca vai para o log nem para a auditoria.
+ * parceiro em uso) vira aviso em vez de desfazer o cadastro. A senha nunca vai para o log nem para a auditoria.
  */
 export const adminCreateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -193,7 +193,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
         reviewed_by: context.userId,
         reviewed_at: new Date().toISOString(),
       });
-      if (r.error) warnings.push(r.error.code === "23505" ? "Afiliado não criado: código ou e-mail já usado por outro afiliado." : "Afiliado não criado. Cadastre em Afiliados.");
+      if (r.error) warnings.push(r.error.code === "23505" ? "Parceiro não criado: código ou e-mail já usado por outro parceiro." : "Parceiro não criado. Cadastre em Parceiros.");
     }
     if (data.subscription) {
       const opened = await openSubscription({

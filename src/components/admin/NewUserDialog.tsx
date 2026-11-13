@@ -1,5 +1,5 @@
 // Painel → Usuários → Novo cadastro (só super admin): cria a conta com senha temporária e as opções escolhidas
-// (perfil da equipe, cortesia ou link de assinatura, afiliado). Depois mostra senha e link uma vez, para copiar.
+// (perfil da equipe, cortesia ou link de assinatura, parceiro). Depois mostra senha e link uma vez, para copiar.
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -84,7 +84,7 @@ export function NewUserDialog({ open, onClose, onCreated, monthlyPriceCents }: {
     name.trim().length < 2 && "Informe o nome.",
     !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) && "Informe um e-mail válido.",
     passwordProblems(password)[0],
-    isAffiliate && !/^[A-Z0-9]{4,20}$/.test(affiliateCode) && "Código de afiliado: 4 a 20 letras ou números.",
+    isAffiliate && !/^[A-Z0-9]{4,20}$/.test(affiliateCode) && "Código de parceiro: 4 a 20 letras ou números.",
     isAffiliate && bp === null && "Comissão: use um percentual entre 0 e 100.",
     isAffiliate && mode === "meses" && !(Number.isInteger(rm) && rm >= 1 && rm <= 120) && "Meses da comissão: de 1 a 120.",
   ].filter(Boolean) as string[];
@@ -242,10 +242,10 @@ export function NewUserDialog({ open, onClose, onCreated, monthlyPriceCents }: {
               )}
             </Section>
 
-            <Section title="Afiliado">
+            <Section title="Parceiro">
               <label className="flex min-h-11 items-center gap-2 text-sm">
                 <input type="checkbox" className="h-5 w-5 accent-[var(--primary)]" checked={isAffiliate} onChange={(e) => setIsAffiliate(e.target.checked)} />
-                Já cadastrar como afiliado aprovado
+                Já cadastrar como parceiro aprovado
               </label>
               {isAffiliate && (
                 <div className="space-y-3">

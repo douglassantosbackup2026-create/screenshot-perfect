@@ -1,4 +1,4 @@
-// Código de afiliado da visita (?ref=CODIGO) ou digitado no cadastro. Fica neste navegador por 30 dias
+// Código de parceiro da visita (?ref=CODIGO) ou digitado no cadastro. Fica neste navegador por 30 dias
 // e é ligado à conta no primeiro login (claim_referral). Nada aqui dá desconto.
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,7 +16,7 @@ const safe = <T,>(fn: () => T, fallback: T): T => {
   }
 };
 
-/** Código de afiliado sugerido: primeiro nome sem acento + 2 dígitos (ex.: "MARIA42"). */
+/** Código de parceiro sugerido: primeiro nome sem acento + 2 dígitos (ex.: "MARIA42"). */
 export function suggestCode(name: string): string {
   const base = name
     .normalize("NFD")
@@ -79,7 +79,7 @@ export function clearCoupon() {
 const checked = new Set<string>();
 
 /**
- * Liga a conta conectada ao afiliado do código guardado aqui (ou do cadastro, se confirmou o e-mail em
+ * Liga a conta conectada ao parceiro do código guardado aqui (ou do cadastro, se confirmou o e-mail em
  * outro aparelho). O banco decide se vale; depois de uma resposta, o código local sai.
  */
 export async function claimPendingRef(user: { id: string; created_at: string; user_metadata?: Record<string, unknown> }) {

@@ -1,5 +1,5 @@
-// Inscrição pública no programa de afiliados. Sem login: grava com o service role depois de validar e
-// limitar por IP. E-mail já inscrito recebe a mesma resposta (ninguém descobre quem é afiliado).
+// Inscrição pública no programa de parceiros. Sem login: grava com o service role depois de validar e
+// limitar por IP. E-mail já inscrito recebe a mesma resposta (ninguém descobre quem é parceiro).
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";

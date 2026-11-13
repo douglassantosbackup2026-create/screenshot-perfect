@@ -44,7 +44,7 @@ const SUB_LABEL: Record<string, string> = { pending: "Aguardando autorização",
 const day = (iso: string | null) => (iso ? formatDate(iso) : "—");
 
 function AdminUsers() {
-  // Criar conta: só super admin (pode dar perfil de equipe, cortesia e afiliado).
+  // Criar conta: só super admin (pode dar perfil de equipe, cortesia e parceiro).
   const isSuper = useStaff().includes("super_admin");
   const [creating, setCreating] = useState(false);
   const { prices } = usePlanPrices();
