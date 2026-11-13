@@ -15,6 +15,7 @@ export const AffiliateApplication = z.object({
   pixKey: z.string().trim().max(140).default(""),
   message: z.string().trim().max(1000).default(""),
   terms: z.literal(true),
+  managerCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/).optional().catch(undefined),
 });
 
 export const applyAffiliate = createServerFn({ method: "POST" })
@@ -30,7 +31,14 @@ export const applyAffiliate = createServerFn({ method: "POST" })
       return { error: TOO_MANY };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Convite de gerente: liga o novo parceiro ao gerente ativo dono do código.
+    let managerId: string | null = null;
+    if (data.managerCode) {
+      const { data: m } = await supabaseAdmin.from("affiliate_managers").select("id").eq("code", data.managerCode).eq("active", true).maybeSingle();
+      managerId = m?.id ?? null;
+    }
     const { error } = await supabaseAdmin.from("affiliates").insert({
+      manager_id: managerId,
       name: data.name,
       email: data.email,
       whatsapp: data.whatsapp,

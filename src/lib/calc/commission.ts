@@ -62,3 +62,17 @@ export function parseRate(text: string): number | null {
   if (!text.trim() || !Number.isFinite(n) || n < 0 || n > 100) return null;
   return Math.round(n * 100);
 }
+
+/**
+ * Comissão extra do gerente sobre o mesmo pagamento: vale no mesmo prazo do parceiro, com a % do gerente.
+ * Espelha _affiliate_commission no banco. A comissão do parceiro não diminui.
+ */
+export function managerCommissionFor(
+  partnerRule: CommissionRule,
+  managerBp: number,
+  p: { paymentCents: number; paidAt: string; firstPaidAt: string; previousCount: number },
+): number {
+  // Prazo do parceiro decide se o pagamento conta; a taxa é a do gerente.
+  if (commissionFor({ ...partnerRule, bp: 10000 }, { ...p, paymentCents: 1 }) === 0) return 0;
+  return commissionFor({ mode: "sempre", bp: managerBp, months: null }, p);
+}

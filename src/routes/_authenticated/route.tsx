@@ -18,7 +18,7 @@ import { useEffect } from "react";
  * painel de parceiro (quem divulga não precisa assinar), e o painel administrativo (a equipe não assina;
  * o layout /admin confere o perfil).
  */
-const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/parceiro", "/admin"];
+const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/parceiro", "/gerente", "/admin"];
 
 /** Conta já conferida no servidor nesta aba, e se é admin; trocar de tela não repete essas consultas. */
 let verifiedUser: string | null = null;
