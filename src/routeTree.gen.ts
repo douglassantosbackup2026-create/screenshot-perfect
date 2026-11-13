@@ -29,6 +29,7 @@ import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedDiarioRouteImport } from './routes/_authenticated/diario'
 import { Route as AuthenticatedEvolucaoRouteImport } from './routes/_authenticated/evolucao'
 import { Route as AuthenticatedFechamentoRouteImport } from './routes/_authenticated/fechamento'
+import { Route as AuthenticatedGerenteRouteImport } from './routes/_authenticated/gerente'
 import { Route as AuthenticatedHojeRouteImport } from './routes/_authenticated/hoje'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedOrcamentoRouteImport } from './routes/_authenticated/orcamento'
@@ -161,6 +162,11 @@ const AuthenticatedEvolucaoRoute = AuthenticatedEvolucaoRouteImport.update({
 const AuthenticatedFechamentoRoute = AuthenticatedFechamentoRouteImport.update({
   id: '/fechamento',
   path: '/fechamento',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedGerenteRoute = AuthenticatedGerenteRouteImport.update({
+  id: '/gerente',
+  path: '/gerente',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedHojeRoute = AuthenticatedHojeRouteImport.update({
@@ -372,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
   '/fechamento': typeof AuthenticatedFechamentoRoute
+  '/gerente': typeof AuthenticatedGerenteRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orcamento': typeof AuthenticatedOrcamentoRoute
@@ -426,6 +433,7 @@ export interface FileRoutesByTo {
   '/diario': typeof AuthenticatedDiarioRoute
   '/evolucao': typeof AuthenticatedEvolucaoRoute
   '/fechamento': typeof AuthenticatedFechamentoRoute
+  '/gerente': typeof AuthenticatedGerenteRoute
   '/hoje': typeof AuthenticatedHojeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/orcamento': typeof AuthenticatedOrcamentoRoute
@@ -483,6 +491,7 @@ export interface FileRoutesById {
   '/_authenticated/diario': typeof AuthenticatedDiarioRoute
   '/_authenticated/evolucao': typeof AuthenticatedEvolucaoRoute
   '/_authenticated/fechamento': typeof AuthenticatedFechamentoRoute
+  '/_authenticated/gerente': typeof AuthenticatedGerenteRoute
   '/_authenticated/hoje': typeof AuthenticatedHojeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/orcamento': typeof AuthenticatedOrcamentoRoute
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/diario'
     | '/evolucao'
     | '/fechamento'
+    | '/gerente'
     | '/hoje'
     | '/onboarding'
     | '/orcamento'
@@ -594,6 +604,7 @@ export interface FileRouteTypes {
     | '/diario'
     | '/evolucao'
     | '/fechamento'
+    | '/gerente'
     | '/hoje'
     | '/onboarding'
     | '/orcamento'
@@ -650,6 +661,7 @@ export interface FileRouteTypes {
     | '/_authenticated/diario'
     | '/_authenticated/evolucao'
     | '/_authenticated/fechamento'
+    | '/_authenticated/gerente'
     | '/_authenticated/hoje'
     | '/_authenticated/onboarding'
     | '/_authenticated/orcamento'
@@ -849,6 +861,13 @@ declare module '@tanstack/react-router' {
       path: '/fechamento'
       fullPath: '/fechamento'
       preLoaderRoute: typeof AuthenticatedFechamentoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/gerente': {
+      id: '/_authenticated/gerente'
+      path: '/gerente'
+      fullPath: '/gerente'
+      preLoaderRoute: typeof AuthenticatedGerenteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/hoje': {
@@ -1144,6 +1163,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiarioRoute: typeof AuthenticatedDiarioRoute
   AuthenticatedEvolucaoRoute: typeof AuthenticatedEvolucaoRoute
   AuthenticatedFechamentoRoute: typeof AuthenticatedFechamentoRoute
+  AuthenticatedGerenteRoute: typeof AuthenticatedGerenteRoute
   AuthenticatedHojeRoute: typeof AuthenticatedHojeRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedOrcamentoRoute: typeof AuthenticatedOrcamentoRoute
@@ -1163,6 +1183,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiarioRoute: AuthenticatedDiarioRoute,
   AuthenticatedEvolucaoRoute: AuthenticatedEvolucaoRoute,
   AuthenticatedFechamentoRoute: AuthenticatedFechamentoRoute,
+  AuthenticatedGerenteRoute: AuthenticatedGerenteRoute,
   AuthenticatedHojeRoute: AuthenticatedHojeRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedOrcamentoRoute: AuthenticatedOrcamentoRoute,
