@@ -140,7 +140,7 @@ test("novo cadastro: só o super admin vê; senha temporária gerada e validada;
   await expect(page.getByText("Use pelo menos 8 caracteres.")).toBeVisible();
 
   // Afiliado: código sugerido pelo nome e prévia da comissão.
-  await dialog.getByLabel("Já cadastrar como afiliado aprovado").check();
+  await dialog.getByLabel("Já cadastrar como parceiro aprovado").check();
   await expect(dialog.getByLabel("Código")).toHaveAttribute("placeholder", /^MARIA\d{2}$/);
   await expect(dialog.getByText(/de cada pagamento/)).toBeVisible();
 });

@@ -8,8 +8,8 @@ import { makeSeed } from "../src/lib/data/demo-store";
 import { POLICY_VERSION } from "../src/lib/analytics/analytics";
 import { signIn } from "./fake-supabase";
 
-const PUBLIC = ["/", "/calculadora", "/entrar", "/cadastro", "/esqueci-senha", "/privacidade", "/sobre", "/afiliados", "/pagamento"];
-const PRIVATE = ["/hoje", "/diario", "/orcamento", "/contas", "/plano", "/patrimonio", "/evolucao", "/fechamento", "/perfil", "/planos", "/afiliado"];
+const PUBLIC = ["/", "/calculadora", "/entrar", "/cadastro", "/esqueci-senha", "/privacidade", "/sobre", "/parceiros", "/pagamento"];
+const PRIVATE = ["/hoje", "/diario", "/orcamento", "/contas", "/plano", "/patrimonio", "/evolucao", "/fechamento", "/perfil", "/planos", "/parceiro"];
 const SHOTS = process.env["AUDIT_SHOTS"] ?? "";
 
 test.beforeEach(async ({ page }) => {
@@ -233,7 +233,7 @@ test.describe("tamanhos de tela", () => {
     { path: "/", auth: false },
     { path: "/calculadora", auth: false },
     { path: "/cadastro", auth: false },
-    { path: "/afiliados", auth: false },
+    { path: "/parceiros", auth: false },
     { path: "/hoje", auth: true },
     { path: "/diario", auth: true },
     { path: "/plano", auth: true },
