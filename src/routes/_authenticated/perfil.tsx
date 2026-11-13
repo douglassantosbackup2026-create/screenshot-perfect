@@ -256,6 +256,7 @@ function Profile() {
         <Link to="/sobre" className="min-h-11 py-3">Termos de uso</Link>
         <Link to="/planos" className="min-h-11 py-3 font-semibold text-primary">Sua assinatura</Link>
         <Link to="/parceiro" className="min-h-11 py-3">Programa de parceiros</Link>
+        <Link to="/gerente" className="min-h-11 py-3">Área do gerente</Link>
         <Link to="/privacidade" className="min-h-11 py-3">Política de privacidade</Link>
         <Link to="/sobre" className="min-h-11 py-3">Sobre o app</Link>
         {admin && <Link to="/admin" className="min-h-11 py-3 font-semibold text-primary">Painel administrativo</Link>}

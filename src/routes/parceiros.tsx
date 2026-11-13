@@ -9,6 +9,7 @@ import { Field } from "@/components/auth/AuthShell";
 import { applyAffiliate } from "@/lib/affiliates/affiliates.functions";
 import { pageHead, APP_NAME } from "@/lib/seo";
 import { errMsg } from "@/lib/errors";
+import { z } from "zod";
 
 export const Route = createFileRoute("/parceiros")({
   head: () =>
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/parceiros")({
       `Indique o ${APP_NAME} e ganhe comissão a cada pagamento de quem assinar pelo seu link.`,
       "Indique e ganhe comissão.",
     ),
+  validateSearch: z.object({ gerente: z.string().optional() }),
   component: Affiliates,
 });
 
@@ -29,6 +31,7 @@ const STEPS = [
 
 function Affiliates() {
   const apply = useServerFn(applyAffiliate);
+  const { gerente } = Route.useSearch();
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "", instagram: "", pixKey: "", message: "" });
   const [terms, setTerms] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -41,7 +44,7 @@ function Affiliates() {
     if (!terms) return void toast.error("Aceite os termos para enviar.");
     setBusy(true);
     try {
-      const r = await apply({ data: { ...form, terms: true } });
+      const r = await apply({ data: { ...form, terms: true, managerCode: gerente } });
       if (r.error) toast.error(r.error);
       else setSent(true);
     } catch (e) {
