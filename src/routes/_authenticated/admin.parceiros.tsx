@@ -54,9 +54,12 @@ type Affiliate = {
   pending_cents: number;
   paid_cents: number;
   coupons?: string[];
+  manager_id: string | null;
 };
+type Manager = { id: string; name: string; email: string; whatsapp: string; pix_key: string; commission_bp: number; code: string; active: boolean; partners: number; pending_cents: number; paid_cents: number };
 type Commission = {
   id: string;
+  kind: "parceiro" | "gerente";
   affiliate_id: string;
   affiliate_name: string;
   pix_key: string;
@@ -75,9 +78,15 @@ const ruleOf = (a: Affiliate): CommissionRule => ({ mode: a.commission_mode, bp:
 function AdminAffiliates() {
   const [rows, setRows] = useState<Affiliate[] | null>(null);
   const [editing, setEditing] = useState<Affiliate | null>(null);
+  const [managers, setManagers] = useState<Manager[] | null>(null);
 
   const load = useCallback(async () => {
-    const [{ data, error }, coupons] = await Promise.all([supabase.rpc("admin_list_affiliates", { p_status: null as unknown as string }), supabase.rpc("admin_list_coupons")]);
+    const [{ data, error }, coupons, mgr] = await Promise.all([
+      supabase.rpc("admin_list_affiliates", { p_status: null as unknown as string }),
+      supabase.rpc("admin_list_coupons"),
+      supabase.rpc("admin_list_managers"),
+    ]);
+    setManagers((mgr.data ?? []) as unknown as Manager[]);
     if (error) return void toast.error(errMsg(error));
     // Cupons de cada parceiro, só para mostrar no cartão (o cadastro é em Admin: cupons).
     const byAffiliate = new Map<string, string[]>();
@@ -102,16 +111,20 @@ function AdminAffiliates() {
           <TabsTrigger value="pendentes">Pendentes{pending.length ? ` (${pending.length})` : ""}</TabsTrigger>
           <TabsTrigger value="aprovados">Aprovados</TabsTrigger>
           <TabsTrigger value="recusados">Recusados</TabsTrigger>
+          <TabsTrigger value="gerentes">Gerentes</TabsTrigger>
           <TabsTrigger value="comissoes">Comissões</TabsTrigger>
         </TabsList>
         <TabsContent value="pendentes">
-          <AffiliateList rows={rows && pending} empty="Nenhuma inscrição esperando." onEdit={setEditing} onChanged={load} />
+          <AffiliateList rows={rows && pending} empty="Nenhuma inscrição esperando." onEdit={setEditing} onChanged={load} managers={managers ?? []} />
         </TabsContent>
         <TabsContent value="aprovados">
-          <AffiliateList rows={rows && by("aprovado", "suspenso")} empty="Nenhum parceiro aprovado ainda." onEdit={setEditing} onChanged={load} />
+          <AffiliateList rows={rows && by("aprovado", "suspenso")} empty="Nenhum parceiro aprovado ainda." onEdit={setEditing} onChanged={load} managers={managers ?? []} />
         </TabsContent>
         <TabsContent value="recusados">
-          <AffiliateList rows={rows && by("recusado")} empty="Nenhuma inscrição recusada." onEdit={setEditing} onChanged={load} />
+          <AffiliateList rows={rows && by("recusado")} empty="Nenhuma inscrição recusada." onEdit={setEditing} onChanged={load} managers={managers ?? []} />
+        </TabsContent>
+        <TabsContent value="gerentes">
+          <Managers rows={managers} onChanged={load} />
         </TabsContent>
         <TabsContent value="comissoes">
           <Commissions onChanged={load} />
@@ -127,25 +140,36 @@ function AffiliateList({
   empty,
   onEdit,
   onChanged,
+  managers,
 }: {
   rows: Affiliate[] | null;
   empty: string;
   onEdit: (a: Affiliate) => void;
   onChanged: () => void;
+  managers: Manager[];
 }) {
   if (!rows) return <div className="mt-4 h-36 animate-pulse rounded-2xl bg-card" aria-busy="true" />;
   if (!rows.length) return <p className="mt-4 text-sm text-muted-foreground">{empty}</p>;
   return (
     <ul className="mt-4 space-y-4">
       {rows.map((a) => (
-        <AffiliateCard key={a.id} a={a} onEdit={() => onEdit(a)} onChanged={onChanged} />
+        <AffiliateCard key={a.id} a={a} onEdit={() => onEdit(a)} onChanged={onChanged} managers={managers} />
       ))}
     </ul>
   );
 }
 
-function AffiliateCard({ a, onEdit, onChanged }: { a: Affiliate; onEdit: () => void; onChanged: () => void }) {
+function AffiliateCard({ a, onEdit, onChanged, managers }: { a: Affiliate; onEdit: () => void; onChanged: () => void; managers: Manager[] }) {
   const [busy, setBusy] = useState(false);
+
+  async function setManager(id: string) {
+    setBusy(true);
+    const { error } = await supabase.rpc("admin_set_affiliate_manager", { p_affiliate: a.id, p_manager: (id === "none" ? null : id) as unknown as string });
+    setBusy(false);
+    if (error) return void toast.error(errMsg(error));
+    toast.success("Gerente atualizado.");
+    onChanged();
+  }
 
   async function setStatus(status: "aprovado" | "suspenso") {
     setBusy(true);
@@ -197,6 +221,22 @@ function AffiliateCard({ a, onEdit, onChanged }: { a: Affiliate; onEdit: () => v
           </>
         )}
       </dl>
+      <div className="mt-3 flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Gerente</span>
+        <Select value={a.manager_id ?? "none"} onValueChange={setManager} disabled={busy}>
+          <SelectTrigger className="h-9 w-52 rounded-xl bg-muted" aria-label="Gerente do parceiro">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nenhum</SelectItem>
+            {managers.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {a.message && <p className="mt-3 whitespace-pre-line rounded-xl bg-muted p-3 text-sm">{a.message}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
         {a.status === "pendente" && (
@@ -382,9 +422,10 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
   // Agrupado por parceiro: o total de cada um é o Pix a fazer.
   const groups = new Map<string, { first: Commission; list: Commission[] }>();
   for (const c of rows ?? []) {
-    const g = groups.get(c.affiliate_id);
+    const key = `${c.kind}:${c.affiliate_id}`;
+    const g = groups.get(key);
     if (g) g.list.push(c);
-    else groups.set(c.affiliate_id, { first: c, list: [c] });
+    else groups.set(key, { first: c, list: [c] });
   }
 
   return (
@@ -418,10 +459,13 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
           const ids = list.map((c) => c.id);
           const all = ids.every((id) => selected.has(id));
           return (
-            <li key={first.affiliate_id} className="rounded-2xl bg-card p-4 shadow-card">
+            <li key={`${first.kind}:${first.affiliate_id}`} className="rounded-2xl bg-card p-4 shadow-card">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-semibold">{first.affiliate_name}</p>
+                  <p className="font-semibold">
+                    {first.affiliate_name}
+                    {first.kind === "gerente" && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal">Gerente</span>}
+                  </p>
                   <p className="break-all text-xs text-muted-foreground">Pix: {first.pix_key || "não informado"}</p>
                 </div>
                 <span className="money shrink-0 text-primary">{formatMoney(list.reduce((t, c) => t + c.commission_cents, 0))}</span>
@@ -465,5 +509,131 @@ function Commissions({ onChanged }: { onChanged: () => void }) {
         })}
       </ul>
     </div>
+  );
+}
+
+function Managers({ rows, onChanged }: { rows: Manager[] | null; onChanged: () => void }) {
+  const [editing, setEditing] = useState<Manager | "new" | null>(null);
+  if (!rows) return <div className="mt-4 h-36 animate-pulse rounded-2xl bg-card" aria-busy="true" />;
+  return (
+    <div className="mt-4">
+      <Button size="sm" onClick={() => setEditing("new")}>
+        Novo gerente
+      </Button>
+      {!rows.length && <p className="mt-4 text-sm text-muted-foreground">Nenhum gerente ainda.</p>}
+      <ul className="mt-4 space-y-4">
+        {rows.map((m) => (
+          <li key={m.id} className="rounded-2xl bg-card p-4 shadow-card">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold">{m.name}</p>
+                <p className="break-all text-xs text-muted-foreground">{m.email}</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs">{m.active ? "Ativo" : "Inativo"}</span>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <dt className="text-muted-foreground">Comissão extra</dt>
+              <dd className="money">{formatRate(m.commission_bp)}</dd>
+              <dt className="text-muted-foreground">Código de convite</dt>
+              <dd className="money">{m.code}</dd>
+              <dt className="text-muted-foreground">Parceiros</dt>
+              <dd className="money">{m.partners}</dd>
+              <dt className="text-muted-foreground">A pagar / pago</dt>
+              <dd className="money">
+                {formatMoney(m.pending_cents)} / {formatMoney(m.paid_cents)}
+              </dd>
+              <dt className="text-muted-foreground">Pix</dt>
+              <dd className="break-all">{m.pix_key || "—"}</dd>
+            </dl>
+            <Button size="sm" variant="outline" className="mt-4" onClick={() => setEditing(m)}>
+              Editar
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {editing && <ManagerDialog manager={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={onChanged} />}
+    </div>
+  );
+}
+
+function ManagerDialog({ manager: m, onClose, onSaved }: { manager: Manager | null; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({
+    name: m?.name ?? "",
+    email: m?.email ?? "",
+    whatsapp: m?.whatsapp ?? "",
+    pix_key: m?.pix_key ?? "",
+    rate: m ? String(m.commission_bp / 100).replace(".", ",") : "5",
+    code: m?.code ?? "",
+    active: m?.active ?? true,
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+
+  async function save() {
+    const bp = parseRate(f.rate);
+    const code = f.code || suggestCode(f.name);
+    if (f.name.trim().length < 2 || !/^\S+@\S+\.\S+$/.test(f.email.trim()) || bp === null || !/^[A-Z0-9]{4,20}$/.test(code))
+      return void toast.error("Confira nome, e-mail, percentual (0 a 100) e código (4 a 20 letras ou números).");
+    setBusy(true);
+    const { error } = await supabase.rpc("admin_save_manager", {
+      p_id: (m?.id ?? null) as unknown as string,
+      p_manager: { name: f.name, email: f.email, whatsapp: f.whatsapp, pix_key: f.pix_key, commission_bp: bp, code, active: f.active },
+    });
+    setBusy(false);
+    if (error) return void toast.error(error.code === "23505" ? "E-mail ou código já usado por outro gerente." : errMsg(error));
+    toast.success("Gerente salvo.");
+    onSaved();
+    onClose();
+  }
+
+  const field = (id: keyof typeof f, label: string, extra?: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <div className="space-y-1.5">
+      <label htmlFor={`mgr-${id}`} className="text-sm font-semibold">
+        {label}
+      </label>
+      <Input id={`mgr-${id}`} className="h-11" value={String(f[id])} onChange={set(id)} {...extra} />
+    </div>
+  );
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{m ? m.name : "Novo gerente"}</DialogTitle>
+          <DialogDescription>O gerente entra no app com este e-mail e vê os parceiros dele em Perfil → Área do gerente.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          {field("name", "Nome", { maxLength: 120 })}
+          {field("email", "E-mail", { type: "email", maxLength: 254 })}
+          {field("whatsapp", "WhatsApp", { maxLength: 30 })}
+          {field("pix_key", "Chave Pix", { maxLength: 140 })}
+          <div className="grid grid-cols-2 gap-3">
+            {field("rate", "Comissão extra (%)", { inputMode: "decimal" })}
+            <div className="space-y-1.5">
+              <label htmlFor="mgr-code" className="text-sm font-semibold">
+                Código de convite
+              </label>
+              <Input
+                id="mgr-code"
+                className="h-11 uppercase"
+                maxLength={20}
+                placeholder={suggestCode(f.name || "GERENTE")}
+                value={f.code}
+                onChange={(e) => setF((x) => ({ ...x, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") }))}
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={f.active} onCheckedChange={(v) => setF((x) => ({ ...x, active: v === true }))} />
+            Ativo (inativo para de ganhar comissões novas)
+          </label>
+        </div>
+        <DialogFooter>
+          <Button disabled={busy} onClick={save}>
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
