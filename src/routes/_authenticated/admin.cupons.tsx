@@ -21,7 +21,7 @@ import { errMsg } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated/admin/cupons")({
   beforeLoad: ({ context }) => requireModule(context.staff, "/admin/cupons"),
-  head: () => pageHead("Admin de cupons", "Cupons de desconto da assinatura, com afiliado opcional.", "Cupons de desconto da assinatura."),
+  head: () => pageHead("Admin de cupons", "Cupons de desconto da assinatura, com parceiro opcional.", "Cupons de desconto da assinatura."),
   component: AdminCoupons,
 });
 
@@ -74,7 +74,7 @@ function AdminCoupons() {
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         Acesso só para administradores. O desconto vale na assinatura do Mercado Pago; terminado o prazo, ela volta ao preço cheio. Cupom de
-        afiliado liga quem usa a ele, e a comissão sai sobre o valor pago.
+        parceiro liga quem usa a ele, e a comissão sai sobre o valor pago.
       </p>
       {!rows && <div className="mt-6 h-36 animate-pulse rounded-2xl bg-card" aria-busy="true" />}
       {rows && !rows.length && <p className="mt-6 text-sm text-muted-foreground">Nenhum cupom ainda.</p>}
@@ -103,7 +103,7 @@ function AdminCoupons() {
                 </dd>
                 <dt className="text-muted-foreground">Validade</dt>
                 <dd>{c.expires_at ? `${expired ? "venceu em" : "até"} ${formatDate(c.expires_at)}` : "Sem prazo"}</dd>
-                <dt className="text-muted-foreground">Afiliado</dt>
+                <dt className="text-muted-foreground">Parceiro</dt>
                 <dd>{c.affiliate_name ?? "Nenhum"}</dd>
               </dl>
               <Button size="sm" variant="outline" className="mt-4" onClick={() => setEditing(c)}>
@@ -154,9 +154,9 @@ function CouponDialog({
   const cyclesOk = duration !== "meses" || (Number.isInteger(n) && n >= 1 && n <= 120);
   const codeOk = /^[A-Z0-9]{3,20}$/.test(code);
   const terms = parsed ? { kind, value: parsed, duration, cycles: duration === "meses" ? n : null } : null;
-  // Afiliado que não está mais aprovado continua aparecendo para não sumir da edição.
+  // Parceiro que não está mais aprovado continua aparecendo para não sumir da edição.
   const options = coupon?.affiliate_id && !affiliates.some((a) => a.id === coupon.affiliate_id)
-    ? [...affiliates, { id: coupon.affiliate_id, name: coupon.affiliate_name ?? "Afiliado", code: null, status: "" }]
+    ? [...affiliates, { id: coupon.affiliate_id, name: coupon.affiliate_name ?? "Parceiro", code: null, status: "" }]
     : affiliates;
 
   async function save() {
@@ -272,9 +272,9 @@ function CouponDialog({
             </div>
           </div>
           <div className={field}>
-            <span className={label}>Afiliado</span>
+            <span className={label}>Parceiro</span>
             <Select value={affiliateId} onValueChange={setAffiliateId}>
-              <SelectTrigger className="h-11 rounded-xl bg-muted" aria-label="Afiliado do cupom">
+              <SelectTrigger className="h-11 rounded-xl bg-muted" aria-label="Parceiro do cupom">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

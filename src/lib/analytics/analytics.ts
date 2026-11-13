@@ -142,7 +142,7 @@ function send(anon: string, name: ClientEvent, props: Record<string, string | nu
 const SESSION_KEY = "mk_session";
 
 /** Páginas públicas cuja visita entra na contagem anônima (a mesma lista do banco, count_anonymous). */
-export const COUNTED_PAGES = ["/", "/calculadora", "/cadastro", "/entrar", "/afiliados", "/planos", "/contato"] as const;
+export const COUNTED_PAGES = ["/", "/calculadora", "/cadastro", "/entrar", "/parceiros", "/planos", "/contato"] as const;
 export type AnonymousKey = `visita:${(typeof COUNTED_PAGES)[number]}` | "simulacao_iniciada" | "simulacao_concluida";
 
 /**

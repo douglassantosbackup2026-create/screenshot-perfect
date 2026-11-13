@@ -54,7 +54,7 @@ export const createSubscription = createServerFn({ method: "POST" })
     return opened;
   });
 
-/** Cupom de afiliado: quem usa vira indicado dele, se ainda não for de ninguém (nunca de si mesmo). */
+/** Cupom de parceiro: quem usa vira indicado dele, se ainda não for de ninguém (nunca de si mesmo). */
 async function linkToAffiliate(userId: string, email: string | null, coupon: ValidCoupon) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: aff } = await supabaseAdmin.from("affiliates").select("id, email, status").eq("id", coupon.affiliateId!).maybeSingle();

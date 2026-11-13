@@ -30,7 +30,7 @@ function SignUp() {
   // Quem veio da calculadora já tem a conta feita: o cadastro só salva.
   const [fromCalc, setFromCalc] = useState(false);
   useEffect(() => setFromCalc(!!window.sessionStorage.getItem(CALC_PREFILL_KEY)), []);
-  // Código de afiliado: vem do link (?ref=) ou a pessoa digita. Só liga a conta ao afiliado.
+  // Código de parceiro: vem do link (?ref=) ou a pessoa digita. Só liga a conta ao parceiro.
   const [refCode, setRefCode] = useState("");
   const [linkRef, setLinkRef] = useState<string | null>(null);
   useEffect(() => {

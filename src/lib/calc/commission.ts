@@ -1,4 +1,4 @@
-// Comissão de afiliado sobre um pagamento do indicado. Função pura; a fonte da verdade é o banco
+// Comissão de parceiro sobre um pagamento do indicado. Função pura; a fonte da verdade é o banco
 // (_affiliate_commission em supabase/migrations/20261109120000_afiliados.sql), que segue esta regra.
 // A tela do admin usa daqui para mostrar a simulação antes de aprovar.
 
@@ -48,7 +48,7 @@ export function formatRate(bp: number): string {
   return `${(bp / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
-/** A regra em uma frase, para o afiliado e o admin. */
+/** A regra em uma frase, para o parceiro e o admin. */
 export function describeRule(rule: CommissionRule): string {
   const rate = formatRate(rule.bp);
   if (rule.mode === "primeiro") return `${rate} do primeiro pagamento de cada indicado`;

@@ -150,7 +150,7 @@ describe("dados de cada pessoa", () => {
     }
   });
 
-  it("ninguém fora do servidor lê tabelas internas (afiliados, cupons, configurações, analytics)", async () => {
+  it("ninguém fora do servidor lê tabelas internas (parceiros, cupons, configurações, analytics)", async () => {
     for (const role of ["anon", "authenticated"] as const)
       for (const t of ["affiliates", "referrals", "affiliate_commissions", "coupons", "coupon_redemptions", "app_settings", "analytics_events", "consent_log"])
         await denied(as({ role, sub: A }, (tx) => tx.query(`select * from public.${t}`)));
@@ -244,7 +244,7 @@ describe("regras específicas", () => {
     expect(result.uses).toEqual([{ n: 1 }]);
   });
 
-  it("ninguém usa o próprio código de afiliado", async () => {
+  it("ninguém usa o próprio código de parceiro", async () => {
     const r = await as({ role: "service_role" }, async (tx) => {
       await tx.exec(`
         insert into public.affiliates (name, email, status, code, commission_months) values ('Ana', 'a@teste.dev', 'aprovado', 'PROPRIO1', 12);
@@ -256,7 +256,7 @@ describe("regras específicas", () => {
     expect((r[0] as { r: unknown }).r).toMatchObject({ ok: false, reason: "proprio codigo" });
   });
 
-  it("inscrição pública de afiliado é salva, com comissão padrão de 12 meses", async () => {
+  it("inscrição pública de parceiro é salva, com comissão padrão de 12 meses", async () => {
     const r = await as({ role: "service_role" }, (tx) =>
       rows(tx, "insert into public.affiliates (name, email) values ('Thais', 't@teste.dev') returning commission_mode, commission_months"),
     );

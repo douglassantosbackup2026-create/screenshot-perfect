@@ -15,10 +15,10 @@ import { useEffect } from "react";
 
 /**
  * Abrem sem assinatura: a própria Assinatura, o Perfil (exportar dados, excluir a conta, sair), o
- * painel de afiliado (quem divulga não precisa assinar), e o painel administrativo (a equipe não assina;
+ * painel de parceiro (quem divulga não precisa assinar), e o painel administrativo (a equipe não assina;
  * o layout /admin confere o perfil).
  */
-const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/afiliado", "/admin"];
+const OPEN_WITHOUT_SUBSCRIPTION = ["/planos", "/perfil", "/parceiro", "/admin"];
 
 /** Conta já conferida no servidor nesta aba, e se é admin; trocar de tela não repete essas consultas. */
 let verifiedUser: string | null = null;

@@ -25,7 +25,7 @@ export type AdminPath =
   | "/admin/assinaturas"
   | "/admin/precos"
   | "/admin/cupons"
-  | "/admin/afiliados"
+  | "/admin/parceiros"
   | "/admin/usuarios"
   | "/admin/atendimento"
   | "/admin/leads"
@@ -54,7 +54,7 @@ export const MODULES: AdminModule[] = [
   { path: "/admin/assinaturas", title: "Assinaturas e faturamento", group: "Negócio", read: ["financeiro", "analista"], write: ["financeiro"] },
   { path: "/admin/precos", title: "Preços", group: "Negócio", read: ["financeiro"], write: ["financeiro"] },
   { path: "/admin/cupons", title: "Cupons", group: "Negócio", read: ["financeiro", "marketing"], write: ["financeiro", "marketing"] },
-  { path: "/admin/afiliados", title: "Afiliados", group: "Negócio", read: ["financeiro", "marketing"], write: ["financeiro", "marketing"] },
+  { path: "/admin/parceiros", title: "Parceiros", group: "Negócio", read: ["financeiro", "marketing"], write: ["financeiro", "marketing"] },
   { path: "/admin/usuarios", title: "Usuários", group: "Pessoas", read: ["suporte", "financeiro"], write: ["financeiro"] },
   { path: "/admin/atendimento", title: "Atendimento", group: "Pessoas", read: ["suporte"], write: ["suporte"] },
   { path: "/admin/leads", title: "Leads", group: "Pessoas", read: ["marketing"], write: ["marketing"] },
